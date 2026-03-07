@@ -38,6 +38,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState<InventoryForm>(emptyForm());
 
   const isAdmin = currentRole === 'director';
+  const isVendedor = currentRole === 'vendedor';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
 
   const totalValue = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0) * p.cost, 0);
