@@ -59,7 +59,7 @@ const queryClient = new QueryClient();
 // Route guard component that checks role permissions
 function RoleGuard({ children }: { children: React.ReactNode }) {
   const { currentRole } = useAppContext();
-  const path = window.location.pathname;
+  const location = useLocation();
   
   if (isPathBlockedForRole(path, currentRole)) {
     return <Navigate to="/" replace />;
