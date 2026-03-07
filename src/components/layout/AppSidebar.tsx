@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, Package, Wrench, Warehouse, FileText,
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
   BadgeDollarSign, BarChart3, Search, Bell, ChevronLeft, ChevronRight,
-  Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw, CalendarDays, Sparkles, MapPin
+  Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw, CalendarDays, Sparkles, MapPin,
+  ClipboardList,
 } from 'lucide-react';
 
 const navItems = [
