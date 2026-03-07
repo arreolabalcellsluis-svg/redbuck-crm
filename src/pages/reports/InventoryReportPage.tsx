@@ -10,6 +10,8 @@ import { useAppContext } from '@/contexts/AppContext';
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function InventoryReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', bodega: '', categoria: '' });
 
   const records = useMemo(() => {
