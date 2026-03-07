@@ -542,13 +542,19 @@ export default function QuotationsPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor *</label>
-              <select value={selectedVendorId} onChange={e => setSelectedVendorId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
-                <option value="">Seleccionar vendedor...</option>
-                {vendors.map(v => {
-                  const current = vendorSeries[v.id] ?? v.seriesStart ?? 1000;
-                  return <option key={v.id} value={v.id}>{v.name} — Serie {v.seriesPrefix} (siguiente: {v.seriesPrefix}-{current + 1})</option>;
-                })}
-              </select>
+              {isVendedor ? (
+                <div className="w-full px-3 py-2 rounded-lg border bg-muted text-sm font-medium">
+                  {vendors.find(v => v.id === vendorId)?.name ?? 'Vendedor'}
+                </div>
+              ) : (
+                <select value={selectedVendorId} onChange={e => setSelectedVendorId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+                  <option value="">Seleccionar vendedor...</option>
+                  {vendors.map(v => {
+                    const current = vendorSeries[v.id] ?? v.seriesStart ?? 1000;
+                    return <option key={v.id} value={v.id}>{v.name} — Serie {v.seriesPrefix} (siguiente: {v.seriesPrefix}-{current + 1})</option>;
+                  })}
+                </select>
+              )}
             </div>
           </div>
 
