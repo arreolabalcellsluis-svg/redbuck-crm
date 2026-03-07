@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import RestockOpportunitiesPage from "./pages/RestockOpportunitiesPage";
 import CommercialAgendaPage from "./pages/CommercialAgendaPage";
 import DailyAssistantPage from "./pages/DailyAssistantPage";
+import MarketMapPage from "./pages/MarketMapPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
