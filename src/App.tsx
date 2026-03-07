@@ -80,6 +80,7 @@ function ProtectedRoutes() {
           <Route path="/ejecutivo" element={<ExecutiveDashboardPage />} />
           <Route path="/crm" element={<CRMPage />} />
           <Route path="/crm/reabasto" element={<RestockOpportunitiesPage />} />
+          <Route path="/crm/agenda" element={<CommercialAgendaPage />} />
           <Route path="/productos" element={<ProductsPage />} />
           <Route path="/refacciones" element={<SparePartsPage />} />
           <Route path="/inventario" element={<InventoryPage />} />

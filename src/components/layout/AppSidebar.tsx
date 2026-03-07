@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Dashboard Ejecutivo', icon: Crown, path: '/ejecutivo' },
   { label: 'CRM', icon: Users, path: '/crm' },
   { label: 'Reabasto', icon: RefreshCw, path: '/crm/reabasto' },
+  { label: 'Agenda', icon: CalendarDays, path: '/crm/agenda' },
   { label: 'Productos', icon: Package, path: '/productos' },
   { label: 'Refacciones', icon: Wrench, path: '/refacciones' },
   { label: 'Inventario', icon: Warehouse, path: '/inventario' },
