@@ -4,6 +4,8 @@ import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { demoOrders, demoProducts } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
