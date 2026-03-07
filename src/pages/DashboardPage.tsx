@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import MetricCard from '@/components/shared/MetricCard';
 import StatusBadge from '@/components/shared/StatusBadge';
+import TodayActivitiesWidget from '@/components/dashboard/TodayActivitiesWidget';
 import { dashboardMetrics, salesByVendor, salesByCategory, monthlySales, demoImports, demoOpportunities, demoAccountsReceivable } from '@/data/demo-data';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import {
@@ -76,7 +77,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Vendor ranking + imports + receivables */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Agenda widget */}
+        <TodayActivitiesWidget />
+
         {/* Vendor ranking */}
         <div className="bg-card rounded-xl border p-5">
           <h3 className="font-display font-semibold mb-4">Ventas por vendedor</h3>
