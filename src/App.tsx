@@ -56,6 +56,18 @@ import FinancialSimulatorPage from "./pages/reports/FinancialSimulatorPage";
 
 const queryClient = new QueryClient();
 
+// Route guard component that checks role permissions
+function RoleGuard({ children }: { children: React.ReactNode }) {
+  const { currentRole } = useAppContext();
+  const path = window.location.pathname;
+  
+  if (isPathBlockedForRole(path, currentRole)) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
 function ProtectedRoutes() {
   const { session, loading } = useAuth();
 
@@ -80,48 +92,50 @@ function ProtectedRoutes() {
   return (
     <AppProvider>
       <AppLayout>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/ejecutivo" element={<ExecutiveDashboardPage />} />
-          <Route path="/crm" element={<CRMPage />} />
-          <Route path="/crm/reabasto" element={<RestockOpportunitiesPage />} />
-          <Route path="/crm/agenda" element={<CommercialAgendaPage />} />
-          <Route path="/crm/asistente" element={<DailyAssistantPage />} />
-          <Route path="/crm/mapa-mercado" element={<MarketMapPage />} />
-          <Route path="/productos" element={<ProductsPage />} />
-          <Route path="/refacciones" element={<SparePartsPage />} />
-          <Route path="/inventario" element={<InventoryPage />} />
-          <Route path="/cotizaciones" element={<QuotationsPage />} />
-          <Route path="/pedidos" element={<OrdersPage />} />
-          <Route path="/cobranza" element={<ReceivablesPage />} />
-          <Route path="/compras" element={<PurchasesPage />} />
-          <Route path="/historial-compras" element={<PurchaseHistoryPage />} />
-          <Route path="/historial-pedidos" element={<OrderHistoryPage />} />
-          <Route path="/importaciones" element={<ImportsPage />} />
-          <Route path="/proveedores" element={<SuppliersPage />} />
-          <Route path="/servicio" element={<ServicePage />} />
-          <Route path="/comisiones" element={<CommissionsPage />} />
-          <Route path="/planeacion" element={<PlanningPage />} />
-          <Route path="/reportes" element={<ReportsPage />} />
-          <Route path="/reportes-ejecutivos" element={<ExecutiveReportsPage />} />
-          <Route path="/reportes/ventas" element={<SalesReportPage />} />
-          <Route path="/reportes/inventario" element={<InventoryReportPage />} />
-          <Route path="/reportes/inventario-muerto" element={<DeadStockReportPage />} />
-          <Route path="/reportes/bajo-stock" element={<LowStockReportPage />} />
-          <Route path="/reportes/ventas-sku" element={<SkuSalesReportPage />} />
-          <Route path="/reportes/vendedor" element={<VendorDetailReportPage />} />
-          <Route path="/reportes/rentabilidad" element={<ProfitabilityReportPage />} />
-          <Route path="/reportes/cuentas-cobrar" element={<ReceivablesReportPage />} />
-          <Route path="/reportes/compras" element={<PurchasesReportPage />} />
-          <Route path="/reportes/distribuidores" element={<DistributorsReportPage />} />
-          <Route path="/reportes/desempeno-vendedores" element={<VendorPerformanceReportPage />} />
-          <Route path="/reportes/estado-resultados" element={<IncomeStatementReportPage />} />
-          <Route path="/reportes/sobreinventario" element={<OverstockReportPage />} />
-          <Route path="/reportes/plan-importaciones" element={<ImportPlanningPage />} />
-          <Route path="/reportes/simulador-financiero" element={<FinancialSimulatorPage />} />
-          <Route path="/configuracion" element={<SettingsPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <RoleGuard>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/ejecutivo" element={<ExecutiveDashboardPage />} />
+            <Route path="/crm" element={<CRMPage />} />
+            <Route path="/crm/reabasto" element={<RestockOpportunitiesPage />} />
+            <Route path="/crm/agenda" element={<CommercialAgendaPage />} />
+            <Route path="/crm/asistente" element={<DailyAssistantPage />} />
+            <Route path="/crm/mapa-mercado" element={<MarketMapPage />} />
+            <Route path="/productos" element={<ProductsPage />} />
+            <Route path="/refacciones" element={<SparePartsPage />} />
+            <Route path="/inventario" element={<InventoryPage />} />
+            <Route path="/cotizaciones" element={<QuotationsPage />} />
+            <Route path="/pedidos" element={<OrdersPage />} />
+            <Route path="/cobranza" element={<ReceivablesPage />} />
+            <Route path="/compras" element={<PurchasesPage />} />
+            <Route path="/historial-compras" element={<PurchaseHistoryPage />} />
+            <Route path="/historial-pedidos" element={<OrderHistoryPage />} />
+            <Route path="/importaciones" element={<ImportsPage />} />
+            <Route path="/proveedores" element={<SuppliersPage />} />
+            <Route path="/servicio" element={<ServicePage />} />
+            <Route path="/comisiones" element={<CommissionsPage />} />
+            <Route path="/planeacion" element={<PlanningPage />} />
+            <Route path="/reportes" element={<ReportsPage />} />
+            <Route path="/reportes-ejecutivos" element={<ExecutiveReportsPage />} />
+            <Route path="/reportes/ventas" element={<SalesReportPage />} />
+            <Route path="/reportes/inventario" element={<InventoryReportPage />} />
+            <Route path="/reportes/inventario-muerto" element={<DeadStockReportPage />} />
+            <Route path="/reportes/bajo-stock" element={<LowStockReportPage />} />
+            <Route path="/reportes/ventas-sku" element={<SkuSalesReportPage />} />
+            <Route path="/reportes/vendedor" element={<VendorDetailReportPage />} />
+            <Route path="/reportes/rentabilidad" element={<ProfitabilityReportPage />} />
+            <Route path="/reportes/cuentas-cobrar" element={<ReceivablesReportPage />} />
+            <Route path="/reportes/compras" element={<PurchasesReportPage />} />
+            <Route path="/reportes/distribuidores" element={<DistributorsReportPage />} />
+            <Route path="/reportes/desempeno-vendedores" element={<VendorPerformanceReportPage />} />
+            <Route path="/reportes/estado-resultados" element={<IncomeStatementReportPage />} />
+            <Route path="/reportes/sobreinventario" element={<OverstockReportPage />} />
+            <Route path="/reportes/plan-importaciones" element={<ImportPlanningPage />} />
+            <Route path="/reportes/simulador-financiero" element={<FinancialSimulatorPage />} />
+            <Route path="/configuracion" element={<SettingsPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </RoleGuard>
       </AppLayout>
     </AppProvider>
   );
