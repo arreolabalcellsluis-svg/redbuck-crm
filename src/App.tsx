@@ -94,6 +94,8 @@ function ProtectedRoutes() {
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/cobranza" element={<ReceivablesPage />} />
           <Route path="/compras" element={<PurchasesPage />} />
+          <Route path="/historial-compras" element={<PurchaseHistoryPage />} />
+          <Route path="/historial-pedidos" element={<OrderHistoryPage />} />
           <Route path="/importaciones" element={<ImportsPage />} />
           <Route path="/proveedores" element={<SuppliersPage />} />
           <Route path="/servicio" element={<ServicePage />} />
