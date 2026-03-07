@@ -245,7 +245,7 @@ export default function ReceivablesPage() {
         <MetricCard title="Saldo total" value={fmt(totalBalance)} icon={CreditCard} variant="primary" />
         <MetricCard title="Cartera vencida" value={fmt(overdueAmount)} icon={AlertTriangle} variant="danger" />
         <MetricCard title="Cuentas vencidas" value={overdue.length} icon={Clock} variant="warning" />
-        <MetricCard title="Al corriente" value={receivables.filter(a => a.status === 'al_corriente').length} icon={CheckCircle} variant="success" />
+        <MetricCard title="Al corriente" value={visibleReceivables.filter(a => a.status === 'al_corriente').length} icon={CheckCircle} variant="success" />
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
