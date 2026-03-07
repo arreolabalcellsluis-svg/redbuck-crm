@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { demoProducts, demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
+import { useAppContext } from '@/contexts/AppContext';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function InventoryReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', bodega: '', categoria: '' });
 
   const records = useMemo(() => {
@@ -51,13 +54,19 @@ export default function InventoryReportPage() {
   const hasActiveFilters = !!(filters.search || filters.bodega || filters.categoria);
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      SKU: r.sku, Producto: r.producto, Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
-      Modelo: r.modelo,
-      ...Object.fromEntries(demoWarehouses.map(w => [w.name, (r as any)[`stock_${w.id}`]])),
-      'Stock Total': r.stockTotal, 'En Tránsito': r.enTransito,
-      Costo: r.costo, 'Valor Total': r.valorTotal,
-    }));
+    const data = filtered.map(r => {
+      const base: Record<string, any> = {
+        SKU: r.sku, Producto: r.producto, Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
+        Modelo: r.modelo,
+        ...Object.fromEntries(demoWarehouses.map(w => [w.name, (r as any)[`stock_${w.id}`]])),
+        'Stock Total': r.stockTotal, 'En Tránsito': r.enTransito,
+      };
+      if (!isVendedor) {
+        base['Costo'] = r.costo;
+        base['Valor Total'] = r.valorTotal;
+      }
+      return base;
+    });
     exportToExcel(data, `Inventario_${new Date().toISOString().split('T')[0]}`);
   };
 
@@ -89,7 +98,7 @@ export default function InventoryReportPage() {
         hasActiveFilters={hasActiveFilters}
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className={`grid ${isVendedor ? 'grid-cols-2' : 'grid-cols-3'} gap-4 mb-4`}>
         <div className="bg-card rounded-xl border p-4 text-center">
           <div className="text-xs text-muted-foreground">Productos</div>
           <div className="text-xl font-bold">{filtered.length}</div>
@@ -98,10 +107,12 @@ export default function InventoryReportPage() {
           <div className="text-xs text-muted-foreground">Unidades totales</div>
           <div className="text-xl font-bold">{totalUnits}</div>
         </div>
-        <div className="bg-card rounded-xl border p-4 text-center">
-          <div className="text-xs text-muted-foreground">Valor total</div>
-          <div className="text-xl font-bold text-primary">{fmt(totalValue)}</div>
-        </div>
+        {!isVendedor && (
+          <div className="bg-card rounded-xl border p-4 text-center">
+            <div className="text-xs text-muted-foreground">Valor total</div>
+            <div className="text-xl font-bold text-primary">{fmt(totalValue)}</div>
+          </div>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
@@ -110,7 +121,7 @@ export default function InventoryReportPage() {
             <tr>
               <th>SKU</th><th>Producto</th><th>Categoría</th><th>Modelo</th>
               {demoWarehouses.map(w => <th key={w.id}>{w.name}</th>)}
-              <th>Total</th><th>Tránsito</th><th>Costo</th><th>Valor</th>
+              <th>Total</th><th>Tránsito</th>{!isVendedor && <><th>Costo</th><th>Valor</th></>}
             </tr>
           </thead>
           <tbody>
@@ -125,8 +136,12 @@ export default function InventoryReportPage() {
                 ))}
                 <td className="text-xs font-bold text-center">{r.stockTotal}</td>
                 <td className="text-xs text-center text-primary">{r.enTransito}</td>
-                <td className="text-xs">{fmt(r.costo)}</td>
-                <td className="text-xs font-bold">{fmt(r.valorTotal)}</td>
+                {!isVendedor && (
+                  <>
+                    <td className="text-xs">{fmt(r.costo)}</td>
+                    <td className="text-xs font-bold">{fmt(r.valorTotal)}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>

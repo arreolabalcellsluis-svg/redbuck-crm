@@ -19,6 +19,7 @@ const emptyForm = (): SparePartForm => ({
 
 export default function SparePartsPage() {
   const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [spareParts, setSpareParts] = useState<SparePart[]>(initialSpareParts);
@@ -147,16 +148,24 @@ export default function SparePartsPage() {
           {demoProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo</label>
-          <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+      {!isVendedor && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo</label>
+            <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio *</label>
+            <input type="number" value={form.price || ''} onChange={e => setForm(p => ({ ...p, price: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+          </div>
         </div>
+      )}
+      {isVendedor && (
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio *</label>
           <input type="number" value={form.price || ''} onChange={e => setForm(p => ({ ...p, price: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
         </div>
-      </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Stock inicial</label>
@@ -192,7 +201,7 @@ export default function SparePartsPage() {
       <div className="bg-card rounded-xl border overflow-x-auto">
         <table className="data-table">
           <thead>
-            <tr><th>SKU</th><th>Refacción</th><th>Equipo relacionado</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Mín</th><th>Estado</th><th></th></tr>
+            <tr><th>SKU</th><th>Refacción</th><th>Equipo relacionado</th>{!isVendedor && <th>Costo</th>}<th>Precio</th><th>Stock</th><th>Mín</th><th>Estado</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(sp => (
@@ -209,7 +218,7 @@ export default function SparePartsPage() {
                   </div>
                 </td>
                 <td className="text-muted-foreground text-sm">{sp.productName}</td>
-                <td>{fmt(sp.cost)}</td>
+                {!isVendedor && <td>{fmt(sp.cost)}</td>}
                 <td className="font-semibold">{fmt(sp.price)}</td>
                 <td className={sp.stock <= sp.minStock ? 'text-destructive font-bold' : 'font-semibold'}>
                   {sp.stock}
