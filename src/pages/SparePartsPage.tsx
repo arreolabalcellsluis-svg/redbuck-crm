@@ -148,16 +148,24 @@ export default function SparePartsPage() {
           {demoProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo</label>
-          <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+      {!isVendedor && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo</label>
+            <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio *</label>
+            <input type="number" value={form.price || ''} onChange={e => setForm(p => ({ ...p, price: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+          </div>
         </div>
+      )}
+      {isVendedor && (
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio *</label>
           <input type="number" value={form.price || ''} onChange={e => setForm(p => ({ ...p, price: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
         </div>
-      </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Stock inicial</label>
