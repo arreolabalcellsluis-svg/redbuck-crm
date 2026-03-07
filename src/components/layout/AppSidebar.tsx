@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_LABELS } from '@/types';
+import { getNavItemsForRole } from '@/lib/rolePermissions';
 import {
   LayoutDashboard, Users, Package, Wrench, Warehouse, FileText,
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
