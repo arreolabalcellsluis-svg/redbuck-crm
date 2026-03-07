@@ -39,6 +39,10 @@ export default function ExecutiveDashboardPage() {
   const { currentRole } = useAppContext();
   const navigate = useNavigate();
 
+  const [daysDialog, setDaysDialog] = useState(false);
+  const [deadDialog, setDeadDialog] = useState(false);
+  const [excessDialog, setExcessDialog] = useState(false);
+
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
   const fin = useMemo(() => getFinancialAnalysis(analyses), [analyses]);
