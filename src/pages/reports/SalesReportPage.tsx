@@ -39,20 +39,27 @@ function generateSalesRecords() {
 }
 
 export default function SalesReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [searchParams] = useSearchParams();
   const vendorFilter = searchParams.get('vendedor') || '';
   const skuFilter = searchParams.get('sku') || '';
 
   const [filters, setFilters] = useState<Record<string, any>>({
     search: '',
-    vendedor: vendorFilter,
+    vendedor: isVendedor ? DEMO_VENDEDOR_NAME : vendorFilter,
     sku: skuFilter,
     categoria: '',
     dateFrom: undefined,
     dateTo: undefined,
   });
 
-  const records = useMemo(() => generateSalesRecords(), []);
+  const records = useMemo(() => {
+    const allRecords = generateSalesRecords();
+    // For vendedor, pre-filter at source level
+    if (isVendedor) return allRecords.filter(r => r.vendedor === DEMO_VENDEDOR_NAME);
+    return allRecords;
+  }, [isVendedor]);
 
   const filtered = useMemo(() => {
     return records.filter(r => {
