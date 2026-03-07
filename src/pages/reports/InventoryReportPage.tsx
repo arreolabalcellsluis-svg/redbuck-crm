@@ -115,7 +115,7 @@ export default function InventoryReportPage() {
             <tr>
               <th>SKU</th><th>Producto</th><th>Categoría</th><th>Modelo</th>
               {demoWarehouses.map(w => <th key={w.id}>{w.name}</th>)}
-              <th>Total</th><th>Tránsito</th><th>Costo</th><th>Valor</th>
+              <th>Total</th><th>Tránsito</th>{!isVendedor && <><th>Costo</th><th>Valor</th></>}
             </tr>
           </thead>
           <tbody>
@@ -130,8 +130,12 @@ export default function InventoryReportPage() {
                 ))}
                 <td className="text-xs font-bold text-center">{r.stockTotal}</td>
                 <td className="text-xs text-center text-primary">{r.enTransito}</td>
-                <td className="text-xs">{fmt(r.costo)}</td>
-                <td className="text-xs font-bold">{fmt(r.valorTotal)}</td>
+                {!isVendedor && (
+                  <>
+                    <td className="text-xs">{fmt(r.costo)}</td>
+                    <td className="text-xs font-bold">{fmt(r.valorTotal)}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>

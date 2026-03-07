@@ -201,7 +201,7 @@ export default function SparePartsPage() {
       <div className="bg-card rounded-xl border overflow-x-auto">
         <table className="data-table">
           <thead>
-            <tr><th>SKU</th><th>Refacción</th><th>Equipo relacionado</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Mín</th><th>Estado</th><th></th></tr>
+            <tr><th>SKU</th><th>Refacción</th><th>Equipo relacionado</th>{!isVendedor && <th>Costo</th>}<th>Precio</th><th>Stock</th><th>Mín</th><th>Estado</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(sp => (
@@ -218,7 +218,7 @@ export default function SparePartsPage() {
                   </div>
                 </td>
                 <td className="text-muted-foreground text-sm">{sp.productName}</td>
-                <td>{fmt(sp.cost)}</td>
+                {!isVendedor && <td>{fmt(sp.cost)}</td>}
                 <td className="font-semibold">{fmt(sp.price)}</td>
                 <td className={sp.stock <= sp.minStock ? 'text-destructive font-bold' : 'font-semibold'}>
                   {sp.stock}
