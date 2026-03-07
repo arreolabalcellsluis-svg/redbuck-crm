@@ -140,7 +140,7 @@ export default function QuotationsPage() {
 
   const resetForm = () => {
     setSelectedCustomerId('');
-    setSelectedVendorId('');
+    setSelectedVendorId(isVendedor ? vendorId : '');
     setItems([]);
     setValidDays(15);
   };
