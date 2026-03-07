@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CommercialSections from '@/components/dashboard/CommercialSections';
 import { useAppContext } from '@/contexts/AppContext';
@@ -12,6 +12,7 @@ import { generateRestockOpportunities, getRestockAlerts } from '@/lib/restockEng
 import { generateDailyRecommendations, getAssistantSummary } from '@/lib/dailyAssistantEngine';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
+import { DaysOfInventoryDialog, DeadStockDialog, ExcessStockDialog } from '@/components/dashboard/InventoryDrillDownDialogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import {
   DollarSign, TrendingUp, Package, Warehouse, Activity, ShieldAlert,
@@ -37,6 +38,10 @@ const COLORS = [
 export default function ExecutiveDashboardPage() {
   const { currentRole } = useAppContext();
   const navigate = useNavigate();
+
+  const [daysDialog, setDaysDialog] = useState(false);
+  const [deadDialog, setDeadDialog] = useState(false);
+  const [excessDialog, setExcessDialog] = useState(false);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
@@ -354,9 +359,9 @@ export default function ExecutiveDashboardPage() {
       {/* ═══ SECCIÓN 3: INVENTARIO ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <MetricCard title="Rotación inventario" value={`${inventoryRotation.toFixed(1)}x`} icon={Activity} variant="primary" subtitle="anual" href="/reportes/inventario" />
-        <MetricCard title="Días de inventario" value={daysOfInventory} icon={Clock} variant={daysOfInventory > 90 ? 'warning' : 'success'} subtitle={daysOfInventory <= 90 ? 'Saludable' : 'Excesivo'} href="/reportes/inventario" />
-        <MetricCard title="Inventario muerto" value={fmt(summary.deadStockValue)} icon={Skull} variant="danger" subtitle="> 180 días" href="/reportes/inventario-muerto" />
-        <MetricCard title="Productos excedentes" value={summary.excessProducts} icon={Layers} variant="warning" href="/reportes/inventario" />
+        <MetricCard title="Días de inventario" value={daysOfInventory} icon={Clock} variant={daysOfInventory > 90 ? 'warning' : 'success'} subtitle={daysOfInventory <= 90 ? 'Saludable' : 'Excesivo'} onClick={() => setDaysDialog(true)} />
+        <MetricCard title="Inventario muerto" value={fmt(summary.deadStockValue)} icon={Skull} variant="danger" subtitle="> 180 días" onClick={() => setDeadDialog(true)} />
+        <MetricCard title="Productos excedentes" value={summary.excessProducts} icon={Layers} variant="warning" onClick={() => setExcessDialog(true)} />
 
         {/* Simulador financiero KPI */}
         <div {...clickCard('/reportes/simulador-financiero')} style={{ borderLeft: '4px solid hsl(var(--info))' }}>
@@ -684,6 +689,10 @@ export default function ExecutiveDashboardPage() {
 
       {/* ═══ SECCIONES COMERCIALES ═══ */}
       <CommercialSections />
+      {/* ═══ DRILL-DOWN DIALOGS ═══ */}
+      <DaysOfInventoryDialog open={daysDialog} onOpenChange={setDaysDialog} analyses={analyses} />
+      <DeadStockDialog open={deadDialog} onOpenChange={setDeadDialog} analyses={analyses} />
+      <ExcessStockDialog open={excessDialog} onOpenChange={setExcessDialog} analyses={analyses} />
     </div>
   );
 }
