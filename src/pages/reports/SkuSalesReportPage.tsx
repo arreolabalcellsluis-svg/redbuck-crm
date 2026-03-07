@@ -14,6 +14,8 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 type ViewMode = 'monto' | 'unidades' | 'rentabilidad';
 
 export default function SkuSalesReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const navigate = useNavigate();
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', categoria: '', dateFrom: undefined, dateTo: undefined });
   const [viewMode, setViewMode] = useState<ViewMode>('monto');
