@@ -1,0 +1,197 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 97%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 0 78% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
+
+    --info: 210 100% 52%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 78% 45%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 0 78% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 0 78% 50%;
+    --sidebar-muted: 0 0% 40%;
+
+    --chart-1: 0 78% 45%;
+    --chart-2: 210 100% 52%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 280 65% 55%;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer components {
+  .metric-card {
+    @apply bg-card rounded-xl border p-5 transition-all duration-200;
+  }
+  .metric-card:hover {
+    box-shadow: 0 4px 20px -4px hsl(var(--primary) / 0.1);
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .status-badge-success {
+    @apply status-badge;
+    background: hsl(var(--success) / 0.12);
+    color: hsl(var(--success));
+  }
+  .status-badge-warning {
+    @apply status-badge;
+    background: hsl(var(--warning) / 0.12);
+    color: hsl(var(--warning));
+  }
+  .status-badge-danger {
+    @apply status-badge;
+    background: hsl(var(--destructive) / 0.12);
+    color: hsl(var(--destructive));
+  }
+  .status-badge-info {
+    @apply status-badge;
+    background: hsl(var(--info) / 0.12);
+    color: hsl(var(--info));
+  }
+  .status-badge-neutral {
+    @apply status-badge;
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+
+  .page-header {
+    @apply mb-6;
+  }
+  .page-title {
+    @apply text-2xl font-bold tracking-tight;
+    font-family: var(--font-display);
+  }
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  .data-table {
+    @apply w-full text-sm;
+  }
+  .data-table th {
+    @apply text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 border-b;
+  }
+  .data-table td {
+    @apply px-4 py-3 border-b;
+  }
+  .data-table tbody tr {
+    @apply transition-colors hover:bg-muted/50;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150;
+    color: hsl(var(--sidebar-foreground));
+  }
+  .sidebar-link:hover {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+  .sidebar-link-active {
+    background: hsl(var(--sidebar-primary) / 0.15);
+    color: hsl(var(--sidebar-primary));
+  }
+
+  .timeline-step {
+    @apply relative flex items-center gap-3;
+  }
+  .timeline-dot {
+    @apply w-3 h-3 rounded-full border-2 shrink-0;
+  }
+  .timeline-dot-active {
+    @apply timeline-dot;
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary));
+  }
+  .timeline-dot-complete {
+    @apply timeline-dot;
+    border-color: hsl(var(--success));
+    background: hsl(var(--success));
+  }
+  .timeline-dot-pending {
+    @apply timeline-dot;
+    border-color: hsl(var(--border));
+    background: hsl(var(--card));
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}

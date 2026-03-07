@@ -1,0 +1,161 @@
+import { demoSuppliers } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { Building2, Plus, Search, Edit2 } from 'lucide-react';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Supplier } from '@/types';
+import { addAuditLog } from '@/lib/auditLog';
+import { toast } from 'sonner';
+
+export default function SuppliersPage() {
+  const { currentRole } = useAppContext();
+  const canEdit = currentRole === 'director' || currentRole === 'compras';
+
+  const [search, setSearch] = useState('');
+  const [suppliers, setSuppliers] = useState<Supplier[]>(demoSuppliers);
+  const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN' as 'MXN' | 'USD' | 'CNY', type: 'nacional' as Supplier['type'] });
+
+  const filtered = suppliers.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+
+  const openEdit = (s: Supplier) => {
+    setEditId(s.id);
+    setForm({ name: s.name, country: s.country, contact: s.contact, phone: s.phone, email: s.email, currency: s.currency, type: s.type });
+    setOpen(true);
+  };
+
+  const resetForm = () => {
+    setEditId(null);
+    setForm({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN', type: 'nacional' });
+  };
+
+  const handleSave = () => {
+    if (!form.name || !form.contact) {
+      toast.error('Nombre y contacto son requeridos');
+      return;
+    }
+    if (editId) {
+      setSuppliers(prev => prev.map(s => s.id === editId ? { ...s, ...form } : s));
+      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'proveedores', action: 'editar_proveedor', entityId: editId, newValue: form.name, comment: `Proveedor ${form.name} editado` });
+      toast.success('Proveedor actualizado');
+    } else {
+      const newSupplier: Supplier = { id: `s-${Date.now()}`, ...form };
+      setSuppliers(prev => [newSupplier, ...prev]);
+      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'proveedores', action: 'crear_proveedor', entityId: newSupplier.id, newValue: form.name });
+      toast.success(`Proveedor ${form.name} creado`);
+    }
+    setOpen(false);
+    resetForm();
+  };
+
+  return (
+    <div>
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="page-title">Proveedores</h1>
+          <p className="page-subtitle">{suppliers.length} proveedores registrados</p>
+        </div>
+        {canEdit && (
+          <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus size={16} /> Nuevo proveedor
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar proveedor..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filtered.map(s => (
+          <div key={s.id} className="bg-card rounded-xl border p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <Building2 size={20} className="text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-display font-semibold text-sm">{s.name}</h3>
+                  <p className="text-xs text-muted-foreground">{s.country} · {s.currency}</p>
+                </div>
+              </div>
+              {canEdit && (
+                <button onClick={() => openEdit(s)} className="p-1.5 rounded-md hover:bg-muted" title="Editar proveedor">
+                  <Edit2 size={14} />
+                </button>
+              )}
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Contacto:</span><span>{s.contact}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Teléfono:</span><span>{s.phone}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Email:</span><span className="text-xs">{s.email}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Tipo:</span><span className="capitalize">{s.type}</span></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Dialog open={open} onOpenChange={() => { setOpen(false); resetForm(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editId ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
+            <DialogDescription>{editId ? 'Modifica la información del proveedor' : 'Registra un nuevo proveedor'}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Nombre *</label>
+              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">País</label>
+                <input value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+                <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as Supplier['type'] })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
+                  <option value="nacional">Nacional</option>
+                  <option value="internacional">Internacional</option>
+                  <option value="refacciones">Refacciones</option>
+                  <option value="logistica">Logística</option>
+                  <option value="aduana">Aduana</option>
+                  <option value="servicio">Servicio</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Contacto *</label>
+              <input value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Teléfono</label>
+                <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Moneda</label>
+                <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value as 'MXN' | 'USD' | 'CNY' })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
+                  <option value="MXN">MXN</option><option value="USD">USD</option><option value="CNY">CNY</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Email</label>
+              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => { setOpen(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
+              <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+                {editId ? 'Guardar cambios' : 'Crear proveedor'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
