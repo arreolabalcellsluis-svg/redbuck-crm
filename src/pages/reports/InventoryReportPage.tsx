@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { demoProducts, demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
+import { useAppContext } from '@/contexts/AppContext';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
