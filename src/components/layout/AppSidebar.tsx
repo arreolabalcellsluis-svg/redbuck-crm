@@ -84,7 +84,7 @@ export default function AppSidebar() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {navItems.map((item) => {
+          {getNavItemsForRole(navItems, currentRole).map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <NavLink
