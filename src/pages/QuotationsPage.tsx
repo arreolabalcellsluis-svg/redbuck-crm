@@ -49,7 +49,14 @@ export default function QuotationsPage() {
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [reserveDeadline, setReserveDeadline] = useState('');
 
-  const filtered = quotations.filter(q =>
+  const isVendedor = currentRole === 'vendedor';
+  const vendorId = DEMO_VENDEDOR_ID;
+
+  const visibleQuotations = isVendedor
+    ? quotations.filter(q => q.vendorId === vendorId)
+    : quotations;
+
+  const filtered = visibleQuotations.filter(q =>
     q.customerName.toLowerCase().includes(search.toLowerCase()) ||
     q.folio.toLowerCase().includes(search.toLowerCase())
   );

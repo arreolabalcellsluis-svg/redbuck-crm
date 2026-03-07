@@ -254,7 +254,7 @@ export default function ReceivablesPage() {
             <tr><th>Cliente</th><th>Pedido</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Vencimiento</th><th>Días vencido</th><th>Estatus</th></tr>
           </thead>
           <tbody>
-            {receivables.map(ar => (
+            {visibleReceivables.map(ar => (
               <tr key={ar.id}>
                 <td>
                   <button
