@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_LABELS } from '@/types';
+import { getNavItemsForRole } from '@/lib/rolePermissions';
 import {
   LayoutDashboard, Users, Package, Wrench, Warehouse, FileText,
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
@@ -83,7 +84,7 @@ export default function AppSidebar() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {navItems.map((item) => {
+          {getNavItemsForRole(navItems, currentRole).map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <NavLink

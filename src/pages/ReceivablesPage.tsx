@@ -1,5 +1,6 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { demoCustomers } from '@/data/demo-data';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { CreditCard, AlertTriangle, CheckCircle, Clock, FileSpreadsheet, History, Download } from 'lucide-react';
@@ -12,10 +13,20 @@ import { addAuditLog } from '@/lib/auditLog';
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function ReceivablesPage() {
-  const { receivables, orders, payments, getTotalPaid, getOrderPayments } = useAppContext();
+  const { currentRole, receivables, orders, payments, getTotalPaid, getOrderPayments } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
+  const vendorId = DEMO_VENDEDOR_ID;
 
-  const totalBalance = receivables.reduce((s, a) => s + a.balance, 0);
-  const overdue = receivables.filter(a => a.status === 'vencido');
+  // Filter receivables for vendedor - only show their clients
+  const myCustomerIds = isVendedor
+    ? new Set(demoCustomers.filter(c => c.vendorId === vendorId).map(c => c.id))
+    : null;
+  const visibleReceivables = myCustomerIds
+    ? receivables.filter(r => myCustomerIds.has(r.customerId))
+    : receivables;
+
+  const totalBalance = visibleReceivables.reduce((s, a) => s + a.balance, 0);
+  const overdue = visibleReceivables.filter(a => a.status === 'vencido');
   const overdueAmount = overdue.reduce((s, a) => s + a.balance, 0);
 
   // Customer account statement
@@ -234,7 +245,7 @@ export default function ReceivablesPage() {
         <MetricCard title="Saldo total" value={fmt(totalBalance)} icon={CreditCard} variant="primary" />
         <MetricCard title="Cartera vencida" value={fmt(overdueAmount)} icon={AlertTriangle} variant="danger" />
         <MetricCard title="Cuentas vencidas" value={overdue.length} icon={Clock} variant="warning" />
-        <MetricCard title="Al corriente" value={receivables.filter(a => a.status === 'al_corriente').length} icon={CheckCircle} variant="success" />
+        <MetricCard title="Al corriente" value={visibleReceivables.filter(a => a.status === 'al_corriente').length} icon={CheckCircle} variant="success" />
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
@@ -243,7 +254,7 @@ export default function ReceivablesPage() {
             <tr><th>Cliente</th><th>Pedido</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Vencimiento</th><th>Días vencido</th><th>Estatus</th></tr>
           </thead>
           <tbody>
-            {receivables.map(ar => (
+            {visibleReceivables.map(ar => (
               <tr key={ar.id}>
                 <td>
                   <button

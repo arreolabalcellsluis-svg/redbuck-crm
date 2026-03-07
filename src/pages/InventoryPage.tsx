@@ -38,6 +38,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState<InventoryForm>(emptyForm());
 
   const isAdmin = currentRole === 'director';
+  const isVendedor = currentRole === 'vendedor';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
 
   const totalValue = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0) * p.cost, 0);
@@ -194,33 +195,35 @@ export default function InventoryPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <MetricCard title="Unidades totales" value={totalUnits} icon={Package} />
-        <MetricCard title="Valor inventario" value={fmt(totalValue)} icon={Warehouse} variant="primary" />
+        {!isVendedor && <MetricCard title="Valor inventario" value={fmt(totalValue)} icon={Warehouse} variant="primary" />}
         <MetricCard title="En tránsito" value={inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
         <MetricCard title="Stock bajo" value={lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
       </div>
 
-      {/* Warehouses overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {demoWarehouses.map(w => {
-          const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
-          const value = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
-          return (
-            <div key={w.id} className="bg-card rounded-xl border p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <Warehouse size={20} className="text-muted-foreground" />
-                <div>
-                  <h3 className="font-display font-semibold text-sm">{w.name}</h3>
-                  <p className="text-xs text-muted-foreground">{w.location}{w.hasExhibition ? ' · Con exhibición' : ''}</p>
+      {/* Warehouses overview - hide financial values for vendedor */}
+      {!isVendedor && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {demoWarehouses.map(w => {
+            const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
+            const value = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
+            return (
+              <div key={w.id} className="bg-card rounded-xl border p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <Warehouse size={20} className="text-muted-foreground" />
+                  <div>
+                    <h3 className="font-display font-semibold text-sm">{w.name}</h3>
+                    <p className="text-xs text-muted-foreground">{w.location}{w.hasExhibition ? ' · Con exhibición' : ''}</p>
+                  </div>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{units} unidades</span>
+                  <span className="font-semibold">{fmt(value)}</span>
                 </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{units} unidades</span>
-                <span className="font-semibold">{fmt(value)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Product stock table */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">

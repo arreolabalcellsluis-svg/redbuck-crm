@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { demoCustomers as initialCustomers, demoOpportunities, demoUsers } from '@/data/demo-data';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
@@ -28,10 +29,15 @@ export default function CRMPage() {
 
   const canExport = true;
   const isVendedor = currentRole === 'vendedor';
+  const vendorId = DEMO_VENDEDOR_ID;
 
   const allCustomers = isVendedor
-    ? customers.filter(c => c.vendorId === 'u3')
+    ? customers.filter(c => c.vendorId === vendorId)
     : customers;
+
+  const allOpportunities = isVendedor
+    ? demoOpportunities.filter(o => o.vendorId === vendorId)
+    : demoOpportunities;
 
   const filteredCustomers = allCustomers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.city.toLowerCase().includes(search.toLowerCase())
@@ -104,10 +110,10 @@ export default function CRMPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Clientes" value={allCustomers.length} icon={Users} />
-        <MetricCard title="Oportunidades" value={demoOpportunities.length} icon={Target} />
-        <MetricCard title="Pipeline activo" value={fmt(demoOpportunities.reduce((s, o) => s + o.estimatedAmount, 0))} icon={TrendingUp} variant="primary" />
-        <MetricCard title="Cierre ganado" value={fmt(demoOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0))} icon={UserPlus} variant="success" />
+        <MetricCard title={isVendedor ? "Mis clientes" : "Clientes"} value={allCustomers.length} icon={Users} />
+        <MetricCard title={isVendedor ? "Mis oportunidades" : "Oportunidades"} value={allOpportunities.length} icon={Target} />
+        <MetricCard title="Pipeline activo" value={fmt(allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0))} icon={TrendingUp} variant="primary" />
+        <MetricCard title="Cierre ganado" value={fmt(allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0))} icon={UserPlus} variant="success" />
       </div>
 
       <div className="flex items-center gap-1 mb-4 border-b">
@@ -156,7 +162,7 @@ export default function CRMPage() {
       {tab === 'pipeline' && (
         <div className="flex gap-3 overflow-x-auto pb-4">
           {pipelineStages.map(stage => {
-            const opps = demoOpportunities.filter(o => o.stage === stage);
+            const opps = allOpportunities.filter(o => o.stage === stage);
             const total = opps.reduce((s, o) => s + o.estimatedAmount, 0);
             return (
               <div key={stage} className="min-w-[260px] flex-shrink-0">
