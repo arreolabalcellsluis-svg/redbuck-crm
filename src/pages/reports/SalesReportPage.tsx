@@ -120,7 +120,7 @@ export default function SalesReportPage() {
           searchPlaceholder: 'Buscar por cliente, producto, SKU, folio...',
           dateRange: true,
           selects: [
-            { key: 'vendedor', label: 'Vendedor', options: vendorOptions },
+            ...(isVendedor ? [] : [{ key: 'vendedor', label: 'Vendedor', options: vendorOptions }]),
             { key: 'sku', label: 'SKU', options: skuOptions },
             { key: 'categoria', label: 'Categoría', options: catOptions },
           ],
@@ -128,7 +128,7 @@ export default function SalesReportPage() {
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
-        onClear={() => setFilters({ search: '', vendedor: '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
+        onClear={() => setFilters({ search: '', vendedor: isVendedor ? DEMO_VENDEDOR_NAME : '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
         hasActiveFilters={hasActiveFilters}
       />

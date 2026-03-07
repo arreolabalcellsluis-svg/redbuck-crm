@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { salesByVendor } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import MetricCard from '@/components/shared/MetricCard';
 import { BadgeDollarSign, Target, TrendingUp, Award, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -49,14 +51,24 @@ function buildInitialRows(): CommissionRow[] {
 }
 
 export default function CommissionsPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
+
   const [rows, setRows] = useState<CommissionRow[]>(buildInitialRows);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState<number>(0);
   const [editGoal, setEditGoal] = useState<number>(0);
   const [editName, setEditName] = useState('');
 
-  const totalCommissions = rows.reduce((s, v) => s + v.commission, 0);
-  const topVendor = rows.filter(r => r.type === 'vendedor').sort((a, b) => b.sales - a.sales)[0];
+  // For vendedor: show only their own commission row, hide admin row and other sellers
+  // Match by short name (e.g. "Roberto J." matches "Roberto Juárez")
+  const vendorShortName = DEMO_VENDEDOR_NAME.split(' ')[0]; // "Roberto"
+  const visibleRows = isVendedor
+    ? rows.filter(r => r.type === 'vendedor' && r.name.startsWith(vendorShortName))
+    : rows;
+
+  const totalCommissions = visibleRows.reduce((s, v) => s + v.commission, 0);
+  const topVendor = visibleRows.filter(r => r.type === 'vendedor').sort((a, b) => b.sales - a.sales)[0];
 
   const startEdit = (row: CommissionRow) => {
     setEditingId(row.id);
@@ -96,14 +108,16 @@ export default function CommissionsPage() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Comisiones</h1>
-        <p className="page-subtitle">Seguimiento de comisiones por vendedor — Marzo 2026</p>
+        <p className="page-subtitle">
+          {isVendedor ? 'Mi comisión — Marzo 2026' : 'Seguimiento de comisiones por vendedor — Marzo 2026'}
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Vendedores" value={rows.filter(r => r.type === 'vendedor').length} icon={BadgeDollarSign} />
-        <MetricCard title="Total comisiones" value={fmt(totalCommissions)} icon={TrendingUp} variant="primary" />
-        <MetricCard title="Venta total" value={fmt(totalAllSales)} icon={Target} />
-        <MetricCard title="Top vendedor" value={topVendor?.name || '-'} icon={Award} variant="success" />
+      <div className={`grid grid-cols-2 ${isVendedor ? 'md:grid-cols-2' : 'md:grid-cols-4'} gap-4 mb-6`}>
+        {!isVendedor && <MetricCard title="Vendedores" value={rows.filter(r => r.type === 'vendedor').length} icon={BadgeDollarSign} />}
+        <MetricCard title={isVendedor ? "Mi comisión" : "Total comisiones"} value={fmt(totalCommissions)} icon={TrendingUp} variant="primary" />
+        <MetricCard title={isVendedor ? "Mi venta" : "Venta total"} value={fmt(visibleRows.reduce((s, r) => s + r.sales, 0))} icon={Target} />
+        {!isVendedor && <MetricCard title="Top vendedor" value={topVendor?.name || '-'} icon={Award} variant="success" />}
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
@@ -111,18 +125,18 @@ export default function CommissionsPage() {
           <thead>
             <tr>
               <th>Nombre</th>
-              <th>Tipo</th>
+              {!isVendedor && <th>Tipo</th>}
               <th>Venta</th>
               <th>Meta</th>
               <th>Avance</th>
               <th>Cobrado</th>
               <th>% Comisión</th>
               <th>Comisión</th>
-              <th className="text-center">Acciones</th>
+              {!isVendedor && <th className="text-center">Acciones</th>}
             </tr>
           </thead>
           <tbody>
-            {rows.map(v => (
+            {visibleRows.map(v => (
               <tr key={v.id} className={v.type === 'administracion' ? 'bg-muted/30 border-t-2 border-border' : ''}>
                 {editingId === v.id ? (
                   <>
@@ -133,9 +147,11 @@ export default function CommissionsPage() {
                         className="w-full px-2 py-1 rounded border bg-background text-sm"
                       />
                     </td>
-                    <td className="text-xs text-muted-foreground">
-                      {v.type === 'administracion' ? '🏢 Admin' : '👤 Vendedor'}
-                    </td>
+                    {!isVendedor && (
+                      <td className="text-xs text-muted-foreground">
+                        {v.type === 'administracion' ? '🏢 Admin' : '👤 Vendedor'}
+                      </td>
+                    )}
                     <td className="font-semibold">{fmt(v.sales)}</td>
                     <td>
                       {v.type === 'vendedor' ? (
@@ -166,23 +182,27 @@ export default function CommissionsPage() {
                       </div>
                     </td>
                     <td className="font-bold text-success">{fmt(v.sales * (editRate / 100))}</td>
-                    <td className="text-center">
-                      <div className="flex justify-center gap-1">
-                        <button onClick={() => saveEdit(v.id)} className="p-1 rounded hover:bg-success/10 text-success" title="Guardar">
-                          <Check size={16} />
-                        </button>
-                        <button onClick={cancelEdit} className="p-1 rounded hover:bg-destructive/10 text-destructive" title="Cancelar">
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    {!isVendedor && (
+                      <td className="text-center">
+                        <div className="flex justify-center gap-1">
+                          <button onClick={() => saveEdit(v.id)} className="p-1 rounded hover:bg-success/10 text-success" title="Guardar">
+                            <Check size={16} />
+                          </button>
+                          <button onClick={cancelEdit} className="p-1 rounded hover:bg-destructive/10 text-destructive" title="Cancelar">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </>
                 ) : (
                   <>
                     <td className="font-medium">{v.name}</td>
-                    <td className="text-xs text-muted-foreground">
-                      {v.type === 'administracion' ? '🏢 Admin' : '👤 Vendedor'}
-                    </td>
+                    {!isVendedor && (
+                      <td className="text-xs text-muted-foreground">
+                        {v.type === 'administracion' ? '🏢 Admin' : '👤 Vendedor'}
+                      </td>
+                    )}
                     <td className="font-semibold">{fmt(v.sales)}</td>
                     <td className="text-muted-foreground">
                       {v.type === 'vendedor' ? fmt(v.goal) : '—'}
@@ -209,11 +229,13 @@ export default function CommissionsPage() {
                       </span>
                     </td>
                     <td className="font-bold text-success">{fmt(v.commission)}</td>
-                    <td className="text-center">
-                      <button onClick={() => startEdit(v)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Editar comisión">
-                        <Pencil size={15} />
-                      </button>
-                    </td>
+                    {!isVendedor && (
+                      <td className="text-center">
+                        <button onClick={() => startEdit(v)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Editar comisión">
+                          <Pencil size={15} />
+                        </button>
+                      </td>
+                    )}
                   </>
                 )}
               </tr>
