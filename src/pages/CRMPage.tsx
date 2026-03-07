@@ -110,10 +110,10 @@ export default function CRMPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Clientes" value={allCustomers.length} icon={Users} />
-        <MetricCard title="Oportunidades" value={demoOpportunities.length} icon={Target} />
-        <MetricCard title="Pipeline activo" value={fmt(demoOpportunities.reduce((s, o) => s + o.estimatedAmount, 0))} icon={TrendingUp} variant="primary" />
-        <MetricCard title="Cierre ganado" value={fmt(demoOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0))} icon={UserPlus} variant="success" />
+        <MetricCard title={isVendedor ? "Mis clientes" : "Clientes"} value={allCustomers.length} icon={Users} />
+        <MetricCard title={isVendedor ? "Mis oportunidades" : "Oportunidades"} value={allOpportunities.length} icon={Target} />
+        <MetricCard title="Pipeline activo" value={fmt(allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0))} icon={TrendingUp} variant="primary" />
+        <MetricCard title="Cierre ganado" value={fmt(allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0))} icon={UserPlus} variant="success" />
       </div>
 
       <div className="flex items-center gap-1 mb-4 border-b">
