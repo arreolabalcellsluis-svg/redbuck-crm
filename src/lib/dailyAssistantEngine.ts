@@ -249,7 +249,7 @@ export function generateDailyRecommendations(): DailyRecommendation[] {
 
   // 9. Pending/overdue activities
   try {
-    const activities = getDemoActivities();
+    const activities = demoActivities;
     const today = new Date().toISOString().slice(0, 10);
     activities
       .filter(a => (a.status === 'pendiente' || a.status === 'en_proceso') && a.date <= today)
