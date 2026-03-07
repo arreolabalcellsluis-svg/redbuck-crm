@@ -32,7 +32,7 @@ export default function QuotationsPage() {
   const [zipLoading, setZipLoading] = useState(false);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [selectedVendorId, setSelectedVendorId] = useState('');
+  const [selectedVendorId, setSelectedVendorId] = useState(currentRole === 'vendedor' ? DEMO_VENDEDOR_ID : '');
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [validDays, setValidDays] = useState(15);
   const [showNoProspectAlert, setShowNoProspectAlert] = useState(false);
@@ -140,7 +140,7 @@ export default function QuotationsPage() {
 
   const resetForm = () => {
     setSelectedCustomerId('');
-    setSelectedVendorId('');
+    setSelectedVendorId(isVendedor ? vendorId : '');
     setItems([]);
     setValidDays(15);
   };
@@ -542,13 +542,19 @@ export default function QuotationsPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor *</label>
-              <select value={selectedVendorId} onChange={e => setSelectedVendorId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
-                <option value="">Seleccionar vendedor...</option>
-                {vendors.map(v => {
-                  const current = vendorSeries[v.id] ?? v.seriesStart ?? 1000;
-                  return <option key={v.id} value={v.id}>{v.name} — Serie {v.seriesPrefix} (siguiente: {v.seriesPrefix}-{current + 1})</option>;
-                })}
-              </select>
+              {isVendedor ? (
+                <div className="w-full px-3 py-2 rounded-lg border bg-muted text-sm font-medium">
+                  {vendors.find(v => v.id === vendorId)?.name ?? 'Vendedor'}
+                </div>
+              ) : (
+                <select value={selectedVendorId} onChange={e => setSelectedVendorId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+                  <option value="">Seleccionar vendedor...</option>
+                  {vendors.map(v => {
+                    const current = vendorSeries[v.id] ?? v.seriesStart ?? 1000;
+                    return <option key={v.id} value={v.id}>{v.name} — Serie {v.seriesPrefix} (siguiente: {v.seriesPrefix}-{current + 1})</option>;
+                  })}
+                </select>
+              )}
             </div>
           </div>
 
