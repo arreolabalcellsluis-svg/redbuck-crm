@@ -19,6 +19,7 @@ const emptyForm = (): SparePartForm => ({
 
 export default function SparePartsPage() {
   const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [spareParts, setSpareParts] = useState<SparePart[]>(initialSpareParts);
