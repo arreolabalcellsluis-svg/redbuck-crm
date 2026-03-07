@@ -629,6 +629,59 @@ export default function ExecutiveDashboardPage() {
         ))}
       </div>
 
+      {/* ═══ ASISTENTE COMERCIAL — Métricas Director ═══ */}
+      {(() => {
+        const assistRecs = generateDailyRecommendations();
+        const assistSummary = getAssistantSummary(assistRecs);
+        const byVendor: Record<string, { total: number; worked: number }> = {};
+        assistRecs.forEach(r => {
+          if (!byVendor[r.vendorName]) byVendor[r.vendorName] = { total: 0, worked: 0 };
+          byVendor[r.vendorName].total++;
+          if (r.worked) byVendor[r.vendorName].worked++;
+        });
+        return (
+          <div className="bg-card rounded-xl border p-5">
+            <h3 className="font-display font-semibold flex items-center gap-2 mb-4">
+              <Zap size={18} className="text-primary" /> Asistente Comercial — Métricas
+            </h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <div className="text-2xl font-bold">{assistSummary.total}</div>
+                <div className="text-xs text-muted-foreground">Oportunidades generadas</div>
+              </div>
+              <div className="p-3 rounded-lg bg-success/5 text-center">
+                <div className="text-2xl font-bold text-success">{assistSummary.workedCount}</div>
+                <div className="text-xs text-muted-foreground">Trabajadas</div>
+              </div>
+              <div className="p-3 rounded-lg bg-primary/5 text-center">
+                <div className="text-2xl font-bold text-primary">{assistSummary.complianceRate}%</div>
+                <div className="text-xs text-muted-foreground">Tasa cumplimiento</div>
+              </div>
+              <div className="p-3 rounded-lg bg-warning/5 text-center">
+                <div className="text-2xl font-bold text-warning">{assistSummary.closedCount}</div>
+                <div className="text-xs text-muted-foreground">Ventas cerradas</div>
+              </div>
+            </div>
+            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Cumplimiento por vendedor</h4>
+            <div className="space-y-2">
+              {Object.entries(byVendor).map(([name, data]) => {
+                const pct = data.total > 0 ? Math.round((data.worked / data.total) * 100) : 0;
+                return (
+                  <div key={name} className="flex items-center gap-3">
+                    <span className="text-sm w-40 truncate">{name}</span>
+                    <div className="flex-1 bg-muted rounded-full h-2">
+                      <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs font-medium w-12 text-right">{pct}%</span>
+                    <span className="text-[10px] text-muted-foreground w-16 text-right">{data.worked}/{data.total}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ═══ SECCIONES COMERCIALES ═══ */}
       <CommercialSections />
     </div>
