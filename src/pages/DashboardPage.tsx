@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import MetricCard from '@/components/shared/MetricCard';
 import StatusBadge from '@/components/shared/StatusBadge';
+import TodayActivitiesWidget from '@/components/dashboard/TodayActivitiesWidget';
 import { dashboardMetrics, salesByVendor, salesByCategory, monthlySales, demoImports, demoOpportunities, demoAccountsReceivable } from '@/data/demo-data';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import {
