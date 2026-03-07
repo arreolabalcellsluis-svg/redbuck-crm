@@ -8,7 +8,7 @@ import {
 } from '@/data/demo-data';
 import { getCrossSellOpportunities, getUpgradeReadyClients } from '@/lib/commercialIntelligence';
 import { generateRestockOpportunities } from '@/lib/restockEngine';
-import { getDemoActivities, type CommercialActivity } from '@/lib/agendaEngine';
+import { demoActivities } from '@/lib/agendaEngine';
 
 // ─── Types ───────────────────────────────────────────────────────
 export type RecommendationReason =
