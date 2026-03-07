@@ -26,6 +26,7 @@ import PlanningPage from "./pages/PlanningPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import RestockOpportunitiesPage from "./pages/RestockOpportunitiesPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
