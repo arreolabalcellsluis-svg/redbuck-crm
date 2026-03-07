@@ -12,6 +12,7 @@ import { generateRestockOpportunities, getRestockAlerts } from '@/lib/restockEng
 import { generateDailyRecommendations, getAssistantSummary } from '@/lib/dailyAssistantEngine';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
+import { DaysOfInventoryDialog, DeadStockDialog, ExcessStockDialog } from '@/components/dashboard/InventoryDrillDownDialogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import {
   DollarSign, TrendingUp, Package, Warehouse, Activity, ShieldAlert,
