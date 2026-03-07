@@ -117,7 +117,7 @@ export default function VendorDetailReportPage() {
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
-        onClear={() => setFilters({ search: '', vendedor: '', dateFrom: undefined, dateTo: undefined })}
+        onClear={() => setFilters({ search: '', vendedor: isVendedor ? DEMO_VENDEDOR_NAME : '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
         hasActiveFilters={hasActiveFilters}
       />

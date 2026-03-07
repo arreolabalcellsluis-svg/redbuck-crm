@@ -23,7 +23,11 @@ export default function SkuSalesReportPage() {
 
   const skuData = useMemo(() => {
     const map: Record<string, { sku: string; producto: string; unidades: number; monto: number; costo: number; categoria: string }> = {};
-    demoOrders.forEach(o => {
+    // For vendedor, only count their own orders
+    const ordersToUse = isVendedor
+      ? demoOrders.filter(o => o.vendorName === DEMO_VENDEDOR_NAME)
+      : demoOrders;
+    ordersToUse.forEach(o => {
       o.items.forEach(item => {
         const product = demoProducts.find(p => p.name === item.productName || item.productName.includes(p.name.split(' ')[0]));
         const sku = product?.sku || 'N/A';
