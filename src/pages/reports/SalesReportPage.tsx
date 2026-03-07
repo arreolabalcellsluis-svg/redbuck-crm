@@ -85,7 +85,7 @@ export default function SalesReportPage() {
 
   const hasActiveFilters = !!(filters.search || filters.vendedor || filters.sku || filters.categoria || filters.dateFrom || filters.dateTo);
 
-  const vendorOptions = [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
+  const vendorOptions = isVendedor ? [] : [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
   const skuOptions = [...new Set(records.map(r => r.sku))].filter(s => s !== 'N/A').map(s => ({ value: s, label: s }));
   const catOptions = Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v }));
 
