@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import RestockOpportunitiesPage from "./pages/RestockOpportunitiesPage";
 import CommercialAgendaPage from "./pages/CommercialAgendaPage";
 import DailyAssistantPage from "./pages/DailyAssistantPage";
+import MarketMapPage from "./pages/MarketMapPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -83,6 +84,7 @@ function ProtectedRoutes() {
           <Route path="/crm/reabasto" element={<RestockOpportunitiesPage />} />
           <Route path="/crm/agenda" element={<CommercialAgendaPage />} />
           <Route path="/crm/asistente" element={<DailyAssistantPage />} />
+          <Route path="/crm/mapa-mercado" element={<MarketMapPage />} />
           <Route path="/productos" element={<ProductsPage />} />
           <Route path="/refacciones" element={<SparePartsPage />} />
           <Route path="/inventario" element={<InventoryPage />} />
