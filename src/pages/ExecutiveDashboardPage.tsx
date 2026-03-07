@@ -355,9 +355,9 @@ export default function ExecutiveDashboardPage() {
       {/* ═══ SECCIÓN 3: INVENTARIO ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <MetricCard title="Rotación inventario" value={`${inventoryRotation.toFixed(1)}x`} icon={Activity} variant="primary" subtitle="anual" href="/reportes/inventario" />
-        <MetricCard title="Días de inventario" value={daysOfInventory} icon={Clock} variant={daysOfInventory > 90 ? 'warning' : 'success'} subtitle={daysOfInventory <= 90 ? 'Saludable' : 'Excesivo'} href="/reportes/inventario" />
-        <MetricCard title="Inventario muerto" value={fmt(summary.deadStockValue)} icon={Skull} variant="danger" subtitle="> 180 días" href="/reportes/inventario-muerto" />
-        <MetricCard title="Productos excedentes" value={summary.excessProducts} icon={Layers} variant="warning" href="/reportes/inventario" />
+        <MetricCard title="Días de inventario" value={daysOfInventory} icon={Clock} variant={daysOfInventory > 90 ? 'warning' : 'success'} subtitle={daysOfInventory <= 90 ? 'Saludable' : 'Excesivo'} onClick={() => setDaysDialog(true)} />
+        <MetricCard title="Inventario muerto" value={fmt(summary.deadStockValue)} icon={Skull} variant="danger" subtitle="> 180 días" onClick={() => setDeadDialog(true)} />
+        <MetricCard title="Productos excedentes" value={summary.excessProducts} icon={Layers} variant="warning" onClick={() => setExcessDialog(true)} />
 
         {/* Simulador financiero KPI */}
         <div {...clickCard('/reportes/simulador-financiero')} style={{ borderLeft: '4px solid hsl(var(--info))' }}>
