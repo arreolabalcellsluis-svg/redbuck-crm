@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { demoCustomers as initialCustomers, demoOpportunities, demoUsers } from '@/data/demo-data';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
