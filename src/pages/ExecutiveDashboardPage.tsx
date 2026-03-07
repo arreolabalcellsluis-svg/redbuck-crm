@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import CommercialSections from '@/components/dashboard/CommercialSections';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   dashboardMetrics, salesByVendor, salesByCategory, monthlySales,
@@ -603,6 +604,9 @@ export default function ExecutiveDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* ═══ SECCIONES COMERCIALES ═══ */}
+      <CommercialSections />
     </div>
   );
 }
