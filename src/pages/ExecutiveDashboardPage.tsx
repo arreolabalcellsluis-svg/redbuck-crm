@@ -689,6 +689,10 @@ export default function ExecutiveDashboardPage() {
 
       {/* ═══ SECCIONES COMERCIALES ═══ */}
       <CommercialSections />
+      {/* ═══ DRILL-DOWN DIALOGS ═══ */}
+      <DaysOfInventoryDialog open={daysDialog} onOpenChange={setDaysDialog} analyses={analyses} />
+      <DeadStockDialog open={deadDialog} onOpenChange={setDeadDialog} analyses={analyses} />
+      <ExcessStockDialog open={excessDialog} onOpenChange={setExcessDialog} analyses={analyses} />
     </div>
   );
 }
