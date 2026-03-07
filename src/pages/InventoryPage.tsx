@@ -195,7 +195,7 @@ export default function InventoryPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <MetricCard title="Unidades totales" value={totalUnits} icon={Package} />
-        <MetricCard title="Valor inventario" value={fmt(totalValue)} icon={Warehouse} variant="primary" />
+        {!isVendedor && <MetricCard title="Valor inventario" value={fmt(totalValue)} icon={Warehouse} variant="primary" />}
         <MetricCard title="En tránsito" value={inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
         <MetricCard title="Stock bajo" value={lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
       </div>
