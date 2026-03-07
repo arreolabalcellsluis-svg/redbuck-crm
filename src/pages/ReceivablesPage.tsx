@@ -1,5 +1,6 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { demoCustomers } from '@/data/demo-data';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { CreditCard, AlertTriangle, CheckCircle, Clock, FileSpreadsheet, History, Download } from 'lucide-react';
