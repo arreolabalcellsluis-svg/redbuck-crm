@@ -82,6 +82,9 @@ export default function DashboardPage() {
         {/* Agenda widget */}
         <TodayActivitiesWidget />
 
+        {/* Daily Assistant widget */}
+        <DailyAssistantWidget />
+
         {/* Vendor ranking */}
         <div className="bg-card rounded-xl border p-5">
           <h3 className="font-display font-semibold mb-4">Ventas por vendedor</h3>
