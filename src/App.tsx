@@ -61,7 +61,7 @@ function RoleGuard({ children }: { children: React.ReactNode }) {
   const { currentRole } = useAppContext();
   const location = useLocation();
   
-  if (isPathBlockedForRole(path, currentRole)) {
+  if (isPathBlockedForRole(location.pathname, currentRole)) {
     return <Navigate to="/" replace />;
   }
   
