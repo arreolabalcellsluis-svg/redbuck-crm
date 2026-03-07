@@ -9,6 +9,7 @@ import {
 import { analyzeProducts, getPlanningSummary } from '@/lib/planningEngine';
 import { getFinancialAnalysis } from '@/lib/financialSimulator';
 import { generateRestockOpportunities, getRestockAlerts } from '@/lib/restockEngine';
+import { generateDailyRecommendations, getAssistantSummary } from '@/lib/dailyAssistantEngine';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import StatusBadge from '@/components/shared/StatusBadge';
