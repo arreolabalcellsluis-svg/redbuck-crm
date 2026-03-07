@@ -13,10 +13,20 @@ import { addAuditLog } from '@/lib/auditLog';
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function ReceivablesPage() {
-  const { receivables, orders, payments, getTotalPaid, getOrderPayments } = useAppContext();
+  const { currentRole, receivables, orders, payments, getTotalPaid, getOrderPayments } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
+  const vendorId = DEMO_VENDEDOR_ID;
 
-  const totalBalance = receivables.reduce((s, a) => s + a.balance, 0);
-  const overdue = receivables.filter(a => a.status === 'vencido');
+  // Filter receivables for vendedor - only show their clients
+  const myCustomerIds = isVendedor
+    ? new Set(demoCustomers.filter(c => c.vendorId === vendorId).map(c => c.id))
+    : null;
+  const visibleReceivables = myCustomerIds
+    ? receivables.filter(r => myCustomerIds.has(r.customerId))
+    : receivables;
+
+  const totalBalance = visibleReceivables.reduce((s, a) => s + a.balance, 0);
+  const overdue = visibleReceivables.filter(a => a.status === 'vencido');
   const overdueAmount = overdue.reduce((s, a) => s + a.balance, 0);
 
   // Customer account statement
