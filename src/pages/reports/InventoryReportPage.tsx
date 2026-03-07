@@ -92,7 +92,7 @@ export default function InventoryReportPage() {
         hasActiveFilters={hasActiveFilters}
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className={`grid ${isVendedor ? 'grid-cols-2' : 'grid-cols-3'} gap-4 mb-4`}>
         <div className="bg-card rounded-xl border p-4 text-center">
           <div className="text-xs text-muted-foreground">Productos</div>
           <div className="text-xl font-bold">{filtered.length}</div>
@@ -101,10 +101,12 @@ export default function InventoryReportPage() {
           <div className="text-xs text-muted-foreground">Unidades totales</div>
           <div className="text-xl font-bold">{totalUnits}</div>
         </div>
-        <div className="bg-card rounded-xl border p-4 text-center">
-          <div className="text-xs text-muted-foreground">Valor total</div>
-          <div className="text-xl font-bold text-primary">{fmt(totalValue)}</div>
-        </div>
+        {!isVendedor && (
+          <div className="bg-card rounded-xl border p-4 text-center">
+            <div className="text-xs text-muted-foreground">Valor total</div>
+            <div className="text-xl font-bold text-primary">{fmt(totalValue)}</div>
+          </div>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
