@@ -29,10 +29,15 @@ export default function CRMPage() {
 
   const canExport = true;
   const isVendedor = currentRole === 'vendedor';
+  const vendorId = DEMO_VENDEDOR_ID;
 
   const allCustomers = isVendedor
-    ? customers.filter(c => c.vendorId === 'u3')
+    ? customers.filter(c => c.vendorId === vendorId)
     : customers;
+
+  const allOpportunities = isVendedor
+    ? demoOpportunities.filter(o => o.vendorId === vendorId)
+    : demoOpportunities;
 
   const filteredCustomers = allCustomers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.city.toLowerCase().includes(search.toLowerCase())
