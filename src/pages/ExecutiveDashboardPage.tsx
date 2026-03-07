@@ -16,7 +16,7 @@ import {
   DollarSign, TrendingUp, Package, Warehouse, Activity, ShieldAlert,
   BarChart3, Target, Users, FileText, ShoppingCart, CreditCard, Globe,
   Zap, Star, ArrowRight, AlertTriangle, Clock, Skull, Crown, Percent,
-  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator,
+  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator, RefreshCw,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
