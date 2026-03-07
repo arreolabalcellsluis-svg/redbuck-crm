@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CommercialSections from '@/components/dashboard/CommercialSections';
 import { useAppContext } from '@/contexts/AppContext';
