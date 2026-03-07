@@ -30,6 +30,8 @@ import RestockOpportunitiesPage from "./pages/RestockOpportunitiesPage";
 import CommercialAgendaPage from "./pages/CommercialAgendaPage";
 import DailyAssistantPage from "./pages/DailyAssistantPage";
 import MarketMapPage from "./pages/MarketMapPage";
+import PurchaseHistoryPage from "./pages/PurchaseHistoryPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -92,6 +94,8 @@ function ProtectedRoutes() {
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/cobranza" element={<ReceivablesPage />} />
           <Route path="/compras" element={<PurchasesPage />} />
+          <Route path="/historial-compras" element={<PurchaseHistoryPage />} />
+          <Route path="/historial-pedidos" element={<OrderHistoryPage />} />
           <Route path="/importaciones" element={<ImportsPage />} />
           <Route path="/proveedores" element={<SuppliersPage />} />
           <Route path="/servicio" element={<ServicePage />} />

@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, Package, Wrench, Warehouse, FileText,
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
   BadgeDollarSign, BarChart3, Search, Bell, ChevronLeft, ChevronRight,
-  Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw, CalendarDays, Sparkles, MapPin
+  Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw, CalendarDays, Sparkles, MapPin,
+  ClipboardList,
 } from 'lucide-react';
 
 const navItems = [
@@ -22,8 +23,10 @@ const navItems = [
   { label: 'Inventario', icon: Warehouse, path: '/inventario' },
   { label: 'Cotizaciones', icon: FileText, path: '/cotizaciones' },
   { label: 'Pedidos', icon: ShoppingCart, path: '/pedidos' },
+  { label: 'Hist. Pedidos', icon: ClipboardList, path: '/historial-pedidos' },
   { label: 'Cobranza', icon: CreditCard, path: '/cobranza' },
   { label: 'Compras', icon: Truck, path: '/compras' },
+  { label: 'Hist. Compras', icon: ClipboardList, path: '/historial-compras' },
   { label: 'Importaciones', icon: Globe, path: '/importaciones' },
   { label: 'Proveedores', icon: Building2, path: '/proveedores' },
   { label: 'Servicio Técnico', icon: Cog, path: '/servicio' },
