@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { demoAccountsReceivable } from '@/data/demo-data';
+import { demoAccountsReceivable, demoCustomers } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportToPdf } from '@/lib/pdfExport';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -19,10 +21,20 @@ const AGING_LABELS: Record<string, string> = {
 };
 
 export default function ReceivablesReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', aging: '', dateFrom: undefined, dateTo: undefined });
 
+  // For vendedor, only show receivables of their own clients
+  const myCustomerIds = isVendedor
+    ? new Set(demoCustomers.filter(c => c.vendorId === DEMO_VENDEDOR_ID).map(c => c.id))
+    : null;
+
   const records = useMemo(() => {
-    return demoAccountsReceivable.map(ar => ({
+    const base = myCustomerIds
+      ? demoAccountsReceivable.filter(ar => myCustomerIds.has(ar.customerId))
+      : demoAccountsReceivable;
+    return base.map(ar => ({
       ...ar,
       agingBucket: ar.daysOverdue > 90 ? 'vencido_90' : ar.daysOverdue > 60 ? 'vencido_60' : ar.daysOverdue > 30 ? 'vencido_30' : ar.status,
     }));

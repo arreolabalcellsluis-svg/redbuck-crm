@@ -4,22 +4,29 @@ import { ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { demoOrders, demoProducts, salesByVendor } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function VendorDetailReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [searchParams] = useSearchParams();
   const vendorParam = searchParams.get('nombre') || '';
 
   const [filters, setFilters] = useState<Record<string, any>>({
     search: '',
-    vendedor: vendorParam,
+    vendedor: isVendedor ? DEMO_VENDEDOR_NAME : vendorParam,
     dateFrom: undefined,
     dateTo: undefined,
   });
 
-  const vendorOptions = salesByVendor.map(v => ({ value: v.name, label: v.name }));
+  // For vendedor, only show their own vendor option
+  const vendorOptions = isVendedor
+    ? [{ value: DEMO_VENDEDOR_NAME, label: DEMO_VENDEDOR_NAME }]
+    : salesByVendor.map(v => ({ value: v.name, label: v.name }));
 
   const records = useMemo(() => {
     return demoOrders.flatMap(o =>
@@ -110,7 +117,7 @@ export default function VendorDetailReportPage() {
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
-        onClear={() => setFilters({ search: '', vendedor: '', dateFrom: undefined, dateTo: undefined })}
+        onClear={() => setFilters({ search: '', vendedor: isVendedor ? DEMO_VENDEDOR_NAME : '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
         hasActiveFilters={hasActiveFilters}
       />

@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { demoOrders, demoProducts, salesByVendor, demoUsers } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -37,20 +39,27 @@ function generateSalesRecords() {
 }
 
 export default function SalesReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const [searchParams] = useSearchParams();
   const vendorFilter = searchParams.get('vendedor') || '';
   const skuFilter = searchParams.get('sku') || '';
 
   const [filters, setFilters] = useState<Record<string, any>>({
     search: '',
-    vendedor: vendorFilter,
+    vendedor: isVendedor ? DEMO_VENDEDOR_NAME : vendorFilter,
     sku: skuFilter,
     categoria: '',
     dateFrom: undefined,
     dateTo: undefined,
   });
 
-  const records = useMemo(() => generateSalesRecords(), []);
+  const records = useMemo(() => {
+    const allRecords = generateSalesRecords();
+    // For vendedor, pre-filter at source level
+    if (isVendedor) return allRecords.filter(r => r.vendedor === DEMO_VENDEDOR_NAME);
+    return allRecords;
+  }, [isVendedor]);
 
   const filtered = useMemo(() => {
     return records.filter(r => {
@@ -76,7 +85,7 @@ export default function SalesReportPage() {
 
   const hasActiveFilters = !!(filters.search || filters.vendedor || filters.sku || filters.categoria || filters.dateFrom || filters.dateTo);
 
-  const vendorOptions = [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
+  const vendorOptions = isVendedor ? [] : [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
   const skuOptions = [...new Set(records.map(r => r.sku))].filter(s => s !== 'N/A').map(s => ({ value: s, label: s }));
   const catOptions = Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v }));
 
@@ -111,7 +120,7 @@ export default function SalesReportPage() {
           searchPlaceholder: 'Buscar por cliente, producto, SKU, folio...',
           dateRange: true,
           selects: [
-            { key: 'vendedor', label: 'Vendedor', options: vendorOptions },
+            ...(isVendedor ? [] : [{ key: 'vendedor', label: 'Vendedor', options: vendorOptions }]),
             { key: 'sku', label: 'SKU', options: skuOptions },
             { key: 'categoria', label: 'Categoría', options: catOptions },
           ],
@@ -119,7 +128,7 @@ export default function SalesReportPage() {
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
-        onClear={() => setFilters({ search: '', vendedor: '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
+        onClear={() => setFilters({ search: '', vendedor: isVendedor ? DEMO_VENDEDOR_NAME : '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
         hasActiveFilters={hasActiveFilters}
       />

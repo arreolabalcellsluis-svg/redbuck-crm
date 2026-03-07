@@ -4,6 +4,8 @@ import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { demoOrders, demoProducts } from '@/data/demo-data';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -12,6 +14,8 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 type ViewMode = 'monto' | 'unidades' | 'rentabilidad';
 
 export default function SkuSalesReportPage() {
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
   const navigate = useNavigate();
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', categoria: '', dateFrom: undefined, dateTo: undefined });
   const [viewMode, setViewMode] = useState<ViewMode>('monto');
@@ -19,7 +23,11 @@ export default function SkuSalesReportPage() {
 
   const skuData = useMemo(() => {
     const map: Record<string, { sku: string; producto: string; unidades: number; monto: number; costo: number; categoria: string }> = {};
-    demoOrders.forEach(o => {
+    // For vendedor, only count their own orders
+    const ordersToUse = isVendedor
+      ? demoOrders.filter(o => o.vendorName === DEMO_VENDEDOR_NAME)
+      : demoOrders;
+    ordersToUse.forEach(o => {
       o.items.forEach(item => {
         const product = demoProducts.find(p => p.name === item.productName || item.productName.includes(p.name.split(' ')[0]));
         const sku = product?.sku || 'N/A';
