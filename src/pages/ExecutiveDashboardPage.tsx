@@ -604,6 +604,9 @@ export default function ExecutiveDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* ═══ SECCIONES COMERCIALES ═══ */}
+      <CommercialSections />
     </div>
   );
 }
