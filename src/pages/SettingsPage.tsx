@@ -52,6 +52,8 @@ export default function SettingsPage() {
   const [salesConditions, setSalesConditions] = useState(demoSalesConditions.text);
   const [whatsappMsg, setWhatsappMsg] = useState(demoWhatsAppTemplate.message);
   const [ivaRate, setIvaRate] = useState(16);
+  const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
+  const [seriesForm, setSeriesForm] = useState({ prefix: '', start: 1000, current: 1000 });
 
   // ─── Dialogs ───────────────────────────────────────────
   const [editingUser, setEditingUser] = useState<User | null>(null);
