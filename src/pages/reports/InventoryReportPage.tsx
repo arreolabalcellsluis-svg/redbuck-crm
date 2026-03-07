@@ -54,13 +54,19 @@ export default function InventoryReportPage() {
   const hasActiveFilters = !!(filters.search || filters.bodega || filters.categoria);
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      SKU: r.sku, Producto: r.producto, Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
-      Modelo: r.modelo,
-      ...Object.fromEntries(demoWarehouses.map(w => [w.name, (r as any)[`stock_${w.id}`]])),
-      'Stock Total': r.stockTotal, 'En Tránsito': r.enTransito,
-      Costo: r.costo, 'Valor Total': r.valorTotal,
-    }));
+    const data = filtered.map(r => {
+      const base: Record<string, any> = {
+        SKU: r.sku, Producto: r.producto, Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
+        Modelo: r.modelo,
+        ...Object.fromEntries(demoWarehouses.map(w => [w.name, (r as any)[`stock_${w.id}`]])),
+        'Stock Total': r.stockTotal, 'En Tránsito': r.enTransito,
+      };
+      if (!isVendedor) {
+        base['Costo'] = r.costo;
+        base['Valor Total'] = r.valorTotal;
+      }
+      return base;
+    });
     exportToExcel(data, `Inventario_${new Date().toISOString().split('T')[0]}`);
   };
 
