@@ -51,6 +51,9 @@ export default function PlanningPage() {
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [sortField, setSortField] = useState<string>('');
   const [sortAsc, setSortAsc] = useState(true);
+  const [purchaseSearch, setPurchaseSearch] = useState('');
+  const [purchaseCat, setPurchaseCat] = useState('');
+  const [purchasePriority, setPurchasePriority] = useState('');
 
   // Simulation state
   const [simProductId, setSimProductId] = useState(demoProducts[0]?.id ?? '');
@@ -374,55 +377,120 @@ export default function PlanningPage() {
       {/* ═══════════════════════ COMPRAS ═══════════════════════ */}
       {tab === 'compras' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <MetricCard title="Productos a comprar" value={analyses.filter(a => a.suggestedPurchase > 0).length} icon={ShoppingCart} variant="primary" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MetricCard title="Productos a comprar" value={analyses.filter(a => a.suggestedPurchase > 0 && !a.shouldNotBuy).length} icon={ShoppingCart} variant="primary" />
             <MetricCard title="Inversión requerida" value={fmt(summary.suggestedPurchaseValue)} icon={DollarSign} variant="warning" />
             <MetricCard title="Valor inventario actual" value={fmt(summary.totalStockValue)} icon={Warehouse} />
+            <MetricCard title="Prioridad alta" value={analyses.filter(a => a.suggestedPurchase > 0 && !a.shouldNotBuy && (a.riskLevel === 'critico' || a.riskLevel === 'alerta')).length} icon={AlertTriangle} variant="danger" subtitle="SKUs requieren atención" />
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center gap-3 flex-wrap bg-card rounded-xl border p-3">
+            <Filter size={14} className="text-muted-foreground" />
+            <input
+              placeholder="Buscar producto..."
+              value={purchaseSearch}
+              onChange={e => setPurchaseSearch(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border bg-background text-xs w-48"
+            />
+            <select value={purchaseCat} onChange={e => setPurchaseCat(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-xs">
+              <option value="">Todas las categorías</option>
+              {Object.entries(
+                { elevadores: 'Elevadores', balanceadoras: 'Balanceadoras', desmontadoras: 'Desmontadoras', alineadoras: 'Alineadoras', hidraulico: 'Hidráulico', lubricacion: 'Lubricación', aire: 'Aire', otros: 'Otros' }
+              ).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <select value={purchasePriority} onChange={e => setPurchasePriority(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-xs">
+              <option value="">Todas las prioridades</option>
+              <option value="critico">🔴 Crítico</option>
+              <option value="alerta">🟠 Alerta</option>
+              <option value="ok">🟡 OK</option>
+            </select>
           </div>
 
           <div className="bg-card rounded-xl border overflow-x-auto">
             <div className="p-5 border-b">
               <h3 className="font-display font-semibold flex items-center gap-2">
                 <ShoppingCart size={18} className="text-primary" />
-                Planeador automático de compras
+                Recomendaciones de compra — Plan anual
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">Sugerencias basadas en demanda proyectada vs. stock disponible</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Capa de recomendación basada en datos existentes del ERP: stock, tránsito, demanda y cobertura. No modifica métricas existentes.
+              </p>
             </div>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Producto</th>
-                  <th>Stock actual</th>
-                  <th>En tránsito</th>
-                  <th>Demanda 3M</th>
-                  <th>Stock ideal</th>
+                  <th>Categoría</th>
+                  <th>Existencia actual</th>
+                  <th>Inv. en tránsito</th>
+                  <th>Ventas prom./mes</th>
+                  <th>Días de inv.</th>
+                  <th>Inv. objetivo</th>
                   <th>Compra sugerida <SortIcon field="suggestedPurchase" /></th>
-                  <th>Inversión</th>
                   <th>Prioridad</th>
+                  <th>Motivo</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedAnalyses
-                  .filter(a => a.suggestedPurchase > 0)
-                  .map(a => (
+                {(() => {
+                  const priorityOrder: Record<string, number> = { critico: 0, alerta: 1, ok: 2, excedente: 3 };
+                  let rows = analyses
+                    .filter(a => a.suggestedPurchase > 0 && !a.shouldNotBuy)
+                    .map(a => {
+                      // Generate reason based on existing metrics
+                      const reasons: string[] = [];
+                      if (a.riskLevel === 'critico') reasons.push('Stock crítico');
+                      else if (a.riskLevel === 'alerta') reasons.push('Stock en alerta');
+                      if (a.daysOfStock < a.leadTime.total) reasons.push(`Cobertura < lead time (${a.leadTime.total}d)`);
+                      if (a.demandTrend === 'crecimiento') reasons.push('Demanda en crecimiento');
+                      if (a.usefulStock <= a.reorderPoint) reasons.push('Bajo punto de reorden');
+                      if (a.quotationDemand > 0) reasons.push(`${a.quotationDemand} uds en cotizaciones`);
+                      if (a.daysOfStock <= 30) reasons.push('< 30 días de inventario');
+                      if (reasons.length === 0) reasons.push('Reposición preventiva');
+                      return { a, reasons, priority: priorityOrder[a.riskLevel] ?? 3 };
+                    });
+
+                  // Apply filters
+                  if (purchaseSearch) {
+                    const s = purchaseSearch.toLowerCase();
+                    rows = rows.filter(r => r.a.product.name.toLowerCase().includes(s) || r.a.product.sku.toLowerCase().includes(s));
+                  }
+                  if (purchaseCat) rows = rows.filter(r => r.a.product.category === purchaseCat);
+                  if (purchasePriority) rows = rows.filter(r => r.a.riskLevel === purchasePriority);
+
+                  // Sort: priority first, then suggested purchase desc
+                  rows.sort((a, b) => a.priority !== b.priority ? a.priority - b.priority : b.a.suggestedPurchase - a.a.suggestedPurchase);
+
+                  if (rows.length === 0) return (
+                    <tr><td colSpan={10} className="text-center text-muted-foreground py-8">No hay recomendaciones de compra con los filtros actuales</td></tr>
+                  );
+
+                  return rows.map(({ a, reasons }) => (
                     <tr key={a.product.id}>
-                      <td className="font-medium">{a.product.name}</td>
-                      <td>{a.totalStock}</td>
-                      <td>{a.inTransit}</td>
-                      <td>{a.demand3m}</td>
-                      <td className="text-muted-foreground">{a.idealStock}</td>
-                      <td className="font-bold text-primary">{a.suggestedPurchase} uds</td>
-                      <td className="font-semibold">{fmt(a.suggestedPurchase * a.product.cost)}</td>
+                      <td className="font-medium text-sm">{a.product.name}</td>
+                      <td className="text-xs text-muted-foreground">{
+                        ({ elevadores: 'Elevadores', balanceadoras: 'Balanceadoras', desmontadoras: 'Desmontadoras', alineadoras: 'Alineadoras', hidraulico: 'Hidráulico', lubricacion: 'Lubricación', aire: 'Aire', otros: 'Otros' } as Record<string, string>)[a.product.category] || a.product.category
+                      }</td>
+                      <td className="text-center font-semibold">{a.totalStock}</td>
+                      <td className="text-center text-primary">{a.effectiveTransit > 0 ? a.effectiveTransit : a.inTransit || 0}</td>
+                      <td className="text-center">{a.predictiveMonthlyDemand.toFixed(1)}</td>
+                      <td className="text-center">
+                        <span className={a.daysOfStock <= 30 ? 'text-destructive font-bold' : a.daysOfStock <= 60 ? 'text-warning font-semibold' : ''}>
+                          {a.daysOfStock > 900 ? '∞' : `${a.daysOfStock}d`}
+                        </span>
+                      </td>
+                      <td className="text-center text-muted-foreground">{a.idealStock}</td>
+                      <td className="text-center font-bold text-primary">{a.suggestedPurchase} uds</td>
                       <td>
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${RISK_CONFIG[a.riskLevel].className}`}>
                           {RISK_CONFIG[a.riskLevel].label}
                         </span>
                       </td>
+                      <td className="text-[11px] text-muted-foreground max-w-[200px]">{reasons.join('; ')}</td>
                     </tr>
-                  ))}
-                {analyses.filter(a => a.suggestedPurchase > 0).length === 0 && (
-                  <tr><td colSpan={8} className="text-center text-muted-foreground py-8">No hay compras sugeridas en este momento</td></tr>
-                )}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
