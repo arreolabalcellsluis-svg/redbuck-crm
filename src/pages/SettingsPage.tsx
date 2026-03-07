@@ -52,6 +52,8 @@ export default function SettingsPage() {
   const [salesConditions, setSalesConditions] = useState(demoSalesConditions.text);
   const [whatsappMsg, setWhatsappMsg] = useState(demoWhatsAppTemplate.message);
   const [ivaRate, setIvaRate] = useState(16);
+  const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
+  const [seriesForm, setSeriesForm] = useState({ prefix: '', start: 1000, current: 1000 });
 
   // ─── Dialogs ───────────────────────────────────────────
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -285,16 +287,61 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             {users.filter(u => u.role === 'vendedor' && u.active).map(u => {
-              const current = vendorSeries[u.id] ?? u.seriesStart ?? 1000;
+              const current = vendorSeries[u.id] ?? u.seriesCurrent ?? u.seriesStart ?? 1000;
+              const isEditing = editingSeriesId === u.id;
               return (
                 <div key={u.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                  <div>
-                    <div className="text-sm font-medium">{u.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Prefijo: <span className="font-mono font-semibold">{u.seriesPrefix}</span> · Inicio: {u.seriesStart} · Actual: {current}
+                  {isEditing ? (
+                    <div className="flex items-center gap-3 flex-1 flex-wrap">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">Prefijo</label>
+                        <input value={seriesForm.prefix} onChange={e => setSeriesForm(f => ({ ...f, prefix: e.target.value.toUpperCase() }))}
+                          className="w-20 px-2 py-1 rounded border bg-background text-sm font-mono" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">Inicio</label>
+                        <input type="number" value={seriesForm.start} onChange={e => setSeriesForm(f => ({ ...f, start: +e.target.value }))}
+                          className="w-24 px-2 py-1 rounded border bg-background text-sm font-mono" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">Actual</label>
+                        <input type="number" value={seriesForm.current} onChange={e => setSeriesForm(f => ({ ...f, current: +e.target.value }))}
+                          className="w-24 px-2 py-1 rounded border bg-background text-sm font-mono" />
+                      </div>
+                      <div className="flex items-end gap-1 ml-auto">
+                        <button onClick={() => {
+                          setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, seriesPrefix: seriesForm.prefix, seriesStart: seriesForm.start, seriesCurrent: seriesForm.current } : usr));
+                          setEditingSeriesId(null);
+                          toast.success(`Serie de ${u.name} actualizada`);
+                        }} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="Guardar">
+                          <Check size={14} />
+                        </button>
+                        <button onClick={() => setEditingSeriesId(null)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground" title="Cancelar">
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="font-mono text-sm font-semibold text-primary">{u.seriesPrefix}-{current + 1}</div>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="text-sm font-medium">{u.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Prefijo: <span className="font-mono font-semibold">{u.seriesPrefix}</span> · Inicio: {u.seriesStart} · Actual: {current}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono text-sm font-semibold text-primary">{u.seriesPrefix}-{current + 1}</div>
+                        {isDirector && (
+                          <button onClick={() => {
+                            setEditingSeriesId(u.id);
+                            setSeriesForm({ prefix: u.seriesPrefix || '', start: u.seriesStart || 1000, current: current });
+                          }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Editar serie">
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
