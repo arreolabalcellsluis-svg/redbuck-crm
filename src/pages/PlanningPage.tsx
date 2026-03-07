@@ -751,15 +751,15 @@ export default function PlanningPage() {
               </label>
               <input
                 type="range"
-                min={1.5}
-                max={5}
+                min={0}
+                max={3.5}
                 step={0.5}
                 value={growthFactor}
                 onChange={e => setGrowthFactor(+e.target.value)}
                 className="w-full max-w-md"
               />
               <div className="flex justify-between text-xs text-muted-foreground max-w-md">
-                <span>1.5x</span><span>2x</span><span>3x</span><span>4x</span><span>5x</span>
+                <span>0x</span><span>1x</span><span>2x</span><span>3x</span><span>3.5x</span>
               </div>
             </div>
 
