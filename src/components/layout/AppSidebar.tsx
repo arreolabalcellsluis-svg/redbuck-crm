@@ -6,13 +6,14 @@ import {
   LayoutDashboard, Users, Package, Wrench, Warehouse, FileText,
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
   BadgeDollarSign, BarChart3, Search, Bell, ChevronLeft, ChevronRight,
-  Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut
+  Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw
 } from 'lucide-react';
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Dashboard Ejecutivo', icon: Crown, path: '/ejecutivo' },
   { label: 'CRM', icon: Users, path: '/crm' },
+  { label: 'Reabasto', icon: RefreshCw, path: '/crm/reabasto' },
   { label: 'Productos', icon: Package, path: '/productos' },
   { label: 'Refacciones', icon: Wrench, path: '/refacciones' },
   { label: 'Inventario', icon: Warehouse, path: '/inventario' },

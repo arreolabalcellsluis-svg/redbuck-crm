@@ -8,6 +8,7 @@ import {
 } from '@/data/demo-data';
 import { analyzeProducts, getPlanningSummary } from '@/lib/planningEngine';
 import { getFinancialAnalysis } from '@/lib/financialSimulator';
+import { generateRestockOpportunities, getRestockAlerts } from '@/lib/restockEngine';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -15,7 +16,7 @@ import {
   DollarSign, TrendingUp, Package, Warehouse, Activity, ShieldAlert,
   BarChart3, Target, Users, FileText, ShoppingCart, CreditCard, Globe,
   Zap, Star, ArrowRight, AlertTriangle, Clock, Skull, Crown, Percent,
-  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator,
+  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator, RefreshCw,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -165,6 +166,28 @@ export default function ExecutiveDashboardPage() {
         </h1>
         <p className="page-subtitle">Visión 360° del negocio — Marzo 2026</p>
       </div>
+
+      {/* Restock alert banner */}
+      {(() => {
+        const restockAlerts = getRestockAlerts(generateRestockOpportunities());
+        if (restockAlerts.length === 0) return null;
+        return (
+          <Link to="/crm/reabasto" className="block p-4 rounded-xl border border-success/30 bg-success/5 hover:bg-success/10 transition-colors group">
+            <div className="flex items-center gap-3">
+              <RefreshCw size={20} className="text-success shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-success">
+                  Tienes {restockAlerts.length} oportunidad{restockAlerts.length !== 1 ? 'es' : ''} por reabasto disponibles para reactivar
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {restockAlerts.map(a => a.productName).slice(0, 3).join(', ')}{restockAlerts.length > 3 ? ` y ${restockAlerts.length - 3} más` : ''}
+                </p>
+              </div>
+              <ArrowRight size={16} className="text-success opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+            </div>
+          </Link>
+        );
+      })()}
 
       {/* ═══ SECCIÓN 1: TOP KPIs ═══ */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
