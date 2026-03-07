@@ -15,6 +15,7 @@ const navItems = [
   { label: 'CRM', icon: Users, path: '/crm' },
   { label: 'Reabasto', icon: RefreshCw, path: '/crm/reabasto' },
   { label: 'Agenda', icon: CalendarDays, path: '/crm/agenda' },
+  { label: 'Asistente', icon: Sparkles, path: '/crm/asistente' },
   { label: 'Productos', icon: Package, path: '/productos' },
   { label: 'Refacciones', icon: Wrench, path: '/refacciones' },
   { label: 'Inventario', icon: Warehouse, path: '/inventario' },
