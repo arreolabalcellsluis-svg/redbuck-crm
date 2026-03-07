@@ -16,6 +16,7 @@ const navItems = [
   { label: 'Reabasto', icon: RefreshCw, path: '/crm/reabasto' },
   { label: 'Agenda', icon: CalendarDays, path: '/crm/agenda' },
   { label: 'Asistente', icon: Sparkles, path: '/crm/asistente' },
+  { label: 'Mapa Mercado', icon: MapPin, path: '/crm/mapa-mercado' },
   { label: 'Productos', icon: Package, path: '/productos' },
   { label: 'Refacciones', icon: Wrench, path: '/refacciones' },
   { label: 'Inventario', icon: Warehouse, path: '/inventario' },
