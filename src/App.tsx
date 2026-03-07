@@ -78,6 +78,7 @@ function ProtectedRoutes() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/ejecutivo" element={<ExecutiveDashboardPage />} />
           <Route path="/crm" element={<CRMPage />} />
+          <Route path="/crm/reabasto" element={<RestockOpportunitiesPage />} />
           <Route path="/productos" element={<ProductsPage />} />
           <Route path="/refacciones" element={<SparePartsPage />} />
           <Route path="/inventario" element={<InventoryPage />} />
