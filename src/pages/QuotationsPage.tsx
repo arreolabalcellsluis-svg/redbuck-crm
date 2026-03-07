@@ -1,5 +1,6 @@
 import { demoCustomers, demoProducts, demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { getProductImage } from '@/lib/productImages';
 import { numberToWords } from '@/lib/numberToWords';
 import { exportQuotationsZip } from '@/lib/exportUtils';
