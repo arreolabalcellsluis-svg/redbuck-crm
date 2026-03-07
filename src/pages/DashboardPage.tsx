@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import MetricCard from '@/components/shared/MetricCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import TodayActivitiesWidget from '@/components/dashboard/TodayActivitiesWidget';
+import DailyAssistantWidget from '@/components/dashboard/DailyAssistantWidget';
 import { dashboardMetrics, salesByVendor, salesByCategory, monthlySales, demoImports, demoOpportunities, demoAccountsReceivable } from '@/data/demo-data';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import {
@@ -80,6 +81,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Agenda widget */}
         <TodayActivitiesWidget />
+
+        {/* Daily Assistant widget */}
+        <DailyAssistantWidget />
 
         {/* Vendor ranking */}
         <div className="bg-card rounded-xl border p-5">
