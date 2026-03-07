@@ -162,7 +162,7 @@ export default function CRMPage() {
       {tab === 'pipeline' && (
         <div className="flex gap-3 overflow-x-auto pb-4">
           {pipelineStages.map(stage => {
-            const opps = demoOpportunities.filter(o => o.stage === stage);
+            const opps = allOpportunities.filter(o => o.stage === stage);
             const total = opps.reduce((s, o) => s + o.estimatedAmount, 0);
             return (
               <div key={stage} className="min-w-[260px] flex-shrink-0">

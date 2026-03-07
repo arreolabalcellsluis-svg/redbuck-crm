@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '@/contexts/AppContext';
 import MetricCard from '@/components/shared/MetricCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import TodayActivitiesWidget from '@/components/dashboard/TodayActivitiesWidget';
 import DailyAssistantWidget from '@/components/dashboard/DailyAssistantWidget';
-import { dashboardMetrics, salesByVendor, salesByCategory, monthlySales, demoImports, demoOpportunities, demoAccountsReceivable } from '@/data/demo-data';
+import { dashboardMetrics, salesByVendor, salesByCategory, monthlySales, demoImports, demoOpportunities, demoAccountsReceivable, demoQuotations, demoCustomers } from '@/data/demo-data';
 import { IMPORT_STATUS_LABELS } from '@/types';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import {
   DollarSign, TrendingUp, Users, FileText, Target, ShoppingCart,
   CreditCard, Warehouse, Globe, Wrench, BarChart3, Package
@@ -17,26 +19,47 @@ const COLORS = ['hsl(0,78%,45%)', 'hsl(210,100%,52%)', 'hsl(142,71%,45%)', 'hsl(
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { currentRole, quotations, receivables } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
+  const vendorId = DEMO_VENDEDOR_ID;
+
+  // Filter data for vendedor
+  const myCustomers = isVendedor ? demoCustomers.filter(c => c.vendorId === vendorId) : demoCustomers;
+  const myOpportunities = isVendedor ? demoOpportunities.filter(o => o.vendorId === vendorId) : demoOpportunities;
+  const myQuotations = isVendedor ? quotations.filter(q => q.vendorId === vendorId) : quotations;
+  const myCustomerIds = new Set(myCustomers.map(c => c.id));
+  const myReceivables = isVendedor ? receivables.filter(r => myCustomerIds.has(r.customerId)) : receivables;
+
+  // Personal metrics for vendedor
+  const vendorSalesMonth = isVendedor ? 420000 : dashboardMetrics.salesMonth; // demo personal sales
+  const vendorSalesQuarter = isVendedor ? 1150000 : dashboardMetrics.salesQuarter;
+  const activeOpportunities = myOpportunities.filter(o => !['cierre_ganado', 'cierre_perdido'].includes(o.stage)).length;
+  const quotationsSent = myQuotations.filter(q => q.status === 'enviada' || q.status === 'seguimiento').length;
+  const overdueReceivables = myReceivables.filter(r => r.status === 'vencido').reduce((s, r) => s + r.balance, 0);
 
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">Vista general de REDBUCK EQUIPMENT — Marzo 2026</p>
+        <p className="page-subtitle">
+          {isVendedor
+            ? 'Mi panel comercial — Marzo 2026'
+            : 'Vista general de REDBUCK EQUIPMENT — Marzo 2026'}
+        </p>
       </div>
 
       {/* Metrics grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <MetricCard title="Ventas del mes" value={fmt(dashboardMetrics.salesMonth)} icon={DollarSign} variant="primary" trend={{ value: 12, positive: true }} href="/reportes/ventas" />
-        <MetricCard title="Ventas trimestre" value={fmt(dashboardMetrics.salesQuarter)} icon={TrendingUp} href="/reportes/ventas" />
-        <MetricCard title="Oportunidades" value={dashboardMetrics.activeOpportunities} icon={Users} subtitle="activas" href="/crm" />
-        <MetricCard title="Cotizaciones" value={dashboardMetrics.quotationsSent} icon={FileText} subtitle="enviadas" href="/cotizaciones" />
-        <MetricCard title="Tasa de cierre" value={`${dashboardMetrics.closeRate}%`} icon={Target} variant="success" href="/reportes/ventas" />
-        <MetricCard title="Ticket promedio" value={fmt(dashboardMetrics.avgTicket)} icon={ShoppingCart} href="/reportes/ventas" />
-        <MetricCard title="Margen bruto" value={`${dashboardMetrics.grossMargin}%`} icon={BarChart3} variant="success" href="/reportes/rentabilidad" />
-        <MetricCard title="Cartera vencida" value={fmt(dashboardMetrics.overdueReceivables)} icon={CreditCard} variant="danger" href="/cobranza" />
-        <MetricCard title="Inventario total" value={fmt(dashboardMetrics.totalInventoryValue)} icon={Warehouse} href="/reportes/inventario" />
-        <MetricCard title="Importaciones" value={dashboardMetrics.activeImports} icon={Globe} subtitle={`${dashboardMetrics.productsInTransit} en tránsito`} variant="warning" href="/importaciones" />
+      <div className={`grid grid-cols-2 ${isVendedor ? 'md:grid-cols-3 lg:grid-cols-4' : 'md:grid-cols-3 lg:grid-cols-5'} gap-4 mb-6`}>
+        <MetricCard title={isVendedor ? "Mis ventas del mes" : "Ventas del mes"} value={fmt(vendorSalesMonth)} icon={DollarSign} variant="primary" trend={{ value: 12, positive: true }} href="/reportes/ventas" />
+        <MetricCard title={isVendedor ? "Mis ventas trimestre" : "Ventas trimestre"} value={fmt(vendorSalesQuarter)} icon={TrendingUp} href="/reportes/ventas" />
+        <MetricCard title={isVendedor ? "Mis oportunidades" : "Oportunidades"} value={activeOpportunities} icon={Users} subtitle="activas" href="/crm" />
+        <MetricCard title={isVendedor ? "Mis cotizaciones" : "Cotizaciones"} value={quotationsSent} icon={FileText} subtitle="enviadas" href="/cotizaciones" />
+        {!isVendedor && <MetricCard title="Tasa de cierre" value={`${dashboardMetrics.closeRate}%`} icon={Target} variant="success" href="/reportes/ventas" />}
+        {!isVendedor && <MetricCard title="Ticket promedio" value={fmt(dashboardMetrics.avgTicket)} icon={ShoppingCart} href="/reportes/ventas" />}
+        {!isVendedor && <MetricCard title="Margen bruto" value={`${dashboardMetrics.grossMargin}%`} icon={BarChart3} variant="success" href="/reportes/rentabilidad" />}
+        <MetricCard title={isVendedor ? "Mi cartera vencida" : "Cartera vencida"} value={fmt(overdueReceivables)} icon={CreditCard} variant="danger" href="/cobranza" />
+        {!isVendedor && <MetricCard title="Inventario total" value={fmt(dashboardMetrics.totalInventoryValue)} icon={Warehouse} href="/reportes/inventario" />}
+        {!isVendedor && <MetricCard title="Importaciones" value={dashboardMetrics.activeImports} icon={Globe} subtitle={`${dashboardMetrics.productsInTransit} en tránsito`} variant="warning" href="/importaciones" />}
       </div>
 
       {/* Charts */}
@@ -44,7 +67,7 @@ export default function DashboardPage() {
         <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group"
           onClick={() => navigate('/reportes/ventas')}>
           <h3 className="font-display font-semibold mb-4 group-hover:text-primary transition-colors">
-            Ventas mensuales
+            {isVendedor ? 'Mis ventas mensuales' : 'Ventas mensuales'}
             <span className="text-[10px] text-muted-foreground ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</span>
           </h3>
           <ResponsiveContainer width="100%" height={260}>
@@ -77,59 +100,65 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Vendor ranking + imports + receivables */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Bottom widgets */}
+      <div className={`grid grid-cols-1 ${isVendedor ? 'lg:grid-cols-2' : 'lg:grid-cols-4'} gap-6`}>
         {/* Agenda widget */}
         <TodayActivitiesWidget />
 
         {/* Daily Assistant widget */}
         <DailyAssistantWidget />
 
-        {/* Vendor ranking */}
-        <div className="bg-card rounded-xl border p-5">
-          <h3 className="font-display font-semibold mb-4">Ventas por vendedor</h3>
-          <div className="space-y-3">
-            {salesByVendor.map((v, i) => (
-              <div key={v.name} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 -mx-1.5 transition-colors group"
-                onClick={() => navigate(`/reportes/vendedor?nombre=${encodeURIComponent(v.name)}`)}>
-                <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium group-hover:text-primary transition-colors">{v.name}</div>
-                  <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-                    <div className="h-1.5 rounded-full bg-primary" style={{ width: `${(v.sales / salesByVendor[0].sales) * 100}%` }} />
+        {/* Vendor ranking - hide for vendedor */}
+        {!isVendedor && (
+          <div className="bg-card rounded-xl border p-5">
+            <h3 className="font-display font-semibold mb-4">Ventas por vendedor</h3>
+            <div className="space-y-3">
+              {salesByVendor.map((v, i) => (
+                <div key={v.name} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 -mx-1.5 transition-colors group"
+                  onClick={() => navigate(`/reportes/vendedor?nombre=${encodeURIComponent(v.name)}`)}>
+                  <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium group-hover:text-primary transition-colors">{v.name}</div>
+                    <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                      <div className="h-1.5 rounded-full bg-primary" style={{ width: `${(v.sales / salesByVendor[0].sales) * 100}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold">{fmt(v.sales)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Active imports - hide for vendedor */}
+        {!isVendedor && (
+          <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate('/importaciones')}>
+            <h3 className="font-display font-semibold mb-4">Importaciones activas</h3>
+            <div className="space-y-3">
+              {demoImports.map((imp) => (
+                <div key={imp.id} className="p-3 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold">{imp.orderNumber}</span>
+                    <StatusBadge status={imp.status} type="import" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{imp.supplier}</p>
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    <span className="text-muted-foreground">ETA: {imp.estimatedArrival}</span>
+                    <span className="font-medium">{imp.daysInTransit}d tránsito</span>
                   </div>
                 </div>
-                <span className="text-sm font-semibold">{fmt(v.sales)}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Active imports */}
-        <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate('/importaciones')}>
-          <h3 className="font-display font-semibold mb-4">Importaciones activas</h3>
-          <div className="space-y-3">
-            {demoImports.map((imp) => (
-              <div key={imp.id} className="p-3 rounded-lg bg-muted/50 border">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold">{imp.orderNumber}</span>
-                  <StatusBadge status={imp.status} type="import" />
-                </div>
-                <p className="text-xs text-muted-foreground">{imp.supplier}</p>
-                <div className="flex items-center justify-between mt-2 text-xs">
-                  <span className="text-muted-foreground">ETA: {imp.estimatedArrival}</span>
-                  <span className="font-medium">{imp.daysInTransit}d tránsito</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Receivables */}
+        {/* Receivables - filtered for vendedor */}
         <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate('/cobranza')}>
-          <h3 className="font-display font-semibold mb-4">Cobranza pendiente</h3>
+          <h3 className="font-display font-semibold mb-4">
+            {isVendedor ? 'Mi cobranza pendiente' : 'Cobranza pendiente'}
+          </h3>
           <div className="space-y-3">
-            {demoAccountsReceivable.filter(ar => ar.status !== 'liquidado').map((ar) => (
+            {myReceivables.filter(ar => ar.status !== 'liquidado').slice(0, 5).map((ar) => (
               <div key={ar.id} className="p-3 rounded-lg bg-muted/50 border">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-semibold">{ar.customerName}</span>
