@@ -51,6 +51,9 @@ export default function PlanningPage() {
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [sortField, setSortField] = useState<string>('');
   const [sortAsc, setSortAsc] = useState(true);
+  const [purchaseSearch, setPurchaseSearch] = useState('');
+  const [purchaseCat, setPurchaseCat] = useState('');
+  const [purchasePriority, setPurchasePriority] = useState('');
 
   // Simulation state
   const [simProductId, setSimProductId] = useState(demoProducts[0]?.id ?? '');
