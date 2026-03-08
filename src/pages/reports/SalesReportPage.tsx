@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoOrders, demoProducts, salesByVendor, demoUsers, demoQuotations } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
