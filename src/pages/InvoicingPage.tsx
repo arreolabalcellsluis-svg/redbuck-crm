@@ -83,7 +83,7 @@ export default function InvoicingPage() {
         <TabsContent value="invoices"><InvoicesTab /></TabsContent>
         <TabsContent value="payments"><PaymentsTab /></TabsContent>
         <TabsContent value="cancellations"><CancellationsTab /></TabsContent>
-        <TabsContent value="drafts"><DraftsTab /></TabsContent>
+        
       </Tabs>
     </div>
   );
