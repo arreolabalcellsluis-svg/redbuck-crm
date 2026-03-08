@@ -59,35 +59,89 @@ export default function PlanningPage() {
   const [purchasePriority, setPurchasePriority] = useState('');
   const [categoryDialog, setCategoryDialog] = useState<keyof typeof CAT_CONFIG | null>(null);
 
-  // Simulation state — multi-product order
-  interface SimLine { productId: string; qty: number; freight: number; customs: number; }
-  const [simLines, setSimLines] = useState<SimLine[]>([{ productId: demoProducts[0]?.id ?? '', qty: 10, freight: 50000, customs: 35000 }]);
+  // Simulation state — multi-product import costing
+  interface SimLine {
+    productId: string;
+    costoUnitario: number;
+    qty: number;
+    fleteLocal: number;
+    igiPct: number;
+    cbm: number;
+    margenPct: number;
+  }
+  const defaultLine = (): SimLine => {
+    const p = demoProducts.find(pr => pr.active) ?? demoProducts[0];
+    return { productId: p?.id ?? '', costoUnitario: p?.cost ?? 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
+  };
+  const [simLines, setSimLines] = useState<SimLine[]>([defaultLine()]);
+  // Shared shipment costs
+  const [costoAduana, setCostoAduana] = useState(35000);
+  const [costoFleteMaritimo, setCostoFleteMaritimo] = useState(50000);
+  const [ivaPct] = useState(16);
+
   const [growthFactor, setGrowthFactor] = useState(2);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
 
-  // Simulate each line
-  const simResults = useMemo(() =>
-    simLines.map(line => ({
-      line,
-      sim: simulateImport(line.productId, line.qty, line.freight, line.customs, analyses),
-    })).filter(r => r.sim !== null) as { line: SimLine; sim: NonNullable<ReturnType<typeof simulateImport>> }[],
-    [simLines, analyses]
-  );
+  // Import costing calculations
+  const simCalc = useMemo(() => {
+    const lines = simLines.map(line => {
+      const product = demoProducts.find(p => p.id === line.productId);
+      const valorTotal = (line.costoUnitario || 0) * (line.qty || 0);
+      const volumenTotal = (line.cbm || 0) * (line.qty || 0);
+      const igiMonto = valorTotal * ((line.igiPct || 0) / 100);
+      return { ...line, product, valorTotal, volumenTotal, igiMonto };
+    });
+
+    const valorEmbarque = lines.reduce((s, l) => s + l.valorTotal, 0) || 1; // avoid /0
+    const volumenEmbarque = lines.reduce((s, l) => s + l.volumenTotal, 0) || 1;
+    const baseImponible = lines.reduce((s, l) => s + l.valorTotal + l.igiMonto, 0);
+    const ivaTotal = baseImponible * (ivaPct / 100);
+
+    return lines.map(l => {
+      const propValor = l.valorTotal / valorEmbarque;
+      const propVolumen = l.volumenTotal / volumenEmbarque;
+      const factor = propValor * 0.5 + propVolumen * 0.5;
+
+      const aduanaAsignada = factor * costoAduana;
+      const fleteMarAsignado = factor * costoFleteMaritimo;
+      const ivaAsignado = factor * ivaTotal;
+
+      const costoTotalImportado = l.valorTotal + (l.fleteLocal || 0) + l.igiMonto + aduanaAsignada + fleteMarAsignado + ivaAsignado;
+      const costoUnitarioFinal = l.qty > 0 ? costoTotalImportado / l.qty : 0;
+      const precioVenta = costoUnitarioFinal * (1 + (l.margenPct || 0) / 100);
+      const utilidadUnit = precioVenta - costoUnitarioFinal;
+      const utilidadTotal = utilidadUnit * (l.qty || 0);
+
+      return {
+        ...l,
+        aduanaAsignada,
+        fleteMarAsignado,
+        ivaAsignado,
+        costoTotalImportado,
+        costoUnitarioFinal,
+        precioVenta,
+        utilidadUnit,
+        utilidadTotal,
+      };
+    });
+  }, [simLines, costoAduana, costoFleteMaritimo, ivaPct]);
 
   const simTotals = useMemo(() => ({
-    totalInvestment: simResults.reduce((s, r) => s + r.sim.totalInvestment, 0),
-    estimatedRevenue: simResults.reduce((s, r) => s + r.sim.estimatedRevenue, 0),
-    estimatedProfit: simResults.reduce((s, r) => s + r.sim.estimatedProfit, 0),
-    totalQty: simResults.reduce((s, r) => s + r.sim.qty, 0),
-  }), [simResults]);
+    totalQty: simCalc.reduce((s, r) => s + (r.qty || 0), 0),
+    totalValor: simCalc.reduce((s, r) => s + r.valorTotal, 0),
+    totalCostoImportado: simCalc.reduce((s, r) => s + r.costoTotalImportado, 0),
+    totalUtilidadTotal: simCalc.reduce((s, r) => s + r.utilidadTotal, 0),
+    totalVenta: simCalc.reduce((s, r) => s + r.precioVenta * (r.qty || 0), 0),
+  }), [simCalc]);
 
   const updateSimLine = (index: number, field: keyof SimLine, value: string | number) => {
     setSimLines(prev => prev.map((l, i) => i === index ? { ...l, [field]: value } : l));
   };
-  const addSimLine = () => setSimLines(prev => [...prev, { productId: demoProducts[0]?.id ?? '', qty: 5, freight: 0, customs: 0 }]);
+  const addSimLine = () => setSimLines(prev => [...prev, defaultLine()]);
+  const duplicateSimLine = (index: number) => setSimLines(prev => [...prev, { ...prev[index] }]);
   const removeSimLine = (index: number) => setSimLines(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
 
   // Access control
