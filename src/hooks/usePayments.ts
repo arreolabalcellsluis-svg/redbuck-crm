@@ -105,3 +105,39 @@ export function useCreatePayment() {
     onError: (e: any) => toast.error('Error al registrar pago: ' + e.message),
   });
 }
+
+export function useGenerateComplement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { data, error } = await supabase.functions.invoke('facturama-cfdi', {
+        body: { action: 'generate-complement', payment_id: paymentId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error al generar complemento');
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      toast.success(`Complemento generado — UUID: ${data.uuid}`);
+    },
+    onError: (e: any) => toast.error('Error al generar complemento: ' + e.message),
+  });
+}
+
+export function useDownloadComplementFile() {
+  return useMutation({
+    mutationFn: async ({ payment_id, file_type }: { payment_id: string; file_type: 'xml' | 'pdf' }) => {
+      const { data, error } = await supabase.functions.invoke('facturama-cfdi', {
+        body: { action: 'download-complement', payment_id, file_type },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error al descargar');
+      return data.url as string;
+    },
+    onSuccess: (url) => {
+      window.open(url, '_blank');
+    },
+    onError: (e: any) => toast.error('Error: ' + e.message),
+  });
+}
