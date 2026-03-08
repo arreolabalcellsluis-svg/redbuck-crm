@@ -25,6 +25,10 @@ type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: strin
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
+  const { data: productFiscalData } = useAllProductFiscalData();
+  const saveFiscalMutation = useSaveProductFiscalData();
+  const fiscalMap = useMemo(() => new Map((productFiscalData ?? []).map(f => [f.product_id, f])), [productFiscalData]);
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ProductCategory | ''>('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
