@@ -65,12 +65,20 @@ export default function QuotationsPage() {
     ? quotations.filter(q => q.vendorId === vendorId)
     : quotations;
 
-  const filtered = visibleQuotations.filter(q =>
-    q.customerName.toLowerCase().includes(search.toLowerCase()) ||
-    q.folio.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+  const filtered = visibleQuotations.filter(q => {
+    if (search && !q.customerName.toLowerCase().includes(search.toLowerCase()) && !q.folio.toLowerCase().includes(search.toLowerCase())) return false;
+    if (dateFrom) {
+      const d = new Date(q.createdAt);
+      if (d < dateFrom) return false;
+    }
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      const d = new Date(q.createdAt);
+      if (d > end) return false;
+    }
+    return true;
+  });
 
   const addItem = (productId: string) => {
     const product = demoProducts.find(p => p.id === productId);
