@@ -299,6 +299,11 @@ export default function ProductsPage() {
               <div className="p-5">
                 <h3 className="font-display font-semibold text-sm">{p.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{p.sku} · {p.brand} {p.model}</p>
+                {!(p as any).satProductKey && !(p as any).satUnitKey && (
+                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
+                    ⚠ Sin claves SAT
+                  </span>
+                )}
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">
                   <div>
