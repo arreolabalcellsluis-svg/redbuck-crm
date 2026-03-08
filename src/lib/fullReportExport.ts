@@ -3,6 +3,8 @@
  * KPIs, summary cards, charts data, detail tables — everything the user sees.
  */
 
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
+
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
