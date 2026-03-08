@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   generateDailyRecommendations, getAssistantSummary, refreshRecommendations,
@@ -30,6 +31,7 @@ const PRIORITY_LABELS: Record<RecommendationPriority, string> = {
 
 export default function DailyAssistantPage() {
   const { currentRole } = useAppContext();
+  const navigate = useNavigate();
   const [recs, setRecs] = useState<DailyRecommendation[]>(() => generateDailyRecommendations());
   const [search, setSearch] = useState('');
   const [filterPriority, setFilterPriority] = useState<RecommendationPriority | 'todas'>('todas');
@@ -256,7 +258,7 @@ export default function DailyAssistantPage() {
                   title="Cotizar">
                   <FileText size={13} /> Cotizar
                 </button>
-                <button onClick={() => toast.info('Actividad registrada')}
+                <button onClick={() => navigate('/agenda', { state: { newActivityForCustomer: { customerId: rec.id, customerName: rec.customerName, vendorName: rec.vendorName, suggestedProduct: rec.suggestedProduct } } })}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-info/10 hover:border-info/30 transition-colors"
                   title="Registrar actividad">
                   <CalendarPlus size={13} /> Actividad

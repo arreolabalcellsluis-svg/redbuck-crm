@@ -3,7 +3,8 @@
  * Views: daily, weekly, monthly, pending list.
  * CRUD, reschedule, duplicate, export.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -50,6 +51,7 @@ function emptyActivity(): Omit<Activity, 'id'> {
 }
 
 export default function CommercialAgendaPage() {
+  const location = useLocation();
   const [view, setView] = useState<ViewMode>('daily');
   const [activities, setActivities] = useState<Activity[]>([...demoActivities]);
   const [search, setSearch] = useState('');
@@ -61,6 +63,26 @@ export default function CommercialAgendaPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [form, setForm] = useState<Omit<Activity, 'id'>>(emptyActivity());
+
+  // Open create dialog pre-filled when navigated from DailyAssistant
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.newActivityForCustomer) {
+      const { customerId, customerName, vendorName, suggestedProduct } = state.newActivityForCustomer;
+      const vendor = demoUsers.find(u => u.name === vendorName && u.role === 'vendedor');
+      setForm({
+        ...emptyActivity(),
+        customerId: customerId || undefined,
+        customerName: customerName || undefined,
+        responsibleId: vendor?.id ?? '',
+        responsibleName: vendorName ?? '',
+        notes: suggestedProduct ? `Producto sugerido: ${suggestedProduct}` : '',
+      });
+      setShowCreate(true);
+      // Clear the state so it doesn't re-trigger
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const vendors = demoUsers.filter(u => u.role === 'vendedor');
 
