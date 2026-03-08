@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoImports, demoSuppliers } from '@/data/demo-data';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import StatusBadge from '@/components/shared/StatusBadge';
