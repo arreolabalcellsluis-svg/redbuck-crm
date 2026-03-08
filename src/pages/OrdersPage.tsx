@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
+import type { DBOrder } from '@/hooks/useOrders';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 const vendors = demoUsers.filter(u => u.role === 'vendedor');
@@ -39,7 +40,30 @@ export default function OrdersPage() {
   const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
-  const [invoiceOrderFolio, setInvoiceOrderFolio] = useState<string | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+
+  // Convert local Order to DBOrder format for InvoiceCreateDialog
+  const invoiceDBOrder: DBOrder | undefined = invoiceOrder ? {
+    id: invoiceOrder.id,
+    folio: invoiceOrder.folio,
+    customer_id: invoiceOrder.customerId || null,
+    customer_name: invoiceOrder.customerName,
+    vendor_name: invoiceOrder.vendorName,
+    items: invoiceOrder.items.map(it => ({ productId: '', name: it.productName, qty: it.qty, unitPrice: it.unitPrice })),
+    total: invoiceOrder.total,
+    advance: invoiceOrder.advance,
+    balance: invoiceOrder.balance,
+    status: invoiceOrder.status,
+    order_type: invoiceOrder.orderType || 'directo',
+    warehouse: invoiceOrder.warehouse,
+    promise_date: invoiceOrder.promiseDate || null,
+    quotation_folio: invoiceOrder.quotationFolio || null,
+    scheduled_delivery_date: invoiceOrder.scheduledDeliveryDate || null,
+    delivery_notes: invoiceOrder.deliveryNotes || null,
+    reserve_deadline: invoiceOrder.reserveDeadline || null,
+    created_at: invoiceOrder.createdAt,
+    updated_at: invoiceOrder.createdAt,
+  } : undefined;
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
@@ -310,7 +334,7 @@ export default function OrdersPage() {
                       <button onClick={() => setPaymentOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-success" title="Registrar pago"><DollarSign size={14} /></button>
                       {isAdmin && <button onClick={() => { setEditFolioOrder(o); setNewFolio(o.folio); }} className="p-1.5 rounded-md hover:bg-muted" title="Editar folio"><Edit2 size={14} /></button>}
                       {!['cancelado', 'nuevo'].includes(o.status) && (
-                        <button onClick={() => setInvoiceOrderFolio(o.folio)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
+                        <button onClick={() => setInvoiceOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
                       )}
                     </div>
                   </td>
@@ -632,9 +656,9 @@ export default function OrdersPage() {
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
       <InvoiceCreateDialog
-        open={!!invoiceOrderFolio}
-        onOpenChange={open => { if (!open) setInvoiceOrderFolio(null); }}
-        preselectedOrderFolio={invoiceOrderFolio ?? undefined}
+        open={!!invoiceOrder}
+        onOpenChange={open => { if (!open) setInvoiceOrder(null); }}
+        preselectedOrder={invoiceDBOrder}
       />
     </div>
   );

@@ -24,9 +24,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   preselectedOrderId?: string;
   preselectedOrderFolio?: string;
+  preselectedOrder?: DBOrder;
 }
 
-export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrderId, preselectedOrderFolio }: Props) {
+export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrderId, preselectedOrderFolio, preselectedOrder }: Props) {
   const { data: orders } = useOrders();
   const { data: fiscal } = useFiscalSettings();
   const { data: customerFiscal } = useAllCustomerFiscalData();
@@ -73,7 +74,13 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setConditions('');
       setNotes('');
 
-      // Auto-select preselected order
+      // Auto-select: first try direct preselectedOrder object, then search DB orders
+      if (preselectedOrder) {
+        setSelectedOrder(preselectedOrder);
+        setStep('configure');
+        setNotes(`Pedido: ${preselectedOrder.folio}`);
+        return;
+      }
       if ((preselectedOrderId || preselectedOrderFolio) && orders) {
         const found = orders.find(o =>
           (preselectedOrderId && o.id === preselectedOrderId) ||
@@ -89,7 +96,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setStep('select');
       setSelectedOrder(null);
     }
-  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders, nextFolio]);
+  }, [open, fiscal, preselectedOrder, preselectedOrderId, preselectedOrderFolio, orders, nextFolio]);
 
   // Filter and sort orders (newest first)
   const eligibleOrders = useMemo(() => {
