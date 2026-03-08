@@ -227,12 +227,13 @@ export default function CFODashboardPage() {
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
       <Tabs defaultValue="radar" className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
-          <TabsTrigger value="radar">Radar Financiero</TabsTrigger>
-          <TabsTrigger value="income">Estado de Resultados</TabsTrigger>
-          <TabsTrigger value="balance">Balance General</TabsTrigger>
-          <TabsTrigger value="cashflow">Flujo de Efectivo</TabsTrigger>
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+          <TabsTrigger value="radar">Radar</TabsTrigger>
+          <TabsTrigger value="income">Resultados</TabsTrigger>
+          <TabsTrigger value="balance">Balance</TabsTrigger>
+          <TabsTrigger value="cashflow">Flujo Efectivo</TabsTrigger>
           <TabsTrigger value="kpis">Indicadores</TabsTrigger>
+          <TabsTrigger value="moneymap">Mapa del Dinero</TabsTrigger>
         </TabsList>
 
         {/* ─── FINANCIAL RADAR TAB ──────────────────────────────── */}
