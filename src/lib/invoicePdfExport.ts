@@ -57,10 +57,16 @@ export interface InvoicePdfData {
 export function generateInvoicePdfHtml(data: InvoicePdfData): string {
   const totalWords = numberToWords(data.total);
   const dateStr = data.issuedAt ? new Date(data.issuedAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX');
+  const logoUrl = getCompanyLogoUrl();
   const demoWatermark = data.isDemo ? `
     <div style="position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:120px;font-weight:900;color:rgba(200,0,0,0.07);z-index:0;pointer-events:none;white-space:nowrap;">
       SIN VALIDEZ FISCAL
     </div>` : '';
+
+  const logoWatermark = `
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:0;pointer-events:none;opacity:0.04;">
+      <img src="${logoUrl}" alt="" style="width:420px;height:420px;object-fit:contain;" onerror="this.style.display='none'" />
+    </div>`;
 
   const uuid = data.uuid || (data.isDemo ? 'DEMO0000-0000-0000-0000-000000000000' : '—');
 
