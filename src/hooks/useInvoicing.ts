@@ -222,6 +222,7 @@ export interface Invoice {
   tax_amount: number;
   total: number;
   status: string;
+  payment_status: string;
   pac_provider: string;
   pac_response: any;
   xml_path: string;
