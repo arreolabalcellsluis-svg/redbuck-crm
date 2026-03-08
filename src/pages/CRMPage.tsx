@@ -502,7 +502,7 @@ export default function CRMPage() {
           </div>
 
           <DialogFooter>
-            <button onClick={() => { setEditingCustomer(null); setForm(emptyCustomer()); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={() => { setEditingCustomer(null); setForm(emptyCustomer()); setFiscal(emptyFiscal()); setShowFiscal(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button onClick={handleUpdate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
               Guardar Cambios
             </button>
