@@ -30,7 +30,8 @@ const ALL_MODULES = [
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'servicio', label: 'Servicio Técnico' },
   { key: 'comisiones', label: 'Comisiones' },
-  { key: 'metas_vendedores', label: 'Metas Vendedores' },
+  { key: 'metas_vendedores', label: 'Metas y KPIs Vendedores' },
+  { key: 'simulador_comisiones', label: 'Simulador de Comisiones' },
   { key: 'gastos', label: 'Gastos Operativos' },
   { key: 'activos', label: 'Activos / Depreciación' },
   { key: 'planeacion', label: 'Planeación' },
@@ -48,7 +49,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   gerencia_comercial: [
     'dashboard', 'ejecutivo', 'crm', 'reabasto', 'agenda', 'asistente', 'mapa_mercado',
     'productos', 'refacciones', 'inventario', 'cotizaciones', 'pedidos', 'historial_pedidos',
-    'cobranza', 'comisiones', 'metas_vendedores', 'reportes', 'reportes_ejecutivos',
+    'cobranza', 'comisiones', 'metas_vendedores', 'simulador_comisiones', 'reportes', 'reportes_ejecutivos',
   ],
   vendedor: [
     'dashboard', 'crm', 'agenda', 'asistente', 'mapa_mercado',
@@ -56,7 +57,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   ],
   administracion: [
     'dashboard', 'ejecutivo', 'financiero', 'cobranza', 'cuentas_pagar',
-    'pedidos', 'historial_pedidos', 'gastos', 'activos',
+    'pedidos', 'historial_pedidos', 'comisiones', 'simulador_comisiones', 'gastos', 'activos',
     'planeacion', 'reportes', 'reportes_ejecutivos', 'simulador', 'configuracion',
   ],
   compras: [
