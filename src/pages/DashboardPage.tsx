@@ -48,19 +48,152 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Metrics grid */}
-      <div className={`grid grid-cols-2 ${isVendedor ? 'md:grid-cols-3 lg:grid-cols-4' : 'md:grid-cols-3 lg:grid-cols-5'} gap-4 mb-6`}>
-        <MetricCard title={isVendedor ? "Mis ventas del mes" : "Ventas del mes"} value={fmt(vendorSalesMonth)} icon={DollarSign} variant="primary" trend={{ value: 12, positive: true }} href="/reportes/ventas" />
-        <MetricCard title={isVendedor ? "Mis ventas trimestre" : "Ventas trimestre"} value={fmt(vendorSalesQuarter)} icon={TrendingUp} href="/reportes/ventas" />
-        <MetricCard title={isVendedor ? "Mis oportunidades" : "Oportunidades"} value={activeOpportunities} icon={Users} subtitle="activas" href="/crm" />
-        <MetricCard title={isVendedor ? "Mis cotizaciones" : "Cotizaciones"} value={quotationsSent} icon={FileText} subtitle="enviadas" href="/cotizaciones" />
-        {!isVendedor && <MetricCard title="Tasa de cierre" value={`${dashboardMetrics.closeRate}%`} icon={Target} variant="success" href="/reportes/ventas" />}
-        {!isVendedor && <MetricCard title="Ticket promedio" value={fmt(dashboardMetrics.avgTicket)} icon={ShoppingCart} href="/reportes/ventas" />}
-        {!isVendedor && <MetricCard title="Margen bruto" value={`${dashboardMetrics.grossMargin}%`} icon={BarChart3} variant="success" href="/reportes/rentabilidad" />}
-        <MetricCard title={isVendedor ? "Mi cartera vencida" : "Cartera vencida"} value={fmt(overdueReceivables)} icon={CreditCard} variant="danger" href="/cobranza" />
-        {!isVendedor && <MetricCard title="Inventario total" value={fmt(dashboardMetrics.totalInventoryValue)} icon={Warehouse} href="/reportes/inventario" />}
-        {!isVendedor && <MetricCard title="Importaciones" value={dashboardMetrics.activeImports} icon={Globe} subtitle={`${dashboardMetrics.productsInTransit} en tránsito`} variant="warning" href="/importaciones" />}
-      </div>
+      {/* Metrics grid — Executive style */}
+      {(() => {
+        const salesGoal = isVendedor ? 500000 : 1500000;
+        const salesPct = Math.round((vendorSalesMonth / salesGoal) * 100);
+        const clickCard = (path: string) => ({
+          className: 'bg-card rounded-xl border p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 hover:scale-[1.02] transition-all duration-200 group',
+          onClick: () => navigate(path),
+        });
+        return (
+          <div className={`grid grid-cols-2 ${isVendedor ? 'md:grid-cols-3 lg:grid-cols-4' : 'md:grid-cols-3 lg:grid-cols-5'} gap-4 mb-6`}>
+            {/* Ventas del mes */}
+            <div {...clickCard('/reportes/ventas')} style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <DollarSign size={14} /> {isVendedor ? 'Mis ventas del mes' : 'Ventas del mes'}
+              </div>
+              <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(vendorSalesMonth)}</div>
+              <div className="flex items-center justify-between mt-2">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${Math.min(salesPct, 100)}%` }} />
+                </div>
+                <span className="text-xs font-bold ml-2 whitespace-nowrap">{salesPct}%</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1">Meta: {fmt(salesGoal)}</div>
+              <div className="text-xs font-semibold mt-1 flex items-center gap-1 text-success">↑ 12% vs mes anterior</div>
+              <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+            </div>
+
+            {/* Ventas trimestre */}
+            <div {...clickCard('/reportes/ventas')} style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <TrendingUp size={14} /> {isVendedor ? 'Mis ventas trimestre' : 'Ventas trimestre'}
+              </div>
+              <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(vendorSalesQuarter)}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Promedio/mes:</span> <span className="font-medium">{fmt(Math.round(vendorSalesQuarter / 3))}</span></div>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+            </div>
+
+            {/* Oportunidades */}
+            <div {...clickCard('/crm')} style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Users size={14} /> {isVendedor ? 'Mis oportunidades' : 'Oportunidades'}
+              </div>
+              <div className="text-xl font-bold group-hover:text-primary transition-colors">{activeOpportunities}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Activas</span> <span className="font-semibold">{activeOpportunities}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Pipeline:</span> <span className="font-medium">{fmt(myOpportunities.filter(o => !['cierre_ganado', 'cierre_perdido'].includes(o.stage)).reduce((s, o) => s + o.estimatedAmount, 0))}</span></div>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+            </div>
+
+            {/* Cotizaciones */}
+            <div {...clickCard('/cotizaciones')} style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <FileText size={14} /> {isVendedor ? 'Mis cotizaciones' : 'Cotizaciones'}
+              </div>
+              <div className="text-xl font-bold group-hover:text-primary transition-colors">{quotationsSent}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Enviadas / seguimiento</span></div>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+            </div>
+
+            {/* Tasa de cierre */}
+            {!isVendedor && (
+              <div {...clickCard('/reportes/ventas')} style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Target size={14} /> Tasa de cierre
+                </div>
+                <div className="text-xl font-bold text-success group-hover:text-primary transition-colors">{dashboardMetrics.closeRate}%</div>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${dashboardMetrics.closeRate}%` }} />
+                  </div>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+              </div>
+            )}
+
+            {/* Ticket promedio */}
+            {!isVendedor && (
+              <div {...clickCard('/reportes/ventas')} style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <ShoppingCart size={14} /> Ticket promedio
+                </div>
+                <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(dashboardMetrics.avgTicket)}</div>
+                <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+              </div>
+            )}
+
+            {/* Margen bruto */}
+            {!isVendedor && (
+              <div {...clickCard('/reportes/rentabilidad')} style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <BarChart3 size={14} /> Margen bruto
+                </div>
+                <div className="text-xl font-bold text-success group-hover:text-primary transition-colors">{dashboardMetrics.grossMargin}%</div>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${dashboardMetrics.grossMargin}%` }} />
+                  </div>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+              </div>
+            )}
+
+            {/* Cartera vencida */}
+            <div {...clickCard('/cobranza')} style={{ borderLeft: '4px solid hsl(var(--destructive))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <CreditCard size={14} /> {isVendedor ? 'Mi cartera vencida' : 'Cartera vencida'}
+              </div>
+              <div className="text-xl font-bold text-destructive group-hover:text-primary transition-colors">{fmt(overdueReceivables)}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Facturas vencidas:</span> <span className="font-bold text-destructive">{myReceivables.filter(r => r.status === 'vencido').length}</span></div>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+            </div>
+
+            {/* Inventario total */}
+            {!isVendedor && (
+              <div {...clickCard('/reportes/inventario')} style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Warehouse size={14} /> Inventario total
+                </div>
+                <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(dashboardMetrics.totalInventoryValue)}</div>
+                <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+              </div>
+            )}
+
+            {/* Importaciones */}
+            {!isVendedor && (
+              <div {...clickCard('/importaciones')} style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Globe size={14} /> Importaciones
+                </div>
+                <div className="text-xl font-bold group-hover:text-primary transition-colors">{dashboardMetrics.activeImports}</div>
+                <div className="space-y-0.5 mt-2 text-[10px]">
+                  <div className="flex justify-between"><span className="text-muted-foreground">En tránsito:</span> <span className="font-semibold">{dashboardMetrics.productsInTransit}</span></div>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
