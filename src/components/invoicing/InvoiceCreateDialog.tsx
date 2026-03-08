@@ -185,9 +185,43 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
 
         {step === 'select' && (
           <div className="space-y-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <Input placeholder="Buscar pedido o cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input placeholder="Buscar pedido o cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+              </div>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateFrom && "text-muted-foreground")}>
+                    <CalendarIcon size={14} />
+                    {dateFrom ? format(dateFrom, 'dd/MM/yy') : 'Desde'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" locale={es} />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateTo && "text-muted-foreground")}>
+                    <CalendarIcon size={14} />
+                    {dateTo ? format(dateTo, 'dd/MM/yy') : 'Hasta'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" locale={es} />
+                </PopoverContent>
+              </Popover>
+
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-xs text-muted-foreground h-8 px-2">
+                  <X size={12} /> Limpiar
+                </Button>
+              )}
+
+              <Badge variant="outline" className="text-xs ml-auto">{eligibleOrders.length} pedidos</Badge>
             </div>
             <div className="max-h-[400px] overflow-y-auto border rounded-lg">
               <Table>
