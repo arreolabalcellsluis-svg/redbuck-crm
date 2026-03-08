@@ -751,6 +751,7 @@ export default function CFODashboardPage() {
             </div>
           </div>
         </TabsContent>
+      </Tabs>
     </div>
   );
 }
