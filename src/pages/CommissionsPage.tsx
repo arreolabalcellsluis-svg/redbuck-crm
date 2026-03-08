@@ -1,248 +1,414 @@
-import { useState } from 'react';
-import { salesByVendor } from '@/data/demo-data';
+import { useState, useMemo } from 'react';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useOrders } from '@/hooks/useOrders';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useSalesGoals, useCommissionConfig } from '@/hooks/useSalesGoals';
+import { calcAllVendorKPIs, type VendorKPI } from '@/lib/vendorKPIsEngine';
+import {
+  buildVendorResults, calcGerenteCommission, calcCobranzaCommission, calcAdminCommission,
+  calcExecutiveSummary, DEFAULT_ROLE_CONFIG,
+  type RoleCommissionResult, type ExecutiveSummary,
+} from '@/lib/roleCommissionsEngine';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
-import MetricCard from '@/components/shared/MetricCard';
-import { BadgeDollarSign, Target, TrendingUp, Award, Pencil, Check, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import {
+  BadgeDollarSign, Users, TrendingUp, ShieldCheck, BarChart3, AlertTriangle,
+  DollarSign, Target, FileText, ArrowUpDown,
+} from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie,
+} from 'recharts';
 
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
-
-interface CommissionRow {
-  id: string;
-  name: string;
-  sales: number;
-  goal: number;
-  collected: number;
-  commissionRate: number;
-  commission: number;
-  progress: number;
-  type: 'vendedor' | 'administracion';
-}
-
-const totalAllSales = salesByVendor.reduce((s, v) => s + v.sales, 0);
-
-function buildInitialRows(): CommissionRow[] {
-  const vendorRows: CommissionRow[] = salesByVendor.map((v, i) => ({
-    id: `v-${i}`,
-    name: v.name,
-    sales: v.sales,
-    goal: 400000,
-    collected: v.sales * 0.85,
-    commissionRate: 5,
-    commission: v.sales * 0.05,
-    progress: Math.round((v.sales / 400000) * 100),
-    type: 'vendedor',
-  }));
-
-  const adminRow: CommissionRow = {
-    id: 'admin',
-    name: 'Administración',
-    sales: totalAllSales,
-    goal: 0,
-    collected: totalAllSales * 0.85,
-    commissionRate: 2.5,
-    commission: totalAllSales * 0.025,
-    progress: 0,
-    type: 'administracion',
-  };
-
-  return [...vendorRows, adminRow];
-}
+const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 
 export default function CommissionsPage() {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
   const { currentRole } = useAppContext();
   const isVendedor = currentRole === 'vendedor';
 
-  const [rows, setRows] = useState<CommissionRow[]>(buildInitialRows);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editRate, setEditRate] = useState<number>(0);
-  const [editGoal, setEditGoal] = useState<number>(0);
-  const [editName, setEditName] = useState('');
+  const { data: quotations = [] } = useQuotations();
+  const { data: orders = [] } = useOrders();
+  const { data: customers = [] } = useCustomers();
+  const { data: goals = [] } = useSalesGoals(month, year);
+  const { data: configData } = useCommissionConfig();
 
-  // For vendedor: show only their own commission row, hide admin row and other sellers
-  // Match by short name (e.g. "Roberto J." matches "Roberto Juárez")
-  const vendorShortName = DEMO_VENDEDOR_NAME.split(' ')[0]; // "Roberto"
-  const visibleRows = isVendedor
-    ? rows.filter(r => r.type === 'vendedor' && r.name.startsWith(vendorShortName))
-    : rows;
+  const vendorKPIs = useMemo(() =>
+    calcAllVendorKPIs(quotations, orders, customers, goals, month, year, configData?.config, configData?.weights, configData?.levels),
+    [quotations, orders, customers, goals, month, year, configData]
+  );
 
-  const totalCommissions = visibleRows.reduce((s, v) => s + v.commission, 0);
-  const topVendor = visibleRows.filter(r => r.type === 'vendedor').sort((a, b) => b.sales - a.sales)[0];
+  const roleConfig = DEFAULT_ROLE_CONFIG;
 
-  const startEdit = (row: CommissionRow) => {
-    setEditingId(row.id);
-    setEditRate(row.commissionRate);
-    setEditGoal(row.goal);
-    setEditName(row.name);
-  };
+  const vendorResults = useMemo(() => buildVendorResults(vendorKPIs, orders, roleConfig.penalties), [vendorKPIs, orders]);
+  const gerenteResult = useMemo(() => calcGerenteCommission(vendorKPIs, roleConfig.gerente), [vendorKPIs]);
+  const cobranzaResult = useMemo(() => calcCobranzaCommission(vendorKPIs, roleConfig.cobranza), [vendorKPIs]);
+  const adminResult = useMemo(() => calcAdminCommission(vendorKPIs, orders, roleConfig.administracion), [vendorKPIs, orders]);
+  const summary = useMemo(() => calcExecutiveSummary(vendorResults, gerenteResult, cobranzaResult, adminResult, vendorKPIs), [vendorResults, gerenteResult, cobranzaResult, adminResult, vendorKPIs]);
 
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
+  // Vendedor: only show their own
+  const visibleVendorResults = isVendedor
+    ? vendorResults.filter(r => r.userName.startsWith(DEMO_VENDEDOR_NAME.split(' ')[0]))
+    : vendorResults;
 
-  const saveEdit = (id: string) => {
-    if (editRate < 0 || editRate > 100) {
-      toast.error('El porcentaje debe estar entre 0 y 100');
-      return;
-    }
-    setRows(prev => prev.map(r => {
-      if (r.id !== id) return r;
-      const newRate = editRate;
-      const newGoal = r.type === 'administracion' ? 0 : editGoal;
-      const newName = editName.trim() || r.name;
-      return {
-        ...r,
-        name: newName,
-        commissionRate: newRate,
-        commission: r.sales * (newRate / 100),
-        goal: newGoal,
-        progress: newGoal > 0 ? Math.round((r.sales / newGoal) * 100) : 0,
-      };
-    }));
-    setEditingId(null);
-    toast.success('Comisión actualizada');
-  };
+  const pieData = [
+    { name: 'Vendedores', value: summary.totalVendorCommissions, fill: 'hsl(var(--primary))' },
+    { name: 'Gerente', value: summary.totalGerenteBonus, fill: 'hsl(var(--chart-2))' },
+    { name: 'Cobranza', value: summary.totalCobranzaBonus, fill: 'hsl(var(--chart-3))' },
+    { name: 'Admin', value: summary.totalAdminBonus, fill: 'hsl(var(--chart-4))' },
+  ].filter(d => d.value > 0);
 
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">Comisiones</h1>
-        <p className="page-subtitle">
-          {isVendedor ? 'Mi comisión — Marzo 2026' : 'Seguimiento de comisiones por vendedor — Marzo 2026'}
-        </p>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+            <BadgeDollarSign className="text-primary" size={28} /> Comisiones por Rol
+          </h1>
+          <p className="text-sm text-muted-foreground">Sistema de incentivos integral — {MONTHS[month - 1]} {year}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={String(month)} onValueChange={v => setMonth(Number(v))}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>{MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={String(year)} onValueChange={v => setYear(Number(v))}>
+            <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+            <SelectContent>{[2025, 2026, 2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className={`grid grid-cols-2 ${isVendedor ? 'md:grid-cols-2' : 'md:grid-cols-4'} gap-4 mb-6`}>
-        {!isVendedor && <MetricCard title="Vendedores" value={rows.filter(r => r.type === 'vendedor').length} icon={BadgeDollarSign} />}
-        <MetricCard title={isVendedor ? "Mi comisión" : "Total comisiones"} value={fmt(totalCommissions)} icon={TrendingUp} variant="primary" />
-        <MetricCard title={isVendedor ? "Mi venta" : "Venta total"} value={fmt(visibleRows.reduce((s, r) => s + r.sales, 0))} icon={Target} />
-        {!isVendedor && <MetricCard title="Top vendedor" value={topVendor?.name || '-'} icon={Award} variant="success" />}
-      </div>
+      <Tabs defaultValue={isVendedor ? 'vendedores' : 'ejecutivo'}>
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1">
+          {!isVendedor && <TabsTrigger value="ejecutivo"><BarChart3 size={14} className="mr-1" />Ejecutivo</TabsTrigger>}
+          <TabsTrigger value="vendedores"><Users size={14} className="mr-1" />Vendedores</TabsTrigger>
+          {!isVendedor && <TabsTrigger value="gerente"><TrendingUp size={14} className="mr-1" />Gerente</TabsTrigger>}
+          {!isVendedor && <TabsTrigger value="cobranza"><DollarSign size={14} className="mr-1" />Cobranza</TabsTrigger>}
+          {!isVendedor && <TabsTrigger value="admin"><ShieldCheck size={14} className="mr-1" />Administración</TabsTrigger>}
+          {!isVendedor && <TabsTrigger value="castigos"><AlertTriangle size={14} className="mr-1" />Castigos</TabsTrigger>}
+        </TabsList>
 
-      <div className="bg-card rounded-xl border overflow-x-auto">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              {!isVendedor && <th>Tipo</th>}
-              <th>Venta</th>
-              <th>Meta</th>
-              <th>Avance</th>
-              <th>Cobrado</th>
-              <th>% Comisión</th>
-              <th>Comisión</th>
-              {!isVendedor && <th className="text-center">Acciones</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map(v => (
-              <tr key={v.id} className={v.type === 'administracion' ? 'bg-muted/30 border-t-2 border-border' : ''}>
-                {editingId === v.id ? (
-                  <>
-                    <td>
-                      <input
-                        value={editName}
-                        onChange={e => setEditName(e.target.value)}
-                        className="w-full px-2 py-1 rounded border bg-background text-sm"
-                      />
-                    </td>
-                    {!isVendedor && (
-                      <td className="text-xs text-muted-foreground">
-                        {v.type === 'administracion' ? '🏢 Admin' : '👤 Vendedor'}
-                      </td>
-                    )}
-                    <td className="font-semibold">{fmt(v.sales)}</td>
-                    <td>
-                      {v.type === 'vendedor' ? (
-                        <input
-                          type="number"
-                          value={editGoal}
-                          onChange={e => setEditGoal(+e.target.value)}
-                          className="w-24 px-2 py-1 rounded border bg-background text-sm"
-                        />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td>—</td>
-                    <td>{fmt(v.collected)}</td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          max="100"
-                          value={editRate}
-                          onChange={e => setEditRate(+e.target.value)}
-                          className="w-16 px-2 py-1 rounded border bg-background text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">%</span>
+        {/* ═══ EJECUTIVO ═══ */}
+        {!isVendedor && (
+          <TabsContent value="ejecutivo" className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              <SummaryCard label="Vendedores" value={fmt(summary.totalVendorCommissions)} icon={<Users size={18} />} />
+              <SummaryCard label="Gerente" value={fmt(summary.totalGerenteBonus)} icon={<TrendingUp size={18} />} />
+              <SummaryCard label="Cobranza" value={fmt(summary.totalCobranzaBonus)} icon={<DollarSign size={18} />} />
+              <SummaryCard label="Admin" value={fmt(summary.totalAdminBonus)} icon={<ShieldCheck size={18} />} />
+              <SummaryCard label="TOTAL INCENTIVOS" value={fmt(summary.grandTotal)} icon={<BadgeDollarSign size={18} />} highlight />
+              <SummaryCard label="Ventas totales" value={fmt(summary.totalSales)} icon={<Target size={18} />} />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Distribution pie */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Distribución de incentivos</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-52">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                          {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                        </Pie>
+                        <Tooltip formatter={(v: number) => fmt(v)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3 mt-2">
+                    {pieData.map(d => (
+                      <div key={d.name} className="flex items-center gap-1.5 text-xs">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} />
+                        <span>{d.name}: {fmt(d.value)}</span>
                       </div>
-                    </td>
-                    <td className="font-bold text-success">{fmt(v.sales * (editRate / 100))}</td>
-                    {!isVendedor && (
-                      <td className="text-center">
-                        <div className="flex justify-center gap-1">
-                          <button onClick={() => saveEdit(v.id)} className="p-1 rounded hover:bg-success/10 text-success" title="Guardar">
-                            <Check size={16} />
-                          </button>
-                          <button onClick={cancelEdit} className="p-1 rounded hover:bg-destructive/10 text-destructive" title="Cancelar">
-                            <X size={16} />
-                          </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Ratios */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Rentabilidad de incentivos</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Incentivos / Ventas</span>
+                      <span className="font-bold">{fmtPct(summary.commissionToSalesRatio)}</span>
+                    </div>
+                    <Progress value={Math.min(summary.commissionToSalesRatio * 5, 100)} className="h-2" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Recomendado: 3-8%</p>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Incentivos / Utilidad bruta</span>
+                      <span className="font-bold">{fmtPct(summary.commissionToProfitRatio)}</span>
+                    </div>
+                    <Progress value={Math.min(summary.commissionToProfitRatio * 2, 100)} className="h-2" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Recomendado: 10-25%</p>
+                  </div>
+                  <div className="pt-2 border-t space-y-1">
+                    <DetailRow label="Ventas totales" value={fmt(summary.totalSales)} />
+                    <DetailRow label="Utilidad bruta estimada" value={fmt(summary.totalGrossProfit)} />
+                    <DetailRow label="Total incentivos" value={fmt(summary.grandTotal)} />
+                    <DetailRow label="Utilidad después de incentivos" value={fmt(summary.totalGrossProfit - summary.grandTotal)} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* All roles table */}
+            <Card>
+              <CardHeader><CardTitle className="text-base">Resumen por rol</CardTitle></CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b text-muted-foreground text-xs">
+                    <th className="text-left py-2 px-2">Rol / Persona</th>
+                    <th className="text-right px-2">Bruto</th>
+                    <th className="text-right px-2">Castigos</th>
+                    <th className="text-right px-2 font-bold">Neto</th>
+                  </tr></thead>
+                  <tbody>
+                    {vendorResults.map(r => (
+                      <tr key={r.userName} className="border-b hover:bg-muted/30">
+                        <td className="py-2 px-2"><Badge variant="outline" className="mr-2 text-[10px]">Vendedor</Badge>{r.userName}</td>
+                        <td className="py-2 px-2 text-right font-mono">{fmt(r.grossTotal)}</td>
+                        <td className="py-2 px-2 text-right font-mono text-destructive">{r.penaltyTotal > 0 ? `-${fmt(r.penaltyTotal)}` : '—'}</td>
+                        <td className="py-2 px-2 text-right font-mono font-bold">{fmt(r.netTotal)}</td>
+                      </tr>
+                    ))}
+                    <RoleSummaryRow result={gerenteResult} />
+                    <RoleSummaryRow result={cobranzaResult} />
+                    <RoleSummaryRow result={adminResult} />
+                  </tbody>
+                  <tfoot><tr className="border-t-2 font-bold">
+                    <td className="py-2 px-2">TOTAL</td>
+                    <td className="py-2 px-2 text-right font-mono">{fmt(vendorResults.reduce((s,r)=>s+r.grossTotal,0) + gerenteResult.grossTotal + cobranzaResult.grossTotal + adminResult.grossTotal)}</td>
+                    <td className="py-2 px-2 text-right font-mono text-destructive">{fmt(vendorResults.reduce((s,r)=>s+r.penaltyTotal,0))}</td>
+                    <td className="py-2 px-2 text-right font-mono text-primary">{fmt(summary.grandTotal)}</td>
+                  </tr></tfoot>
+                </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ═══ VENDEDORES ═══ */}
+        <TabsContent value="vendedores" className="space-y-4">
+          <Card><CardContent className="pt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b text-muted-foreground text-xs">
+                <th className="text-left py-2 px-1">Vendedor</th>
+                <th className="text-right px-1">Ventas</th>
+                <th className="text-right px-1">Base</th>
+                <th className="text-right px-1">B.Margen</th>
+                <th className="text-right px-1">B.Meta</th>
+                <th className="text-right px-1">B.Clientes</th>
+                <th className="text-right px-1">B.Cobranza</th>
+                <th className="text-right px-1">Bruto</th>
+                <th className="text-right px-1">Castigos</th>
+                <th className="text-right px-1 font-bold">Neto</th>
+              </tr></thead>
+              <tbody>{visibleVendorResults.map(r => {
+                const base = r.bonuses.find(b => b.label === 'Comisión base')?.amount ?? 0;
+                const margin = r.bonuses.find(b => b.label === 'Bono margen')?.amount ?? 0;
+                const goal = r.bonuses.find(b => b.label === 'Bono meta')?.amount ?? 0;
+                const clients = r.bonuses.find(b => b.label === 'Bono clientes nuevos')?.amount ?? 0;
+                const cob = r.bonuses.find(b => b.label === 'Bono cobranza')?.amount ?? 0;
+                return (
+                  <tr key={r.userName} className="border-b hover:bg-muted/30">
+                    <td className="py-2 px-1 font-medium">{r.userName}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(Number(r.kpis['Ventas'] ?? 0))}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(base)}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(margin)}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(goal)}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(clients)}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(cob)}</td>
+                    <td className="py-2 px-1 text-right font-mono">{fmt(r.grossTotal)}</td>
+                    <td className="py-2 px-1 text-right font-mono text-destructive">{r.penaltyTotal > 0 ? `-${fmt(r.penaltyTotal)}` : '—'}</td>
+                    <td className="py-2 px-1 text-right font-mono font-bold text-primary">{fmt(r.netTotal)}</td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+          </CardContent></Card>
+
+          {/* Individual breakdown on click */}
+          {visibleVendorResults.length > 0 && (
+            <div className="space-y-3">
+              {visibleVendorResults.map(r => (
+                <RoleDetailCard key={r.userName} result={r} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ═══ GERENTE ═══ */}
+        {!isVendedor && (
+          <TabsContent value="gerente" className="space-y-4">
+            <RoleDetailCard result={gerenteResult} showKPIs />
+          </TabsContent>
+        )}
+
+        {/* ═══ COBRANZA ═══ */}
+        {!isVendedor && (
+          <TabsContent value="cobranza" className="space-y-4">
+            <RoleDetailCard result={cobranzaResult} showKPIs />
+          </TabsContent>
+        )}
+
+        {/* ═══ ADMIN ═══ */}
+        {!isVendedor && (
+          <TabsContent value="admin" className="space-y-4">
+            <RoleDetailCard result={adminResult} showKPIs />
+          </TabsContent>
+        )}
+
+        {/* ═══ CASTIGOS ═══ */}
+        {!isVendedor && (
+          <TabsContent value="castigos" className="space-y-4">
+            <p className="text-sm text-muted-foreground">Castigos y reducciones aplicados automáticamente según reglas configuradas.</p>
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle size={16} className="text-destructive" /> Reglas activas</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <DetailRow label={`Margen < ${roleConfig.penalties.lowMarginThreshold}%`} value={`-${roleConfig.penalties.lowMarginPenaltyPct}% comisión`} />
+                <DetailRow label={`Cancelaciones ≥ ${roleConfig.penalties.highCancellationThreshold}`} value={`-${roleConfig.penalties.highCancellationPenaltyPct}% comisión`} />
+                <DetailRow label={`Sin cobrar > ${roleConfig.penalties.uncollectedThreshold}%`} value={`-${roleConfig.penalties.uncollectedPenaltyPct}% comisión`} />
+              </CardContent>
+            </Card>
+            {vendorResults.filter(r => r.penalties.length > 0).length === 0 ? (
+              <Card><CardContent className="py-12 text-center text-muted-foreground">Sin castigos aplicados este período</CardContent></Card>
+            ) : (
+              vendorResults.filter(r => r.penalties.length > 0).map(r => (
+                <Card key={r.userName} className="border-l-4 border-l-destructive">
+                  <CardContent className="pt-4">
+                    <h3 className="font-semibold mb-2">{r.userName}</h3>
+                    {r.penalties.map((p, i) => (
+                      <div key={i} className="flex justify-between py-1 border-b border-border/50 last:border-0">
+                        <div>
+                          <span className="text-sm font-medium text-destructive">{p.label}</span>
+                          <span className="text-xs text-muted-foreground ml-2">{p.detail}</span>
                         </div>
-                      </td>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <td className="font-medium">{v.name}</td>
-                    {!isVendedor && (
-                      <td className="text-xs text-muted-foreground">
-                        {v.type === 'administracion' ? '🏢 Admin' : '👤 Vendedor'}
-                      </td>
-                    )}
-                    <td className="font-semibold">{fmt(v.sales)}</td>
-                    <td className="text-muted-foreground">
-                      {v.type === 'vendedor' ? fmt(v.goal) : '—'}
-                    </td>
-                    <td>
-                      {v.type === 'vendedor' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-muted rounded-full h-1.5">
-                            <div
-                              className={`h-1.5 rounded-full ${v.progress >= 100 ? 'bg-success' : v.progress >= 70 ? 'bg-warning' : 'bg-destructive'}`}
-                              style={{ width: `${Math.min(v.progress, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-medium">{v.progress}%</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td>{fmt(v.collected)}</td>
-                    <td>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                        {v.commissionRate}%
-                      </span>
-                    </td>
-                    <td className="font-bold text-success">{fmt(v.commission)}</td>
-                    {!isVendedor && (
-                      <td className="text-center">
-                        <button onClick={() => startEdit(v)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Editar comisión">
-                          <Pencil size={15} />
-                        </button>
-                      </td>
-                    )}
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                        <span className="text-sm font-mono text-destructive">-{fmt(p.amount)}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
+
+// ════════════════════════════════════════════════════════════════
+// Sub-components
+// ════════════════════════════════════════════════════════════════
+
+function SummaryCard({ label, value, icon, highlight }: { label: string; value: string; icon: React.ReactNode; highlight?: boolean }) {
+  return (
+    <Card className={highlight ? 'border-primary/50 bg-primary/5' : ''}>
+      <CardContent className="pt-4 text-center space-y-1">
+        <div className="mx-auto text-primary">{icon}</div>
+        <div className={`text-lg font-bold ${highlight ? 'text-primary' : ''}`}>{value}</div>
+        <div className="text-[11px] text-muted-foreground">{label}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between py-1.5 border-b border-border/50 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium">{value}</span>
+    </div>
+  );
+}
+
+function RoleSummaryRow({ result }: { result: RoleCommissionResult }) {
+  return (
+    <tr className="border-b hover:bg-muted/30 bg-muted/20">
+      <td className="py-2 px-2"><Badge variant="secondary" className="mr-2 text-[10px]">{result.roleName}</Badge>{result.userName}</td>
+      <td className="py-2 px-2 text-right font-mono">{fmt(result.grossTotal)}</td>
+      <td className="py-2 px-2 text-right font-mono text-destructive">{result.penaltyTotal > 0 ? `-${fmt(result.penaltyTotal)}` : '—'}</td>
+      <td className="py-2 px-2 text-right font-mono font-bold">{fmt(result.netTotal)}</td>
+    </tr>
+  );
+}
+
+function RoleDetailCard({ result, showKPIs }: { result: RoleCommissionResult; showKPIs?: boolean }) {
+  const fmtVal = (v: number | string) => typeof v === 'number' ? fmt(v) : v;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Badge variant="outline">{result.roleName}</Badge>
+          {result.userName}
+          <span className="ml-auto text-xl font-bold text-primary">{fmt(result.netTotal)}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {showKPIs && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(result.kpis).map(([key, val]) => (
+              <div key={key} className="text-center p-2 rounded-lg bg-muted/30">
+                <div className="text-xs text-muted-foreground">{key}</div>
+                <div className="text-sm font-bold">{fmtVal(val)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {result.bonuses.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Bonos</h4>
+            {result.bonuses.map((b, i) => (
+              <div key={i} className="flex justify-between py-1.5 border-b border-border/50 last:border-0">
+                <div>
+                  <span className="text-sm font-medium">{b.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{b.detail}</span>
+                </div>
+                <span className="text-sm font-mono font-semibold text-green-600">+{fmt(b.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {result.penalties.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-destructive uppercase mb-2">Castigos</h4>
+            {result.penalties.map((p, i) => (
+              <div key={i} className="flex justify-between py-1.5 border-b border-border/50 last:border-0">
+                <div>
+                  <span className="text-sm font-medium text-destructive">{p.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{p.detail}</span>
+                </div>
+                <span className="text-sm font-mono text-destructive">-{fmt(p.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-between pt-2 border-t-2 border-primary/30">
+          <span className="font-bold">TOTAL NETO</span>
+          <span className="text-xl font-bold text-primary">{fmt(result.netTotal)}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const fmt2 = fmt;
