@@ -36,6 +36,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const [step, setStep] = useState<'select' | 'configure'>('select');
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   // Invoice fields
   const [series, setSeries] = useState('A');
