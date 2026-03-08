@@ -983,15 +983,18 @@ function InvoicesTab() {
                             size="icon"
                             variant="ghost"
                             title="Timbrar factura"
-                            disabled={stampMutation.isPending}
+                            disabled={stampingId === inv.id}
                             onClick={() => {
                               if (confirm(`¿Deseas timbrar la factura ${inv.series}-${inv.folio}? Esta acción enviará el CFDI al SAT.`)) {
-                                stampMutation.mutate(inv.id);
+                                setStampingId(inv.id);
+                                stampMutation.mutate(inv.id, {
+                                  onSettled: () => setStampingId(null),
+                                });
                               }
                             }}
                             className="text-green-600 hover:text-green-700 hover:bg-green-50"
                           >
-                            {stampMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Stamp size={14} />}
+                            {stampingId === inv.id ? <Loader2 size={14} className="animate-spin" /> : <Stamp size={14} />}
                           </Button>
                         )}
                         <Button size="icon" variant="ghost" title="Vista previa PDF" onClick={() => handlePreviewInvoicePdf(inv)}><FileText size={14} /></Button>
