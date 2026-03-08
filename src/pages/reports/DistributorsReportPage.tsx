@@ -113,7 +113,7 @@ export default function DistributorsReportPage() {
         config={{
           search: true, searchPlaceholder: 'Buscar por nombre o ciudad...',
           selects: [{ key: 'estado', label: 'Estado', options: stateOptions }],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
