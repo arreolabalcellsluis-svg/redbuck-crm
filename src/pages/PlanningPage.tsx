@@ -1,8 +1,8 @@
 import { useState, useMemo, Fragment } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import {
-  analyzeProducts, getPlanningSummary, simulateGrowth, simulateImport,
-  type ProductAnalysis, type ImportSimulation,
+  analyzeProducts, getPlanningSummary, simulateGrowth,
+  type ProductAnalysis,
 } from '@/lib/planningEngine';
 import { demoProducts } from '@/data/demo-data';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
