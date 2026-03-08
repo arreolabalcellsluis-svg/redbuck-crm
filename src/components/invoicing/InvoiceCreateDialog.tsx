@@ -616,7 +616,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
 
         <DialogFooter className="gap-2 flex-wrap">
           {step === 'configure' && (
-            <Button variant="outline" onClick={() => setStep('select')}>← Cambiar pedido</Button>
+            <>
+              <Button variant="outline" onClick={() => setStep('select')}>← Cambiar pedido</Button>
+              <Button variant="outline" onClick={() => openInvoicePdf(buildPdfData(true))} className="gap-1.5">
+                <Eye size={14} /> Vista previa PDF
+              </Button>
+            </>
           )}
           {step !== 'preview' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -629,6 +634,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
           )}
           {step === 'preview' && (
             <>
+              <Button variant="outline" onClick={() => openInvoicePdf(buildPdfData(true))} className="gap-1.5">
+                <Eye size={14} /> Ver PDF (Demo)
+              </Button>
+              <Button variant="outline" onClick={() => downloadXml(buildPdfData(true))} className="gap-1.5">
+                <Download size={14} /> Descargar XML (Demo)
+              </Button>
               <Button variant="outline" onClick={() => onOpenChange(false)} className="gap-1.5">
                 <Save size={14} /> Guardar como borrador
               </Button>
