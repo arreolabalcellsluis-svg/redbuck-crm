@@ -64,11 +64,26 @@ export default function CFODashboardPage() {
     utilidadesAcumuladas: 500000,
   });
 
-  const income = useMemo(() => calcIncomeStatement(expenses, assets, 12), [expenses, assets]);
+  // Period selector — derive available months from monthlySales
+  const availableMonths = useMemo(() =>
+    monthlySales.map(m => ({ label: m.month, value: parseMonthLabel(m.month) })),
+    [],
+  );
+  const [periodFrom, setPeriodFrom] = useState(availableMonths[0]?.value ?? '2024-01');
+  const [periodTo, setPeriodTo] = useState(availableMonths[availableMonths.length - 1]?.value ?? '2025-03');
+  const period: PeriodRange = useMemo(() => ({ from: periodFrom, to: periodTo }), [periodFrom, periodTo]);
+
+  const periodLabel = useMemo(() => {
+    const fromItem = availableMonths.find(m => m.value === periodFrom);
+    const toItem = availableMonths.find(m => m.value === periodTo);
+    return `${fromItem?.label ?? periodFrom} — ${toItem?.label ?? periodTo}`;
+  }, [periodFrom, periodTo, availableMonths]);
+
+  const income = useMemo(() => calcIncomeStatement(expenses, assets, 12, period), [expenses, assets, period]);
   const balance = useMemo(() => calcBalanceSheet(income, assets, payables, bsConfig), [income, assets, payables, bsConfig]);
   const cashFlow = useMemo(() => calcCashFlow(income, payables, { saldoInicial: bsConfig.bancos }), [income, payables, bsConfig.bancos]);
   const kpis = useMemo(() => calcStrategicKPIs(balance, income, payables), [balance, income, payables]);
-  const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses), [expenses]);
+  const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses, period), [expenses, period]);
   const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
 
   // Leak detector data
