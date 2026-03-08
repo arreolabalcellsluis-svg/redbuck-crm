@@ -65,6 +65,63 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          city: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          priority: Database["public"]["Enums"]["customer_priority"]
+          rfc: string | null
+          source: Database["public"]["Enums"]["lead_source"]
+          state: string
+          trade_name: string | null
+          type: Database["public"]["Enums"]["customer_type"]
+          updated_at: string
+          user_id: string | null
+          vendor_id: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          city?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string
+          priority?: Database["public"]["Enums"]["customer_priority"]
+          rfc?: string | null
+          source?: Database["public"]["Enums"]["lead_source"]
+          state?: string
+          trade_name?: string | null
+          type?: Database["public"]["Enums"]["customer_type"]
+          updated_at?: string
+          user_id?: string | null
+          vendor_id?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          priority?: Database["public"]["Enums"]["customer_priority"]
+          rfc?: string | null
+          source?: Database["public"]["Enums"]["lead_source"]
+          state?: string
+          trade_name?: string | null
+          type?: Database["public"]["Enums"]["customer_type"]
+          updated_at?: string
+          user_id?: string | null
+          vendor_id?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       operating_expenses: {
         Row: {
           area: Database["public"]["Enums"]["expense_area"]
@@ -109,6 +166,229 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      orders: {
+        Row: {
+          advance: number
+          balance: number
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          delivery_notes: string | null
+          folio: string
+          id: string
+          items: Json
+          order_type: Database["public"]["Enums"]["order_type"]
+          promise_date: string | null
+          quotation_folio: string | null
+          reserve_deadline: string | null
+          scheduled_delivery_date: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          total: number
+          updated_at: string
+          user_id: string | null
+          vendor_name: string
+          warehouse: string
+        }
+        Insert: {
+          advance?: number
+          balance?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name: string
+          delivery_notes?: string | null
+          folio: string
+          id?: string
+          items?: Json
+          order_type?: Database["public"]["Enums"]["order_type"]
+          promise_date?: string | null
+          quotation_folio?: string | null
+          reserve_deadline?: string | null
+          scheduled_delivery_date?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_name?: string
+          warehouse?: string
+        }
+        Update: {
+          advance?: number
+          balance?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          delivery_notes?: string | null
+          folio?: string
+          id?: string
+          items?: Json
+          order_type?: Database["public"]["Enums"]["order_type"]
+          promise_date?: string | null
+          quotation_folio?: string | null
+          reserve_deadline?: string | null
+          scheduled_delivery_date?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_name?: string
+          warehouse?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          active: boolean
+          brand: string
+          category: Database["public"]["Enums"]["product_category"]
+          cost: number
+          created_at: string
+          currency: Database["public"]["Enums"]["product_currency"]
+          delivery_days: number
+          description: string
+          id: string
+          image: string | null
+          in_transit: number
+          list_price: number
+          min_price: number
+          model: string
+          name: string
+          sku: string
+          stock: Json
+          supplier: string
+          updated_at: string
+          user_id: string | null
+          warranty: string
+        }
+        Insert: {
+          active?: boolean
+          brand?: string
+          category?: Database["public"]["Enums"]["product_category"]
+          cost?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["product_currency"]
+          delivery_days?: number
+          description?: string
+          id?: string
+          image?: string | null
+          in_transit?: number
+          list_price?: number
+          min_price?: number
+          model?: string
+          name: string
+          sku: string
+          stock?: Json
+          supplier?: string
+          updated_at?: string
+          user_id?: string | null
+          warranty?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string
+          category?: Database["public"]["Enums"]["product_category"]
+          cost?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["product_currency"]
+          delivery_days?: number
+          description?: string
+          id?: string
+          image?: string | null
+          in_transit?: number
+          list_price?: number
+          min_price?: number
+          model?: string
+          name?: string
+          sku?: string
+          stock?: Json
+          supplier?: string
+          updated_at?: string
+          user_id?: string | null
+          warranty?: string
+        }
+        Relationships: []
+      }
+      quotations: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          customer_phone: string | null
+          customer_whatsapp: string | null
+          folio: string
+          id: string
+          items: Json
+          status: Database["public"]["Enums"]["quotation_status"]
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+          user_id: string | null
+          valid_until: string
+          vendor_email: string | null
+          vendor_id: string | null
+          vendor_name: string
+          vendor_phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          customer_whatsapp?: string | null
+          folio: string
+          id?: string
+          items?: Json
+          status?: Database["public"]["Enums"]["quotation_status"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          valid_until?: string
+          vendor_email?: string | null
+          vendor_id?: string | null
+          vendor_name?: string
+          vendor_phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          customer_whatsapp?: string | null
+          folio?: string
+          id?: string
+          items?: Json
+          status?: Database["public"]["Enums"]["quotation_status"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          valid_until?: string
+          vendor_email?: string | null
+          vendor_id?: string | null
+          vendor_name?: string
+          vendor_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -167,6 +447,17 @@ export type Database = {
         | "otros"
       asset_status: "activo" | "dado_de_baja"
       asset_type: "depreciacion" | "amortizacion"
+      customer_priority: "alta" | "media" | "baja"
+      customer_type:
+        | "taller_mecanico"
+        | "llantera"
+        | "suspension_frenos"
+        | "agencia"
+        | "flotilla"
+        | "transportista"
+        | "vulcanizadora"
+        | "particular"
+        | "distribuidor"
       expense_area:
         | "ventas"
         | "administracion"
@@ -186,6 +477,50 @@ export type Database = {
         | "legales_contables"
         | "otros"
       expense_type: "fijo" | "variable"
+      lead_source:
+        | "facebook"
+        | "whatsapp"
+        | "llamada"
+        | "recomendacion"
+        | "sitio_web"
+        | "visita_sucursal"
+        | "expos"
+        | "campaña"
+        | "organico"
+        | "otro"
+      order_status:
+        | "nuevo"
+        | "por_confirmar"
+        | "confirmado"
+        | "confirmado_anticipo"
+        | "apartado"
+        | "entrega_programada"
+        | "en_bodega"
+        | "surtido_parcial"
+        | "surtido_total"
+        | "en_reparto"
+        | "en_entrega"
+        | "entregado"
+        | "cancelado"
+      order_type: "directo" | "anticipo" | "apartado" | "entrega_futura"
+      product_category:
+        | "elevadores"
+        | "balanceadoras"
+        | "desmontadoras"
+        | "alineadoras"
+        | "hidraulico"
+        | "lubricacion"
+        | "aire"
+        | "otros"
+      product_currency: "MXN" | "USD"
+      quotation_status:
+        | "borrador"
+        | "enviada"
+        | "vista"
+        | "seguimiento"
+        | "aceptada"
+        | "rechazada"
+        | "vencida"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -333,6 +668,18 @@ export const Constants = {
       ],
       asset_status: ["activo", "dado_de_baja"],
       asset_type: ["depreciacion", "amortizacion"],
+      customer_priority: ["alta", "media", "baja"],
+      customer_type: [
+        "taller_mecanico",
+        "llantera",
+        "suspension_frenos",
+        "agencia",
+        "flotilla",
+        "transportista",
+        "vulcanizadora",
+        "particular",
+        "distribuidor",
+      ],
       expense_area: [
         "ventas",
         "administracion",
@@ -354,6 +701,54 @@ export const Constants = {
         "otros",
       ],
       expense_type: ["fijo", "variable"],
+      lead_source: [
+        "facebook",
+        "whatsapp",
+        "llamada",
+        "recomendacion",
+        "sitio_web",
+        "visita_sucursal",
+        "expos",
+        "campaña",
+        "organico",
+        "otro",
+      ],
+      order_status: [
+        "nuevo",
+        "por_confirmar",
+        "confirmado",
+        "confirmado_anticipo",
+        "apartado",
+        "entrega_programada",
+        "en_bodega",
+        "surtido_parcial",
+        "surtido_total",
+        "en_reparto",
+        "en_entrega",
+        "entregado",
+        "cancelado",
+      ],
+      order_type: ["directo", "anticipo", "apartado", "entrega_futura"],
+      product_category: [
+        "elevadores",
+        "balanceadoras",
+        "desmontadoras",
+        "alineadoras",
+        "hidraulico",
+        "lubricacion",
+        "aire",
+        "otros",
+      ],
+      product_currency: ["MXN", "USD"],
+      quotation_status: [
+        "borrador",
+        "enviada",
+        "vista",
+        "seguimiento",
+        "aceptada",
+        "rechazada",
+        "vencida",
+      ],
     },
   },
 } as const
