@@ -192,6 +192,7 @@ export default function PaymentsTab() {
                 <TableHead className="text-right">Saldo Restante</TableHead>
                 <TableHead>Forma Pago</TableHead>
                 <TableHead>Complemento</TableHead>
+                <TableHead>UUID Complemento</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
