@@ -217,7 +217,7 @@ export function calcCobranzaCommission(
   const totalCartera = demoAccountsReceivable.reduce((s, ar) => s + ar.total, 0);
   const totalCobrado = demoAccountsReceivable.reduce((s, ar) => s + ar.paid, 0);
   const totalBalance = demoAccountsReceivable.reduce((s, ar) => s + ar.balance, 0);
-  const overdueAR = demoAccountsReceivable.filter(ar => ar.status === 'vencida' || ar.daysOverdue > 0);
+  const overdueAR = demoAccountsReceivable.filter(ar => ar.status === 'vencido' || ar.daysOverdue > 0);
   const overdueRecovered = overdueAR.reduce((s, ar) => s + ar.paid, 0);
   const collectionPct = totalCartera > 0 ? (totalCobrado / totalCartera) * 100 : 0;
   const avgDaysOverdue = overdueAR.length > 0
