@@ -19,6 +19,7 @@ import {
   DollarSign, TrendingUp, Package, CreditCard, Building2,
   Wallet, BarChart3, Download, AlertTriangle,
   CheckCircle, RefreshCw, Banknote, Layers, Activity, Target, Radar,
+  ShieldAlert, Eye,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
