@@ -57,6 +57,49 @@ export default function OperatingExpensesPage() {
   // Filter
   const [filterCat, setFilterCat] = useState<string>('all');
 
+  // Excel download
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const dlFilteredCount = useMemo(() => {
+    if (!dlDateFrom && !dlDateTo) return expenses.length;
+    return expenses.filter(e => {
+      if (dlDateFrom && e.fecha < dlDateFrom) return false;
+      if (dlDateTo && e.fecha > dlDateTo) return false;
+      return true;
+    }).length;
+  }, [expenses, dlDateFrom, dlDateTo]);
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const filtered = expenses.filter(e => {
+      if (dlDateFrom && e.fecha < dlDateFrom) return false;
+      if (dlDateTo && e.fecha > dlDateTo) return false;
+      return true;
+    });
+    const wb = XLSX.utils.book_new();
+    const data = filtered.map(e => ({
+      Fecha: e.fecha, Categoría: EXPENSE_CATEGORIES[e.categoria]?.label ?? e.categoria,
+      Subcategoría: e.subcategoria, Descripción: e.descripcion, Monto: e.monto,
+      Tipo: TYPE_LABELS[e.tipo], Área: AREA_LABELS[e.area as ExpenseArea], Notas: e.notas || '',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Gastos Operativos');
+    const resumen = [
+      { Indicador: 'Periodo', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Todos' },
+      { Indicador: 'Total gastos', Valor: filtered.reduce((s, e) => s + e.monto, 0) },
+      { Indicador: 'Registros', Valor: filtered.length },
+      { Indicador: 'Gastos fijos', Valor: filtered.filter(e => e.tipo === 'fijo').reduce((s, e) => s + e.monto, 0) },
+      { Indicador: 'Gastos variables', Valor: filtered.filter(e => e.tipo === 'variable').reduce((s, e) => s + e.monto, 0) },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      `gastos-operativos_${dlDateFrom || 'inicio'}_${dlDateTo || 'fin'}.xlsx`);
+    setDlOpen(false);
+  };
+
   const summary = useMemo(() => calculateExpenseSummary(expenses), [expenses]);
   const financial = useMemo(() => calculateFinancialMetrics(expenses), [expenses]);
 
