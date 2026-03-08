@@ -3,6 +3,8 @@
  * Generates a printable HTML document and triggers download
  */
 
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
+
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 interface PdfExportOptions {
