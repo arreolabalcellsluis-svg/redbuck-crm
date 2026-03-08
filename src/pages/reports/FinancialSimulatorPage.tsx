@@ -43,14 +43,70 @@ export default function FinancialSimulatorPage() {
     );
   }
 
-  const handleExportExcel = (tab: string) => {
+  const handleExportExcel = async (tab: string) => {
     if (tab === 'capital') {
-      exportToExcel(fin.topCapitalProducts.map(p => ({
+      const XLSX = await import('xlsx');
+      const { saveAs } = await import('file-saver');
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Top productos
+      const prodData = fin.topCapitalProducts.map(p => ({
         SKU: p.sku, Producto: p.name, Categoría: p.category, Stock: p.stock,
-        'Costo unitario': p.cost, 'Valor inventario': p.value, Rotación: p.rotation.toFixed(1),
-        'Margen %': p.margin, 'ROI %': p.roi.toFixed(1), 'Venta mensual': p.monthlySales.toFixed(1),
+        'Costo unitario': p.cost, 'Valor inventario': p.value, Rotación: Number(p.rotation.toFixed(1)),
+        'Margen %': p.margin, 'ROI %': Number(p.roi.toFixed(1)), 'Venta mensual': Number(p.monthlySales.toFixed(1)),
         'Días stock': p.daysOfStock, 'Utilidad anual': p.annualProfit,
-      })), 'capital-invertido-inventario');
+      }));
+      const ws1 = XLSX.utils.json_to_sheet(prodData);
+      ws1['!cols'] = Object.keys(prodData[0] || {}).map(() => ({ wch: 18 }));
+      XLSX.utils.book_append_sheet(wb, ws1, 'Top Productos');
+
+      // Sheet 2: Capital por categoría (chart data)
+      const catData = fin.capitalByCategory.map(c => ({
+        Categoría: c.category, Unidades: c.units, Valor: c.value, '% del total': Number(c.pct.toFixed(1)),
+      }));
+      const ws2 = XLSX.utils.json_to_sheet(catData);
+      ws2['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Capital por Categoría');
+
+      // Sheet 3: Capital por bodega (chart data)
+      const whData = fin.capitalByWarehouse.map(w => ({
+        Bodega: w.warehouse, Unidades: w.units, Valor: w.value, '% del total': Number(w.pct.toFixed(1)),
+      }));
+      const ws3 = XLSX.utils.json_to_sheet(whData);
+      ws3['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 18 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws3, 'Capital por Bodega');
+
+      // Sheet 4: Salud del inventario (chart data)
+      const healthData = [
+        { Categoría: 'Saludable', Valor: fin.healthyInventoryValue, '% del total': Number(((fin.healthyInventoryValue / fin.totalInventoryValue) * 100).toFixed(1)) },
+        { Categoría: 'Lento (>180 días)', Valor: fin.slowInventoryValue - fin.deadInventoryValue, '% del total': Number((((fin.slowInventoryValue - fin.deadInventoryValue) / fin.totalInventoryValue) * 100).toFixed(1)) },
+        { Categoría: 'Muerto (>365 días)', Valor: fin.deadInventoryValue, '% del total': Number(fin.deadInventoryPct.toFixed(1)) },
+      ];
+      const ws4 = XLSX.utils.json_to_sheet(healthData);
+      ws4['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws4, 'Salud Inventario');
+
+      // Sheet 5: KPIs resumen
+      const kpiData = [
+        { Indicador: 'Capital en inventario', Valor: fin.totalInventoryValue },
+        { Indicador: 'Capital detenido (>180d)', Valor: fin.slowInventoryValue },
+        { Indicador: 'Capital muerto (>365d)', Valor: fin.deadInventoryValue },
+        { Indicador: 'Inventario saludable', Valor: fin.healthyInventoryValue },
+        { Indicador: 'Rotación anual', Valor: Number(fin.inventoryRotation.toFixed(2)) },
+        { Indicador: 'Días de inventario', Valor: fin.daysOfInventory },
+        { Indicador: 'ROI inventario %', Valor: Number(fin.roi.toFixed(1)) },
+        { Indicador: 'Utilidad anual', Valor: fin.annualProfit },
+        { Indicador: 'Ingresos anuales', Valor: fin.annualRevenue },
+        { Indicador: 'Inv. necesario', Valor: fin.requiredInventoryForCurrentSales },
+        { Indicador: fin.inventoryDifference > 0 ? 'Excedente' : 'Faltante', Valor: Math.abs(fin.inventoryDifference) },
+      ];
+      const ws5 = XLSX.utils.json_to_sheet(kpiData);
+      ws5['!cols'] = [{ wch: 28 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, ws5, 'KPIs');
+
+      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `simulador-financiero-completo_${new Date().toISOString().split('T')[0]}.xlsx`);
     } else if (tab === 'slow') {
       exportToExcel(fin.slowInventory.map(s => ({
         SKU: s.sku, Producto: s.name, Categoría: s.category, Stock: s.stock,
