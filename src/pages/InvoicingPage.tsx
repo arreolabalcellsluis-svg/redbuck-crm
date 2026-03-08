@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   FileText, Settings, Shield, Upload, CheckCircle, AlertTriangle, XCircle, Search,
-  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet,
+  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet, Archive,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -718,6 +720,98 @@ function InvoicesTab() {
     toast.success('PDF generado para impresión');
   };
 
+  // Generate single invoice PDF HTML
+  const generateInvoicePdfHtml = (inv: Invoice) => {
+    const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+    const st = STATUS_MAP[inv.status] ?? STATUS_MAP.borrador;
+    return `<!DOCTYPE html><html><head><title>Factura ${inv.series}-${inv.folio}</title>
+      <style>body{font-family:Arial,sans-serif;padding:30px;font-size:12px;color:#333}
+      .header{display:flex;justify-content:space-between;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #333}
+      .title{font-size:22px;font-weight:700}
+      .meta{color:#666;font-size:11px;margin-top:4px}
+      .section{margin-bottom:16px}
+      .section-title{font-size:13px;font-weight:600;margin-bottom:6px;color:#555}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .field{margin-bottom:4px}.field-label{font-size:10px;color:#888;text-transform:uppercase}.field-value{font-size:12px;font-weight:500}
+      table{width:100%;border-collapse:collapse;margin-top:8px}
+      th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:11px}
+      th{background:#f5f5f5;font-weight:600}
+      .totals{text-align:right;margin-top:12px;font-size:13px}
+      .totals .total{font-size:16px;font-weight:700}
+      .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+      </style></head><body>
+      <div class="header">
+        <div><div class="title">FACTURA</div><div class="meta">${inv.series}-${inv.folio}</div></div>
+        <div style="text-align:right"><div class="meta">Fecha: ${new Date(inv.created_at).toLocaleDateString('es-MX')}</div>
+        <div class="meta">UUID: ${inv.uuid || 'Pendiente'}</div>
+        <div class="meta">Estatus: ${st.label}</div></div>
+      </div>
+      <div class="grid section">
+        <div><div class="section-title">Cliente</div>
+          <div class="field"><span class="field-label">Nombre</span><div class="field-value">${cust?.name || '—'}</div></div>
+          <div class="field"><span class="field-label">RFC</span><div class="field-value">${cust?.rfc || '—'}</div></div>
+        </div>
+        <div><div class="section-title">Datos CFDI</div>
+          <div class="field"><span class="field-label">Forma de Pago</span><div class="field-value">${inv.payment_form}</div></div>
+          <div class="field"><span class="field-label">Método de Pago</span><div class="field-value">${inv.payment_method}</div></div>
+          <div class="field"><span class="field-label">Moneda</span><div class="field-value">${inv.currency}</div></div>
+        </div>
+      </div>
+      <div class="totals">
+        <div>Subtotal: ${fmt(inv.subtotal)}</div>
+        <div>IVA: ${fmt(inv.tax_amount)}</div>
+        <div class="total">Total: ${fmt(inv.total)}</div>
+      </div>
+      ${inv.notes ? `<div class="section" style="margin-top:16px"><div class="section-title">Notas</div><p style="font-size:11px">${inv.notes}</p></div>` : ''}
+      </body></html>`;
+  };
+
+  const handleDownloadSinglePdf = (inv: Invoice) => {
+    const html = generateInvoicePdfHtml(inv);
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.print();
+    }
+  };
+
+  const handleDownloadZip = async () => {
+    if (filtered.length === 0) return;
+    toast.info('Generando ZIP con las facturas...');
+    const zip = new JSZip();
+
+    for (const inv of filtered) {
+      const html = generateInvoicePdfHtml(inv);
+      zip.file(`Factura_${inv.series}-${inv.folio}.html`, html);
+    }
+
+    // Also add Excel summary
+    const rows = filtered.map(inv => {
+      const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+      const st = STATUS_MAP[inv.status] ?? STATUS_MAP.borrador;
+      return {
+        Fecha: new Date(inv.created_at).toLocaleDateString('es-MX'),
+        Serie: inv.series, Folio: inv.folio,
+        Cliente: cust?.name || '—', RFC: cust?.rfc || '—',
+        UUID: inv.uuid || '—', Subtotal: inv.subtotal, IVA: inv.tax_amount,
+        Total: inv.total, Moneda: inv.currency, Estatus: st.label,
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
+    const xlsxBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    zip.file('Resumen_Facturas.xlsx', xlsxBuffer);
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const periodLabel = dateFrom || dateTo
+      ? `_${dateFrom ? format(dateFrom, 'yyyyMMdd') : ''}${dateTo ? '_' + format(dateTo, 'yyyyMMdd') : ''}`
+      : '';
+    saveAs(blob, `Facturas${periodLabel}.zip`);
+    toast.success(`ZIP con ${filtered.length} facturas descargado`);
+  };
+
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Cargando facturas...</div>;
 
   return (
@@ -767,8 +861,13 @@ function InvoicesTab() {
                 <FileSpreadsheet size={14} /> Excel
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5">
-                <Download size={14} /> PDF
+                <Download size={14} /> PDF Reporte
               </Button>
+              {filtered.length > 1 && (
+                <Button variant="outline" size="sm" onClick={handleDownloadZip} className="gap-1.5">
+                  <Archive size={14} /> ZIP ({filtered.length})
+                </Button>
+              )}
             </>
           )}
           <Button onClick={() => setShowCreate(true)} className="gap-1.5">
@@ -818,9 +917,7 @@ function InvoicesTab() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
-                        {inv.status === 'timbrada' && (
-                          <Button size="icon" variant="ghost" title="Descargar XML"><Download size={14} /></Button>
-                        )}
+                        <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSinglePdf(inv)}><Download size={14} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
