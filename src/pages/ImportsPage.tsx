@@ -3,12 +3,14 @@ import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
-import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2 } from 'lucide-react';
+import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ImportOrder, ImportStatus, IMPORT_STATUS_LABELS, IMPORT_STATUS_ORDER } from '@/types';
 import { addAuditLog } from '@/lib/auditLog';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
@@ -19,6 +21,9 @@ export default function ImportsPage() {
   const [imports, setImports] = useState<ImportOrder[]>(demoImports);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [showDownload, setShowDownload] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
   const [form, setForm] = useState({
     supplier: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
     purchaseDate: '', estimatedDeparture: '', estimatedArrival: '',
@@ -105,6 +110,69 @@ export default function ImportsPage() {
     resetForm();
   };
 
+  const handleImportsExcel = () => {
+    if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
+    if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
+
+    const data = imports.filter(i => i.purchaseDate >= dlDateFrom && i.purchaseDate <= dlDateTo);
+    if (data.length === 0) { toast.error('No hay importaciones en el rango seleccionado'); return; }
+
+    const rows = data.map(i => ({
+      'No. Orden': i.orderNumber,
+      'Proveedor': i.supplier,
+      'País': i.country,
+      'Puerto Salida': i.departurePort,
+      'Puerto Llegada': i.arrivalPort,
+      'Fecha Compra': i.purchaseDate,
+      'Salida Estimada': i.estimatedDeparture,
+      'Llegada Estimada': i.estimatedArrival,
+      'Costo Productos (USD)': i.totalCost,
+      'Flete (USD)': i.freightCost,
+      'Aduanas (USD)': i.customsCost,
+      'Total Landed (USD)': i.totalLanded,
+      'Tipo Cambio': i.exchangeRate,
+      'Total MXN': Math.round(i.totalLanded * i.exchangeRate),
+      'Estatus': IMPORT_STATUS_LABELS[i.status] || i.status,
+      'Días Tránsito': i.daysInTransit,
+    }));
+
+    const detailRows: Record<string, unknown>[] = [];
+    data.forEach(i => {
+      i.items.forEach(it => {
+        detailRows.push({
+          'No. Orden': i.orderNumber,
+          'Proveedor': i.supplier,
+          'Fecha Compra': i.purchaseDate,
+          'Producto': it.productName,
+          'Cantidad': it.qty,
+          'Costo Unitario (USD)': it.unitCost,
+          'Subtotal (USD)': it.qty * it.unitCost,
+        });
+      });
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(rows);
+    ws1['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 18 }));
+    XLSX.utils.book_append_sheet(wb, ws1, 'Importaciones');
+    if (detailRows.length > 0) {
+      const ws2 = XLSX.utils.json_to_sheet(detailRows);
+      ws2['!cols'] = Object.keys(detailRows[0]).map(() => ({ wch: 20 }));
+      XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Productos');
+    }
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Importaciones_${dlDateFrom}_a_${dlDateTo}.xlsx`);
+    toast.success(`Excel generado con ${data.length} importaciones`);
+    setShowDownload(false);
+  };
+
+  const dlFilteredCount = imports.filter(i => {
+    if (dlDateFrom && i.purchaseDate < dlDateFrom) return false;
+    if (dlDateTo && i.purchaseDate > dlDateTo) return false;
+    return true;
+  }).length;
+
   return (
     <div>
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -112,11 +180,16 @@ export default function ImportsPage() {
           <h1 className="page-title">Importaciones</h1>
           <p className="page-subtitle">Control de compras internacionales y logística</p>
         </div>
-        {canEdit && (
-          <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus size={16} /> Nueva importación
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowDownload(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">
+            <Download size={16} /> Descargar Excel
           </button>
-        )}
+          {canEdit && (
+            <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+              <Plus size={16} /> Nueva importación
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -274,6 +347,39 @@ export default function ImportsPage() {
               </button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DOWNLOAD EXCEL DIALOG */}
+      <Dialog open={showDownload} onOpenChange={setShowDownload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Importaciones</DialogTitle>
+            <DialogDescription>Selecciona el rango de fechas de compra para descargar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicial *</label>
+                <input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha final *</label>
+                <input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              </div>
+            </div>
+            {dlDateFrom && dlDateTo && (
+              <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
+                <span className="font-semibold text-primary">{dlFilteredCount}</span> importación{dlFilteredCount !== 1 ? 'es' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowDownload(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
+            <button onClick={handleImportsExcel} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2">
+              <Download size={16} /> Descargar Excel
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

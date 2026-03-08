@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { CreditCard, AlertTriangle, Clock, CheckCircle, Plus, DollarSign, Trash2, Search, FileText } from 'lucide-react';
+import { CreditCard, AlertTriangle, Clock, CheckCircle, Plus, DollarSign, Trash2, Search, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const fmt = (n: number, cur = 'MXN') =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(n);
@@ -53,6 +55,9 @@ export default function AccountsPayablePage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showPayment, setShowPayment] = useState<string | null>(null);
+  const [showDownload, setShowDownload] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
 
   // Form state for new invoice
   const [form, setForm] = useState({
@@ -138,16 +143,73 @@ export default function AccountsPayablePage() {
     return diff > 0 ? diff : 0;
   };
 
+  const handleExcelDownload = () => {
+    if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
+    if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
+
+    const data = enriched.filter(p => {
+      if (p.invoice_date < dlDateFrom || p.invoice_date > dlDateTo) return false;
+      return true;
+    });
+
+    if (data.length === 0) { toast.error('No hay facturas en el rango seleccionado'); return; }
+
+    const rows = data.map(p => ({
+      'Proveedor': p.supplier_name,
+      'No. Factura': p.invoice_number,
+      'Descripción': p.description,
+      'Fecha Factura': p.invoice_date,
+      'Fecha Vencimiento': p.due_date,
+      'Moneda': p.currency,
+      'Total': p.total,
+      'Pagado': p.paid,
+      'Saldo': p.balance,
+      'Estatus': STATUS_LABELS[p.computedStatus] || p.computedStatus,
+      'Días Vencidos': daysOverdue(p.due_date),
+      'Notas': p.notes || '',
+    }));
+
+    const summary = [
+      { Concepto: 'Total por pagar', Importe: data.reduce((s, p) => s + p.balance, 0) },
+      { Concepto: 'Total pagado', Importe: data.reduce((s, p) => s + p.paid, 0) },
+      { Concepto: 'Facturas vencidas', Importe: data.filter(p => p.computedStatus === 'vencida').length },
+      { Concepto: 'Total facturas', Importe: data.length },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(rows);
+    ws1['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 18 }));
+    XLSX.utils.book_append_sheet(wb, ws1, 'Cuentas por Pagar');
+    const ws2 = XLSX.utils.json_to_sheet(summary);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cuentas_por_Pagar_${dlDateFrom}_a_${dlDateTo}.xlsx`);
+    toast.success(`Excel generado con ${data.length} facturas`);
+    setShowDownload(false);
+  };
+
+  const dlFilteredCount = enriched.filter(p => {
+    if (dlDateFrom && p.invoice_date < dlDateFrom) return false;
+    if (dlDateTo && p.invoice_date > dlDateTo) return false;
+    return true;
+  }).length;
+
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Cuentas por Pagar</h1>
           <p className="page-subtitle">Control de facturas de proveedores y vencimientos</p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="gap-2">
-          <Plus size={16} /> Nueva Factura
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowDownload(true)} className="gap-2">
+            <Download size={16} /> Descargar Excel
+          </Button>
+          <Button onClick={() => setShowAdd(true)} className="gap-2">
+            <Plus size={16} /> Nueva Factura
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -328,6 +390,39 @@ export default function AccountsPayablePage() {
             <Button variant="outline" onClick={() => setShowPayment(null)}>Cancelar</Button>
             <Button onClick={handlePaymentSubmit} disabled={registerPayment.isPending}>
               {registerPayment.isPending ? 'Procesando...' : 'Confirmar Pago'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DOWNLOAD EXCEL DIALOG */}
+      <Dialog open={showDownload} onOpenChange={setShowDownload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Cuentas por Pagar</DialogTitle>
+            <DialogDescription>Selecciona el rango de fechas de facturación para descargar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs mb-1 block">Fecha inicial *</Label>
+                <Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">Fecha final *</Label>
+                <Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} />
+              </div>
+            </div>
+            {dlDateFrom && dlDateTo && (
+              <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
+                <span className="font-semibold text-primary">{dlFilteredCount}</span> factura{dlFilteredCount !== 1 ? 's' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDownload(false)}>Cancelar</Button>
+            <Button onClick={handleExcelDownload} className="gap-2">
+              <Download size={16} /> Descargar Excel
             </Button>
           </DialogFooter>
         </DialogContent>

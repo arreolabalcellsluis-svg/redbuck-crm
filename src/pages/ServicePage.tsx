@@ -2,12 +2,14 @@ import { demoServiceOrders, demoCustomers, demoProducts, demoUsers } from '@/dat
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Wrench, Calendar, CheckCircle, Clock, Plus, Edit2, ImagePlus, X, ZoomIn, FileDown, MessageCircle } from 'lucide-react';
+import { Wrench, Calendar, CheckCircle, Clock, Plus, Edit2, ImagePlus, X, ZoomIn, FileDown, MessageCircle, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ServiceOrder, ServiceType, ServiceStatus } from '@/types';
 import { addAuditLog } from '@/lib/auditLog';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   instalacion: 'Instalación', garantia: 'Garantía', mantenimiento: 'Mantenimiento',
@@ -162,6 +164,9 @@ export default function ServicePage() {
     diagnosis: '', actionsPerformed: '', completedDate: '', observations: '',
   });
   const [formImages, setFormImages] = useState<string[]>([]);
+  const [showDownload, setShowDownload] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
 
   // Image viewer
   const [viewImage, setViewImage] = useState<string | null>(null);
@@ -275,6 +280,46 @@ export default function ServicePage() {
     resetForm();
   };
 
+  const handleServiceExcel = () => {
+    if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
+    if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
+
+    const data = services.filter(s => s.scheduledDate >= dlDateFrom && s.scheduledDate <= dlDateTo);
+    if (data.length === 0) { toast.error('No hay órdenes en el rango seleccionado'); return; }
+
+    const rows = data.map(s => ({
+      'Folio': s.folio,
+      'Cliente': s.customerName,
+      'Equipo': s.productName,
+      'Técnico': s.technicianName,
+      'Tipo': SERVICE_TYPE_LABELS[s.type] || s.type,
+      'Fecha Programada': s.scheduledDate,
+      'Fecha Realizada': s.completedDate || '',
+      'Estatus': SERVICE_STATUS_LABELS[s.status] || s.status,
+      'Descripción': s.description || '',
+      'Diagnóstico': s.diagnosis || '',
+      'Acciones Realizadas': s.actionsPerformed || '',
+      'Observaciones': s.observations || '',
+      'Fotos': s.images?.length || 0,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Servicio Técnico');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Servicio_Tecnico_${dlDateFrom}_a_${dlDateTo}.xlsx`);
+    toast.success(`Excel generado con ${data.length} órdenes`);
+    setShowDownload(false);
+  };
+
+  const dlFilteredCount = services.filter(s => {
+    if (dlDateFrom && s.scheduledDate < dlDateFrom) return false;
+    if (dlDateTo && s.scheduledDate > dlDateTo) return false;
+    return true;
+  }).length;
+
   return (
     <div>
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -282,9 +327,14 @@ export default function ServicePage() {
           <h1 className="page-title">Servicio Técnico</h1>
           <p className="page-subtitle">Instalaciones, garantías y mantenimiento</p>
         </div>
-        <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus size={16} /> Nueva orden
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowDownload(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">
+            <Download size={16} /> Descargar Excel
+          </button>
+          <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus size={16} /> Nueva orden
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -486,6 +536,39 @@ export default function ServicePage() {
       <Dialog open={!!viewImage} onOpenChange={() => setViewImage(null)}>
         <DialogContent className="max-w-3xl p-2">
           {viewImage && <img src={viewImage} alt="" className="w-full max-h-[80vh] object-contain rounded-lg" />}
+        </DialogContent>
+      </Dialog>
+
+      {/* DOWNLOAD EXCEL DIALOG */}
+      <Dialog open={showDownload} onOpenChange={setShowDownload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Servicio Técnico</DialogTitle>
+            <DialogDescription>Selecciona el rango de fechas programadas para descargar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicial *</label>
+                <input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha final *</label>
+                <input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              </div>
+            </div>
+            {dlDateFrom && dlDateTo && (
+              <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
+                <span className="font-semibold text-primary">{dlFilteredCount}</span> orden{dlFilteredCount !== 1 ? 'es' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowDownload(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
+            <button onClick={handleServiceExcel} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2">
+              <Download size={16} /> Descargar Excel
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
