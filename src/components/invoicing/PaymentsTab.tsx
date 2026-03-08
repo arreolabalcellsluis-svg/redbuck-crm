@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, DollarSign, FileText, CreditCard, AlertTriangle } from 'lucide-react';
+import { Search, Plus, DollarSign, FileText, CreditCard, AlertTriangle, Download, FileCode, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { usePayments, useCreatePayment, type Payment } from '@/hooks/usePayments';
+import { usePayments, useCreatePayment, useGenerateComplement, useDownloadComplementFile, type Payment } from '@/hooks/usePayments';
 import { useInvoices, SAT_PAYMENT_FORMS, type Invoice } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
 
@@ -32,6 +32,8 @@ export default function PaymentsTab() {
   const { data: invoices, isLoading: loadingInvoices } = useInvoices();
   const { data: customers } = useCustomers();
   const createPayment = useCreatePayment();
+  const generateComplement = useGenerateComplement();
+  const downloadComplementFile = useDownloadComplementFile();
 
   const [search, setSearch] = useState('');
   const [showRegister, setShowRegister] = useState(false);
@@ -190,6 +192,7 @@ export default function PaymentsTab() {
                 <TableHead className="text-right">Saldo Restante</TableHead>
                 <TableHead>Forma Pago</TableHead>
                 <TableHead>Complemento</TableHead>
+                <TableHead>UUID Complemento</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -211,13 +214,34 @@ export default function PaymentsTab() {
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Badge className={`${compSt.color} text-xs`}>{compSt.label}</Badge>
-                        {p.complement_status === 'pendiente' && (
-                          <Button size="sm" variant="outline" className="h-6 text-xs gap-1" disabled title="Disponible en Fase 2">
-                            <FileText size={12} /> Generar
+                        {p.complement_status === 'pendiente' && inv?.uuid && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs gap-1"
+                            disabled={generateComplement.isPending}
+                            onClick={() => generateComplement.mutate(p.id)}
+                          >
+                            {generateComplement.isPending ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                            Generar
                           </Button>
+                        )}
+                        {p.complement_status === 'pendiente' && !inv?.uuid && (
+                          <span className="text-xs text-muted-foreground">Sin UUID</span>
+                        )}
+                        {p.complement_status === 'generado' && (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" title="Descargar XML" onClick={() => downloadComplementFile.mutate({ payment_id: p.id, file_type: 'xml' })}>
+                              <FileCode size={12} />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" title="Descargar PDF" onClick={() => downloadComplementFile.mutate({ payment_id: p.id, file_type: 'pdf' })}>
+                              <Download size={12} />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="font-mono text-xs max-w-[100px] truncate">{p.complement_uuid || '—'}</TableCell>
                   </TableRow>
                 );
               })}

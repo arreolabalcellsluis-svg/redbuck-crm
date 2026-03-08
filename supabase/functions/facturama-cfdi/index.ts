@@ -248,6 +248,163 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ─── ACTION: generate-complement (CFDI tipo P) ───
+    if (action === "generate-complement") {
+      const { payment_id } = body;
+      if (!payment_id) throw new Error("payment_id requerido");
+
+      // Fetch payment
+      const { data: payment, error: payErr } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("id", payment_id)
+        .single();
+      if (payErr || !payment) throw new Error("Pago no encontrado");
+      if (payment.complement_status === "generado") throw new Error("El complemento ya fue generado para este pago");
+
+      // Fetch related invoice
+      const { data: invoice, error: invErr2 } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("id", payment.invoice_id)
+        .single();
+      if (invErr2 || !invoice) throw new Error("Factura relacionada no encontrada");
+      if (!invoice.uuid) throw new Error("La factura no tiene UUID (no ha sido timbrada)");
+
+      // Fetch fiscal settings
+      const { data: fiscal2 } = await supabase
+        .from("fiscal_settings")
+        .select("*")
+        .limit(1)
+        .single();
+      if (!fiscal2) throw new Error("Configuración fiscal no encontrada");
+
+      // Fetch customer fiscal data
+      let receiver2: any = { Rfc: "XAXX010101000", Name: "PÚBLICO EN GENERAL", CfdiUse: "CP01", FiscalRegime: "616", TaxZipCode: "00000" };
+      if (invoice.customer_id) {
+        const { data: custFiscal2 } = await supabase
+          .from("customer_fiscal_data")
+          .select("*")
+          .eq("customer_id", invoice.customer_id)
+          .single();
+        if (custFiscal2) {
+          receiver2 = {
+            Rfc: custFiscal2.rfc,
+            Name: custFiscal2.legal_name,
+            CfdiUse: "CP01",
+            FiscalRegime: custFiscal2.tax_regime,
+            TaxZipCode: custFiscal2.fiscal_zip_code,
+          };
+        }
+      }
+
+      // Determine parcialidad number (count previous payments on same invoice)
+      const { data: prevPayments } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("invoice_id", payment.invoice_id)
+        .lt("created_at", payment.created_at)
+        .order("created_at", { ascending: true });
+      const partiality = (prevPayments?.length ?? 0) + 1;
+
+      // Build CFDI tipo P payload for Facturama
+      const complementPayload = {
+        Currency: "XXX",
+        ExpeditionPlace: fiscal2.expedition_zip_code,
+        CfdiType: "P",
+        PaymentForm: "99",
+        PaymentMethod: "PUE",
+        Issuer: {
+          Rfc: fiscal2.issuer_rfc,
+          Name: fiscal2.issuer_name,
+          FiscalRegime: fiscal2.issuer_tax_regime,
+        },
+        Receiver: receiver2,
+        Complemento: {
+          Payments: [
+            {
+              Date: payment.payment_date,
+              PaymentForm: payment.payment_form,
+              Currency: payment.currency || "MXN",
+              ExchangeRate: payment.exchange_rate || 1,
+              Amount: payment.amount,
+              RelatedDocuments: [
+                {
+                  Uuid: invoice.uuid,
+                  Series: invoice.series,
+                  Folio: invoice.folio,
+                  Currency: invoice.currency || "MXN",
+                  ExchangeRate: invoice.exchange_rate || 1,
+                  PaymentMethod: invoice.payment_method || "PPD",
+                  PartialityNumber: partiality,
+                  PreviousBalanceAmount: payment.previous_balance,
+                  AmountPaid: payment.amount,
+                  ImpSaldoInsoluto: payment.remaining_balance,
+                },
+              ],
+            },
+          ],
+        },
+      };
+
+      // Call Facturama to stamp complement
+      const compRes = await facturama("/3/cfdis", "POST", complementPayload);
+      const compData = await compRes.json();
+
+      if (!compRes.ok) {
+        // Update payment with error
+        await supabase
+          .from("payments")
+          .update({
+            complement_status: "error",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", payment_id);
+        throw new Error(`Error al generar complemento: ${JSON.stringify(compData)}`);
+      }
+
+      const compUuid = compData.Complement?.TaxStamp?.Uuid || compData.Id || "";
+
+      // Download XML
+      let compXmlPath = "";
+      try {
+        const xmlRes = await facturama(`/api/Cfdi/xml/${compData.Id || compUuid}`, "GET");
+        if (xmlRes.ok) {
+          const xmlContent = await xmlRes.text();
+          compXmlPath = `xml/complement_${payment_id}.xml`;
+          await supabase.storage.from("invoicing").upload(compXmlPath, new Blob([xmlContent], { type: "text/xml" }), { upsert: true });
+        }
+      } catch { /* non-critical */ }
+
+      // Download PDF
+      let compPdfPath = "";
+      try {
+        const pdfRes = await facturama(`/api/Cfdi/pdf/${compData.Id || compUuid}`, "GET");
+        if (pdfRes.ok) {
+          const pdfBlob = await pdfRes.blob();
+          compPdfPath = `pdf/complement_${payment_id}.pdf`;
+          await supabase.storage.from("invoicing").upload(compPdfPath, pdfBlob, { contentType: "application/pdf", upsert: true });
+        }
+      } catch { /* non-critical */ }
+
+      // Update payment record
+      await supabase
+        .from("payments")
+        .update({
+          complement_status: "generado",
+          complement_uuid: compUuid,
+          complement_xml_path: compXmlPath,
+          complement_pdf_path: compPdfPath,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", payment_id);
+
+      return new Response(
+        JSON.stringify({ success: true, uuid: compUuid, data: compData }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ─── ACTION: download ───
     if (action === "download") {
       const { invoice_id, file_type } = body;
@@ -260,6 +417,28 @@ Deno.serve(async (req) => {
 
       const path = file_type === "xml" ? invoice.xml_path : invoice.pdf_path;
       if (!path) throw new Error(`Archivo ${file_type} no disponible`);
+
+      const { data: fileData } = await supabase.storage.from("invoicing").createSignedUrl(path, 3600);
+      if (!fileData?.signedUrl) throw new Error("No se pudo generar URL de descarga");
+
+      return new Response(
+        JSON.stringify({ success: true, url: fileData.signedUrl }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ─── ACTION: download-complement ───
+    if (action === "download-complement") {
+      const { payment_id, file_type } = body;
+      const { data: payment } = await supabase
+        .from("payments")
+        .select("complement_xml_path, complement_pdf_path, complement_uuid")
+        .eq("id", payment_id)
+        .single();
+      if (!payment) throw new Error("Pago no encontrado");
+
+      const path = file_type === "xml" ? payment.complement_xml_path : payment.complement_pdf_path;
+      if (!path) throw new Error(`Archivo ${file_type} del complemento no disponible`);
 
       const { data: fileData } = await supabase.storage.from("invoicing").createSignedUrl(path, 3600);
       if (!fileData?.signedUrl) throw new Error("No se pudo generar URL de descarga");
