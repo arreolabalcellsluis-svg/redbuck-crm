@@ -34,7 +34,7 @@ export default function ImportPlanningPage() {
   };
 
   const records = useMemo(() => {
-    return [...analyses].sort((a, b) => urgencyOrder[a.purchaseUrgency] - urgencyOrder[b.purchaseUrgency]);
+    return [...analyses].sort((a, b) => a.daysOfStockWithTransit - b.daysOfStockWithTransit);
   }, [analyses]);
 
   const filtered = useMemo(() => {
