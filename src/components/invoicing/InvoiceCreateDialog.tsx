@@ -19,6 +19,14 @@ import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, u
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
+const DOCUMENT_TYPES = [
+  { code: 'I', label: 'Factura (Ingreso)' },
+  { code: 'E', label: 'Nota de Crédito / Devolución (Egreso)' },
+  { code: 'P', label: 'Recibo de Pago (Complemento)' },
+  { code: 'N', label: 'Recibo de Honorarios (Nómina)' },
+  { code: 'T', label: 'Traslado' },
+] as const;
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +52,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   // Invoice fields
   const [series, setSeries] = useState('A');
   const [folio, setFolio] = useState('');
+  const [invoiceType, setInvoiceType] = useState<'I' | 'E' | 'P' | 'N' | 'T'>('I');
   const [paymentForm, setPaymentForm] = useState('99');
   const [paymentMethod, setPaymentMethod] = useState('PUE');
   const [currency, setCurrency] = useState('MXN');
@@ -69,6 +78,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setFolio(nextFolio);
       setPaymentForm('99');
       setPaymentMethod('PUE');
+      setInvoiceType('I');
       setCurrency('MXN');
       setExchangeRate(1);
       setConditions('');
@@ -170,7 +180,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
         sales_person_id: '',
         series,
         folio,
-        invoice_type: 'I',
+        invoice_type: invoiceType,
         payment_form: paymentForm,
         payment_method: paymentMethod,
         currency,
@@ -307,6 +317,14 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
               </div>
             )}
 
+            {/* Document type */}
+            <div className="space-y-1.5">
+              <Label>Tipo de documento</Label>
+              <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
+                {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+              </select>
+            </div>
+
             {/* CFDI Fields */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
@@ -407,7 +425,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
           {step === 'configure' && (
             <Button onClick={handleCreate} disabled={createMutation.isPending} className="gap-1.5">
               <Plus size={14} />
-              {createMutation.isPending ? 'Creando...' : 'Crear Factura (Borrador)'}
+              {createMutation.isPending ? 'Creando...' : `Crear ${DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label.split(' (')[0] || 'Factura'} (Borrador)`}
             </Button>
           )}
         </DialogFooter>
