@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { demoOrders, demoProducts, salesByVendor, demoUsers } from '@/data/demo-data';
+import { demoOrders, demoProducts, salesByVendor, demoUsers, demoQuotations } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
@@ -83,6 +83,40 @@ export default function SalesReportPage() {
     total: filtered.reduce((s, r) => s + r.total, 0),
   }), [filtered]);
 
+  // Count quotations matching current filters
+  const totalCotizaciones = useMemo(() => {
+    const baseQuotations = isVendedor
+      ? demoQuotations.filter(q => q.vendorName === DEMO_VENDEDOR_NAME)
+      : demoQuotations;
+    return baseQuotations.filter(q => {
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        if (!q.customerName.toLowerCase().includes(s) && !q.folio.toLowerCase().includes(s)) return false;
+      }
+      if (filters.vendedor && !q.vendorName.includes(filters.vendedor)) return false;
+      if (filters.dateFrom && new Date(q.createdAt) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(q.createdAt) > new Date(filters.dateTo)) return false;
+      return true;
+    }).length;
+  }, [filters, isVendedor]);
+
+  // Count orders matching current filters
+  const totalPedidos = useMemo(() => {
+    const baseOrders = isVendedor
+      ? demoOrders.filter(o => o.vendorName === DEMO_VENDEDOR_NAME)
+      : demoOrders;
+    return baseOrders.filter(o => {
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        if (!o.customerName.toLowerCase().includes(s) && !o.folio.toLowerCase().includes(s)) return false;
+      }
+      if (filters.vendedor && !o.vendorName.includes(filters.vendedor)) return false;
+      if (filters.dateFrom && new Date(o.createdAt) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(o.createdAt) > new Date(filters.dateTo)) return false;
+      return true;
+    }).length;
+  }, [filters, isVendedor]);
+
   const hasActiveFilters = !!(filters.search || filters.vendedor || filters.sku || filters.categoria || filters.dateFrom || filters.dateTo);
 
   const vendorOptions = isVendedor ? [] : [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
@@ -136,12 +170,12 @@ export default function SalesReportPage() {
       {/* Summary */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         <div className="bg-card rounded-xl border p-4 text-center">
-          <div className="text-xs text-muted-foreground">Registros</div>
-          <div className="text-xl font-bold">{filtered.length}</div>
+          <div className="text-xs text-muted-foreground">Cotizaciones</div>
+          <div className="text-xl font-bold">{totalCotizaciones}</div>
         </div>
         <div className="bg-card rounded-xl border p-4 text-center">
-          <div className="text-xs text-muted-foreground">Unidades</div>
-          <div className="text-xl font-bold">{totals.cantidad}</div>
+          <div className="text-xs text-muted-foreground">Pedidos</div>
+          <div className="text-xl font-bold">{totalPedidos}</div>
         </div>
         <div className="bg-card rounded-xl border p-4 text-center">
           <div className="text-xs text-muted-foreground">Subtotal</div>
