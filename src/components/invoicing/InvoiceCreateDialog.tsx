@@ -363,11 +363,17 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
             )}
 
             {/* Document type + Relation */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label>Tipo de documento</Label>
                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
                   {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Uso de CFDI</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={cfdiUse} onChange={e => setCfdiUse(e.target.value)}>
+                  {SAT_CFDI_USES.map(u => <option key={u.code} value={u.code}>{u.label}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
