@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama to stamp complement
       const compRes = await facturama("/3/cfdis", "POST", complementPayload);
-      const compData = await compRes.json();
+      const compData = await safeJson(compRes);
 
       if (!compRes.ok) {
         // Update payment with error
