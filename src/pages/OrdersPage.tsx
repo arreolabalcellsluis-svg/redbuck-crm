@@ -407,7 +407,7 @@ export default function OrdersPage() {
                                 <Check className={cn("mr-2 h-4 w-4", it.productId === p.id ? "opacity-100" : "opacity-0")} />
                                 <div className="flex flex-col">
                                   <span className="text-sm">{p.name}</span>
-                                  <span className="text-xs text-muted-foreground">{p.sku} — {fmt(p.listPrice)}</span>
+                                  <span className="text-xs text-muted-foreground">{p.sku} — ${p.listPrice} USD {p.currency === 'USD' ? `(≈ ${fmt(p.listPrice * exchangeRate)} MXN)` : fmt(p.listPrice)}</span>
                                 </div>
                               </CommandItem>
                             ))}
