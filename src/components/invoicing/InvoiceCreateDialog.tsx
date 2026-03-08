@@ -231,7 +231,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
             <div className="max-h-[400px] overflow-y-auto border rounded-lg">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                   <TableRow>
+                    <TableHead>Fecha</TableHead>
                     <TableHead>Folio</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Estatus</TableHead>
@@ -241,11 +242,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {eligibleOrders.slice(0, 30).map(o => {
+                  {eligibleOrders.slice(0, 50).map(o => {
                     const cf = o.customer_id ? fiscalMap.get(o.customer_id) : null;
                     const hasFiscal = cf && cf.rfc && cf.legal_name;
                     return (
                       <TableRow key={o.id}>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('es-MX')}</TableCell>
                         <TableCell className="font-mono text-sm">{o.folio}</TableCell>
                         <TableCell>{o.customer_name}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{o.status}</Badge></TableCell>
