@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -331,9 +332,12 @@ export default function IncomeStatementReportPage() {
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="brand">REDBUCK EQUIPMENT</div>
-            <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img src="${getCompanyLogoUrl()}" alt="Logo" style="height:36px;max-width:120px;object-fit:contain;" onerror="this.style.display='none'" />
+            <div>
+              <div class="brand">REDBUCK EQUIPMENT</div>
+              <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+            </div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:16px;font-weight:700;">Estado de Resultados</div>

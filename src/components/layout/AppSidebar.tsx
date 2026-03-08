@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_LABELS } from '@/types';
+import { useCompanyLogo } from '@/hooks/useCompanyLogo';
 import { getNavItemsForRole } from '@/lib/rolePermissions';
 import {
   LayoutDashboard, Users, Package, Wrench, Warehouse, FileText,
@@ -50,6 +51,7 @@ export default function AppSidebar() {
   const { currentRole, setCurrentRole, sidebarOpen, setSidebarOpen } = useAppContext();
   const { user, userRole, signOut } = useAuth();
   const location = useLocation();
+  const { logoUrl } = useCompanyLogo();
 
   return (
     <>
@@ -71,9 +73,13 @@ export default function AppSidebar() {
         <div className="flex items-center justify-between px-4 h-16 shrink-0" style={{ borderBottom: '1px solid hsl(var(--sidebar-border))' }}>
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-display font-bold text-sm" style={{ background: 'hsl(var(--sidebar-primary))', color: 'hsl(var(--sidebar-primary-foreground))' }}>
-                RB
-              </div>
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center font-display font-bold text-sm" style={{ background: 'hsl(var(--sidebar-primary))', color: 'hsl(var(--sidebar-primary-foreground))' }}>
+                  RB
+                </div>
+              )}
               <div>
                 <div className="text-sm font-bold font-display" style={{ color: 'hsl(var(--sidebar-accent-foreground))' }}>REDBUCK</div>
                 <div className="text-[10px] tracking-widest uppercase" style={{ color: 'hsl(var(--sidebar-muted))' }}>ERP · CRM</div>

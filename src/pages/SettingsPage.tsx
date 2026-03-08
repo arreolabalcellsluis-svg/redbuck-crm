@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { demoUsers as initialUsers, demoWarehouses as initialWarehouses, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate } from '@/data/demo-data';
 import { ROLE_LABELS, UserRole, User, Warehouse } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { Users, Warehouse as WarehouseIcon, Shield, Building2, FileText, MessageCircle, Hash, Pencil, Plus, Trash2, X, Check, Upload, Image, FileUp } from 'lucide-react';
+import { useCompanyLogo } from '@/hooks/useCompanyLogo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
@@ -323,6 +324,9 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ═══════════ COMPANY LOGO ═══════════ */}
+        <CompanyLogoCard isDirector={isDirector} />
+
         {/* ═══════════ COMPANY INFO ═══════════ */}
         <div className="bg-card rounded-xl border p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -723,6 +727,59 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function CompanyLogoCard({ isDirector }: { isDirector: boolean }) {
+  const { logoUrl, uploading, uploadLogo, removeLogo } = useCompanyLogo();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Máximo 5MB'); return; }
+    uploadLogo(file);
+  };
+
+  return (
+    <div className="bg-card rounded-xl border p-5 lg:col-span-2">
+      <div className="flex items-center gap-2 mb-4">
+        <Image size={20} className="text-primary" />
+        <h3 className="font-display font-semibold">Logo de la empresa</h3>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        Este logo aparecerá en el menú lateral, cotizaciones, reportes PDF y archivos descargables.
+      </p>
+      <div className="flex items-center gap-6">
+        <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30">
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo empresa" className="w-full h-full object-contain p-1" />
+          ) : (
+            <Image size={32} className="text-muted-foreground/40" />
+          )}
+        </div>
+        {isDirector && (
+          <div className="space-y-2">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              <Upload size={16} />
+              {uploading ? 'Subiendo...' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
+            </button>
+            {logoUrl && (
+              <button onClick={removeLogo} className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm text-destructive hover:bg-destructive/10">
+                <Trash2 size={14} /> Eliminar
+              </button>
+            )}
+            <p className="text-[10px] text-muted-foreground">PNG, JPG o SVG. Máximo 5MB.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

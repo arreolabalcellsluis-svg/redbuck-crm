@@ -3,6 +3,8 @@
  * Generates a printable HTML document and triggers download
  */
 
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
+
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 interface PdfExportOptions {
@@ -59,9 +61,12 @@ export function exportToPdf({ title, subtitle, filename, headers, rows, summary 
     </head>
     <body>
       <div class="header">
-        <div>
-          <div class="brand">REDBUCK EQUIPMENT</div>
-          <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="${getCompanyLogoUrl()}" alt="Logo" style="height:36px;max-width:120px;object-fit:contain;" onerror="this.style.display='none'" />
+          <div>
+            <div class="brand">REDBUCK EQUIPMENT</div>
+            <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+          </div>
         </div>
         <div style="text-align:right;">
           <div class="report-title">${title}</div>

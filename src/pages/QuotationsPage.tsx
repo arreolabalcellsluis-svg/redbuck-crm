@@ -1,4 +1,5 @@
 import { demoCustomers, demoProducts, demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate } from '@/data/demo-data';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { getProductImage } from '@/lib/productImages';
@@ -347,12 +348,14 @@ export default function QuotationsPage() {
   <!-- HEADER -->
   <div style="padding:24px 32px 20px;display:flex;justify-content:space-between;align-items:flex-start;">
     <div style="display:flex;align-items:center;gap:16px;">
-      <div style="width:56px;height:56px;border-radius:12px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;letter-spacing:-0.5px;flex-shrink:0;">RB</div>
+    <div style="display:flex;align-items:flex-start;gap:16px;">
+      <img src="${getCompanyLogoUrl()}" alt="Logo" style="height:56px;max-width:140px;object-fit:contain;border-radius:8px;" onerror="this.style.display='none'" />
       <div>
         <div style="font-weight:800;font-size:20px;letter-spacing:-0.5px;line-height:1.2;">${company.nombreComercial}</div>
         <div style="font-size:11px;color:hsl(0,0%,50%);margin-top:2px;">${company.razonSocial}</div>
         <div style="font-size:11px;color:hsl(0,0%,50%);line-height:1.5;margin-top:4px;">${company.direccion}<br/>Tel: ${company.telefono} · ${company.correo}<br/>RFC: ${company.rfc}</div>
       </div>
+    </div>
     </div>
     <div style="text-align:right;flex-shrink:0;">
       <div style="display:inline-block;padding:8px 16px;border-radius:8px;background:rgba(220,38,38,0.08);color:#dc2626;font-weight:900;font-size:24px;letter-spacing:-0.5px;">${q.folio}</div>
@@ -882,13 +885,14 @@ export default function QuotationsPage() {
 function QuotationPreview({ quotation }: { quotation: Quotation }) {
   const company = demoCompanyInfo;
   const conditions = demoSalesConditions;
+  const logoSrc = getCompanyLogoUrl();
 
   return (
     <div className="bg-white text-[hsl(0,0%,12%)]" id="quotation-pdf">
       <div className="h-2 w-full" style={{ background: 'hsl(var(--primary))' }} />
       <div className="px-8 pt-6 pb-5 flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center font-display font-black text-xl tracking-tight" style={{ background: 'hsl(var(--primary))', color: '#fff' }}>RB</div>
+          <img src={logoSrc} alt="Logo" className="w-14 h-14 rounded-xl object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           <div>
             <div className="font-display font-extrabold text-xl tracking-tight leading-tight">{company.nombreComercial}</div>
             <div className="text-[11px] text-[hsl(0,0%,50%)] mt-0.5">{company.razonSocial}</div>

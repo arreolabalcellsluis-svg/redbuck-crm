@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { getFinancialAnalysis } from '@/lib/financialSimulator';
@@ -229,7 +230,7 @@ export default function FinancialSimulatorPage() {
       @media print{body{padding:12px;} @page{size:landscape;margin:10mm;}}
     </style></head><body>
       <div class="header">
-        <div><div class="brand">REDBUCK EQUIPMENT</div><div class="brand-sub">ERP · SIMULADOR FINANCIERO DE INVENTARIO</div></div>
+        <div style="display:flex;align-items:center;gap:12px;"><img src="${getCompanyLogoUrl()}" alt="Logo" style="height:32px;max-width:100px;object-fit:contain;" onerror="this.style.display='none'" /><div><div class="brand">REDBUCK EQUIPMENT</div><div class="brand-sub">ERP · SIMULADOR FINANCIERO DE INVENTARIO</div></div></div>
         <div style="text-align:right;"><div style="font-size:14px;font-weight:700;">Simulador Financiero de Inventario</div>
         <div style="font-size:9px;color:#666;">Generado: ${new Date().toLocaleString('es-MX')}</div></div>
       </div>
