@@ -6,7 +6,9 @@ import { demoExpenses } from '@/lib/operatingExpensesEngine';
 import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
   calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
+  type PeriodRange, parseMonthLabel,
 } from '@/lib/cfoDashboardEngine';
+import { monthlySales } from '@/data/demo-data';
 import {
   calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
   detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
