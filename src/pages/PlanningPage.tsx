@@ -419,7 +419,7 @@ export default function PlanningPage() {
                 </tr>
               </thead>
               <tbody>
-                {analyses.map(a => (
+                {sortedAnalyses.map(a => (
                   <tr key={a.product.id}>
                     <td className="font-medium">{a.product.name}</td>
                     <td className="text-xs text-muted-foreground">{a.product.supplier}</td>
