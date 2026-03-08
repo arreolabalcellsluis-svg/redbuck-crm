@@ -34,6 +34,7 @@ import MarketMapPage from "./pages/MarketMapPage";
 import PurchaseHistoryPage from "./pages/PurchaseHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import OperatingExpensesPage from "./pages/OperatingExpensesPage";
+import AssetsPage from "./pages/AssetsPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
