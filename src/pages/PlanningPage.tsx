@@ -54,6 +54,7 @@ const CAT_CONFIG = {
 export default function PlanningPage() {
   const { currentRole } = useAppContext();
   const [tab, setTab] = useState<TabKey>('dashboard');
+  const [planningDate, setPlanningDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortField, setSortField] = useState<string>('');
   const [sortAsc, setSortAsc] = useState(true);
   const [purchaseSearch, setPurchaseSearch] = useState('');
