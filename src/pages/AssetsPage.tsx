@@ -172,7 +172,10 @@ export default function AssetsPage() {
             {!isDbConnected && <span className="ml-2 text-xs text-warning">● Datos demo — registra tu primer activo para activar</span>}
           </p>
         </div>
-        <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Agregar Activo</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setDlOpen(true)}><Download size={14} className="mr-1" /> Excel</Button>
+          <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Agregar Activo</Button>
+        </div>
       </div>
 
       {/* KPIs */}
