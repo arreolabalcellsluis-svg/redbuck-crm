@@ -104,7 +104,15 @@ export default function ProductsPage() {
 
   const openEdit = (p: Product) => {
     setEditId(p.id);
-    setForm({ ...p });
+    const existing = fiscalMap.get(p.id);
+    const taxFamily = existing ? (existing.vat_rate === 0 ? (existing.tax_object === '01' || existing.tax_object === '04' ? 'exento' : '0') : String(existing.vat_rate)) : '16';
+    setForm({
+      ...p,
+      satProductKey: existing?.sat_product_key || (p as any).satProductKey || '',
+      satUnitKey: existing?.sat_unit_key || (p as any).satUnitKey || '',
+      taxObject: existing?.tax_object || (p as any).taxObject || '02',
+      taxFamily,
+    });
     setImagePreview(p.image || null);
     setShowEdit(true);
   };
