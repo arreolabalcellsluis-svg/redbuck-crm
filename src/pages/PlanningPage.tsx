@@ -149,7 +149,7 @@ export default function PlanningPage() {
         {TABS.map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); setSortField(''); setSortAsc(true); }}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
               tab === t.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
