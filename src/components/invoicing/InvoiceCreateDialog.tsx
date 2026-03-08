@@ -18,6 +18,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preselectedOrderId?: string;
+  preselectedOrderFolio?: string;
 }
 
 export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrderId }: Props) {
