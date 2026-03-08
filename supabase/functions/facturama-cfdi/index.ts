@@ -6,6 +6,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Safe JSON parse helper — returns null on empty/invalid body
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  if (!text || text.trim().length === 0) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { _raw: text };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,7 +36,12 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No autorizado");
 
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      throw new Error("Body JSON inválido o vacío");
+    }
     const { action } = body;
 
     // Configurable: set FACTURAMA_ENV=production to use live API
