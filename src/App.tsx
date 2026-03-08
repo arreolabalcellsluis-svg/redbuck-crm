@@ -39,6 +39,7 @@ import AccountsPayablePage from "./pages/AccountsPayablePage";
 import CFODashboardPage from "./pages/CFODashboardPage";
 import VendorGoalsPage from "./pages/VendorGoalsPage";
 import CommissionSimulatorPage from "./pages/CommissionSimulatorPage";
+import SalesForecastPage from "./pages/SalesForecastPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -124,6 +125,7 @@ function ProtectedRoutes() {
             <Route path="/comisiones" element={<CommissionsPage />} />
             <Route path="/metas-vendedores" element={<VendorGoalsPage />} />
             <Route path="/simulador-comisiones" element={<CommissionSimulatorPage />} />
+            <Route path="/pronostico-ventas" element={<SalesForecastPage />} />
             <Route path="/planeacion" element={<PlanningPage />} />
             <Route path="/gastos" element={<OperatingExpensesPage />} />
             <Route path="/activos" element={<AssetsPage />} />
