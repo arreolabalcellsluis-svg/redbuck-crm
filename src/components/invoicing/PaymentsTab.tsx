@@ -32,6 +32,8 @@ export default function PaymentsTab() {
   const { data: invoices, isLoading: loadingInvoices } = useInvoices();
   const { data: customers } = useCustomers();
   const createPayment = useCreatePayment();
+  const generateComplement = useGenerateComplement();
+  const downloadComplementFile = useDownloadComplementFile();
 
   const [search, setSearch] = useState('');
   const [showRegister, setShowRegister] = useState(false);
