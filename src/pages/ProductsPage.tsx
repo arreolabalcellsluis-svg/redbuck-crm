@@ -13,7 +13,7 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
-const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string } => ({
+const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string } => ({
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
   listPrice: 0, minPrice: 0, cost: 0, currency: 'MXN', deliveryDays: 5,
   supplier: '', warranty: '1 año', active: true, stock: {}, inTransit: 0, image: '',
