@@ -125,14 +125,45 @@ export default function SalesReportPage() {
   const catOptions = Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v }));
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      Fecha: r.fecha, Folio: r.folio, Cliente: r.cliente, Vendedor: r.vendedor,
-      SKU: r.sku, Producto: r.producto, Cantidad: r.cantidad,
-      'Precio Venta': r.precioVenta, Subtotal: r.subtotal, IVA: r.iva, Total: r.total,
-      Canal: r.canal, Estatus: r.estatus,
-    }));
     const dateStr = new Date().toISOString().split('T')[0];
-    exportToExcel(data, `Ventas_del_mes_${dateStr}`);
+    exportFullExcel({
+      title: 'Reporte de Ventas',
+      subtitle: `Generado: ${dateStr}`,
+      filename: `Ventas_${dateStr}`,
+      kpis: [
+        { label: 'Cotizaciones', value: totalCotizaciones },
+        { label: 'Pedidos', value: totalPedidos },
+        { label: 'Subtotal', value: fmt(totals.subtotal) },
+        { label: 'Total c/IVA', value: fmt(totals.total), color: 'primary' },
+      ],
+      sections: [{
+        title: 'Detalle transaccional',
+        headers: ['Fecha', 'Folio', 'Cliente', 'Vendedor', 'SKU', 'Producto', 'Cant.', 'P. Venta', 'Subtotal', 'IVA', 'Total', 'Canal', 'Estatus'],
+        rows: filtered.map(r => [r.fecha, r.folio, r.cliente, r.vendedor, r.sku, r.producto, r.cantidad, fmt(r.precioVenta), fmt(r.subtotal), fmt(r.iva), fmt(r.total), r.canal, r.estatus]),
+        totalsRow: ['TOTAL', '', '', '', '', '', totals.cantidad, '', fmt(totals.subtotal), fmt(totals.iva), fmt(totals.total), '', ''],
+      }],
+    });
+  };
+
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Reporte de Ventas',
+      subtitle: `Generado: ${dateStr}`,
+      filename: `Ventas_${dateStr}`,
+      kpis: [
+        { label: 'Cotizaciones', value: totalCotizaciones },
+        { label: 'Pedidos', value: totalPedidos },
+        { label: 'Subtotal', value: fmt(totals.subtotal) },
+        { label: 'Total c/IVA', value: fmt(totals.total), color: 'primary' },
+      ],
+      sections: [{
+        title: 'Detalle transaccional',
+        headers: ['Fecha', 'Folio', 'Cliente', 'Vendedor', 'SKU', 'Producto', 'Cant.', 'P. Venta', 'Subtotal', 'IVA', 'Total', 'Canal', 'Estatus'],
+        rows: filtered.map(r => [r.fecha, r.folio, r.cliente, r.vendedor, r.sku, r.producto, r.cantidad, fmt(r.precioVenta), fmt(r.subtotal), fmt(r.iva), fmt(r.total), r.canal, r.estatus]),
+        totalsRow: ['TOTAL', '', '', '', '', '', totals.cantidad, '', fmt(totals.subtotal), fmt(totals.iva), fmt(totals.total), '', ''],
+      }],
+    });
   };
 
   return (
