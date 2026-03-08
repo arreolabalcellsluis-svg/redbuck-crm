@@ -197,6 +197,7 @@ export default function SalesReportPage() {
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', vendedor: isVendedor ? DEMO_VENDEDOR_NAME : '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 
