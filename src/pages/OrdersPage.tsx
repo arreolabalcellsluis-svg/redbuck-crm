@@ -656,9 +656,9 @@ export default function OrdersPage() {
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
       <InvoiceCreateDialog
-        open={!!invoiceOrderFolio}
-        onOpenChange={open => { if (!open) setInvoiceOrderFolio(null); }}
-        preselectedOrderFolio={invoiceOrderFolio ?? undefined}
+        open={!!invoiceOrder}
+        onOpenChange={open => { if (!open) setInvoiceOrder(null); }}
+        preselectedOrder={invoiceDBOrder}
       />
     </div>
   );
