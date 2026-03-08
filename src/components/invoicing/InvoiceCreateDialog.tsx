@@ -242,6 +242,47 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const customerName = selectedOrder?.customer_name || customers?.find(c => c.id === selectedOrder?.customer_id)?.name || '—';
   const docTypeLabel = DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label || 'Factura';
 
+  const buildPdfData = (isDemo: boolean): InvoicePdfData => ({
+    issuerName: fiscal?.issuer_name || 'Emisor',
+    issuerRfc: fiscal?.issuer_rfc || 'XAXX010101000',
+    issuerTaxRegime: fiscal?.issuer_tax_regime || '601',
+    issuerTradeName: fiscal?.issuer_trade_name || '',
+    issuerZipCode: fiscal?.expedition_zip_code || '00000',
+    customerName: customerFiscalData?.legal_name || customerName,
+    customerRfc: customerFiscalData?.rfc || 'XAXX010101000',
+    customerTaxRegime: customerFiscalData?.tax_regime || '601',
+    customerZipCode: customerFiscalData?.fiscal_zip_code || '00000',
+    cfdiUse,
+    cfdiUseLabel: SAT_CFDI_USES.find(u => u.code === cfdiUse)?.label || cfdiUse,
+    series,
+    folio,
+    invoiceType,
+    invoiceTypeLabel: docTypeLabel,
+    paymentForm,
+    paymentFormLabel: SAT_PAYMENT_FORMS.find(f => f.code === paymentForm)?.label || paymentForm,
+    paymentMethod,
+    paymentMethodLabel: SAT_PAYMENT_METHODS.find(m => m.code === paymentMethod)?.label || paymentMethod,
+    currency,
+    exchangeRate,
+    conditions,
+    notes,
+    items: invoiceItems.map(it => ({
+      description: it.description,
+      satProductKey: it.sat_product_key,
+      satUnitKey: it.sat_unit_key,
+      qty: it.qty,
+      unitPrice: it.unit_price,
+      discount: it.discount || 0,
+      subtotal: it.subtotal,
+      taxAmount: it.tax_amount,
+      total: it.total,
+    })),
+    subtotal,
+    taxTotal,
+    total,
+    isDemo,
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
