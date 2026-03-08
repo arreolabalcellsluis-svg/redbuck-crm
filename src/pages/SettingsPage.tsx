@@ -324,6 +324,9 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ═══════════ COMPANY LOGO ═══════════ */}
+        <CompanyLogoCard isDirector={isDirector} />
+
         {/* ═══════════ COMPANY INFO ═══════════ */}
         <div className="bg-card rounded-xl border p-5">
           <div className="flex items-center gap-2 mb-4">
