@@ -78,6 +78,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setFolio(nextFolio);
       setPaymentForm('99');
       setPaymentMethod('PUE');
+      setInvoiceType('I');
       setCurrency('MXN');
       setExchangeRate(1);
       setConditions('');
