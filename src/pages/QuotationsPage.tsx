@@ -80,6 +80,8 @@ export default function QuotationsPage() {
     return true;
   });
 
+  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+
   const addItem = (productId: string) => {
     const product = demoProducts.find(p => p.id === productId);
     if (!product) return;
