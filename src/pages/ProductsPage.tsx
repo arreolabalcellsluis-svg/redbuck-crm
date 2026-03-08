@@ -13,14 +13,14 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
-const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string } => ({
+const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string } => ({
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
   listPrice: 0, minPrice: 0, cost: 0, currency: 'MXN', deliveryDays: 5,
   supplier: '', warranty: '1 año', active: true, stock: {}, inTransit: 0, image: '',
-  satProductKey: '', satUnitKey: '',
+  satProductKey: '', satUnitKey: '', taxObject: '02',
 });
 
-type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string };
+type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string };
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
@@ -254,6 +254,15 @@ export default function ProductsPage() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Clave SAT Unidad</label>
             <input value={form.satUnitKey || ''} onChange={e => setForm(p => ({ ...p, satUnitKey: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="H87" />
             <p className="text-[10px] text-muted-foreground mt-0.5">Ej: H87 — Pieza, E48 — Servicio</p>
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Objeto de Impuestos</label>
+            <select value={form.taxObject || '02'} onChange={e => setForm(p => ({ ...p, taxObject: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+              <option value="01">01 — No objeto de impuestos</option>
+              <option value="02">02 — Sí objeto de impuestos</option>
+              <option value="03">03 — Sí objeto de impuestos y no obligado al desglose</option>
+              <option value="04">04 — Sí objeto de impuesto y no causa de impuestos</option>
+            </select>
           </div>
         </div>
       </div>
