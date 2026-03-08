@@ -237,12 +237,22 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
 
   const customerName = selectedOrder?.customer_name || customers?.find(c => c.id === selectedOrder?.customer_id)?.name || '—';
   const docTypeLabel = DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label || 'Factura';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText size={18} />
-            {step === 'select' ? 'Seleccionar Pedido para Facturar' : 'Configurar Factura'}
+            {step === 'select' ? 'Seleccionar Pedido para Facturar' : step === 'configure' ? `Configurar ${docTypeLabel}` : `Vista Previa — ${docTypeLabel}`}
           </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Selecciona el pedido del cual generar la factura' : `Pedido ${selectedOrder?.folio} — ${selectedOrder?.customer_name}`}
+            {step === 'select'
+              ? 'Selecciona el pedido del cual generar la factura'
+              : step === 'configure'
+                ? `Pedido ${selectedOrder?.folio} — ${customerName}`
+                : `Borrador ${series}-${folio} guardado correctamente`
+            }
           </DialogDescription>
         </DialogHeader>
 
