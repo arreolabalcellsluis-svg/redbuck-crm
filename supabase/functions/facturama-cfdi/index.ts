@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama API Web to stamp
       console.log("Stamping CFDI payload:", JSON.stringify(cfdiPayload));
-      const stampRes = await facturama("/2/cfdis", "POST", cfdiPayload);
+      const stampRes = await facturama("/3/cfdis", "POST", cfdiPayload);
       const stampData = await safeJson(stampRes);
 
       console.log("Facturama stamp response status:", stampRes.status, "data:", JSON.stringify(stampData));
