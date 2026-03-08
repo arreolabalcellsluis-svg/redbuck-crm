@@ -189,6 +189,15 @@ export default function CFODashboardPage() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpiData), 'Indicadores');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(radarData), 'Radar Financiero');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(flowData), 'Flujo Mensual');
+      // Leak detector sheets
+      const leakAlerts = leakSummary.alertas.map(a => ({ Tipo: a.tipo, Severidad: a.severity, Alerta: a.titulo, Descripción: a.descripcion, Monto: a.monto }));
+      const slowData = slowInv.map(s => ({ Producto: s.name, SKU: s.sku, Stock: s.totalStock, 'Capital Detenido': s.capitalDetenido, 'Días sin venta': s.diasSinVenta, Severidad: s.severity }));
+      const marginData = lowMargin.map(l => ({ Producto: l.name, Costo: l.cost, 'Precio Lista': l.listPrice, 'Precio Mín': l.minPrice, 'Margen Lista %': l.margenLista.toFixed(1), 'Margen Mín %': l.margenMinimo.toFixed(1), Severidad: l.severity }));
+      const clientData = capClients.map(c => ({ Cliente: c.customerName, 'Saldo CxC': c.saldoPorCobrar, 'Días promedio': c.diasPromedioCobro, Facturas: c.facturasPendientes, Severidad: c.severity }));
+      if (leakAlerts.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leakAlerts), 'Alertas Fugas');
+      if (slowData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slowData), 'Inv. Lento');
+      if (marginData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(marginData), 'Bajo Margen');
+      if (clientData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientData), 'Clientes Riesgo');
       XLSX.writeFile(wb, `Dashboard_Financiero_${new Date().toISOString().split('T')[0]}.xlsx`);
     });
   };
