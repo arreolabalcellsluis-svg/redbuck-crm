@@ -43,7 +43,7 @@ export default function FinancialSimulatorPage() {
     );
   }
 
-  const handleExportExcel = (tab: string) => {
+  const handleExportExcel = async (tab: string) => {
     if (tab === 'capital') {
       const XLSX = await import('xlsx');
       const { saveAs } = await import('file-saver');
