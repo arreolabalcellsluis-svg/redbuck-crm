@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      operating_expenses: {
+        Row: {
+          area: Database["public"]["Enums"]["expense_area"]
+          categoria: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          descripcion: string
+          fecha: string
+          id: string
+          monto: number
+          notas: string | null
+          subcategoria: string
+          tipo: Database["public"]["Enums"]["expense_type"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          area?: Database["public"]["Enums"]["expense_area"]
+          categoria: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          descripcion: string
+          fecha?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          subcategoria: string
+          tipo?: Database["public"]["Enums"]["expense_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["expense_area"]
+          categoria?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          subcategoria?: string
+          tipo?: Database["public"]["Enums"]["expense_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -61,6 +106,25 @@ export type Database = {
         | "vendedor"
         | "almacen"
         | "tecnico"
+      expense_area:
+        | "ventas"
+        | "administracion"
+        | "logistica"
+        | "operaciones"
+        | "direccion"
+        | "servicio_tecnico"
+        | "importaciones"
+      expense_category:
+        | "personal"
+        | "administracion"
+        | "ventas"
+        | "logistica"
+        | "importaciones"
+        | "financieros"
+        | "servicio_tecnico"
+        | "legales_contables"
+        | "otros"
+      expense_type: "fijo" | "variable"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -197,6 +261,27 @@ export const Constants = {
         "almacen",
         "tecnico",
       ],
+      expense_area: [
+        "ventas",
+        "administracion",
+        "logistica",
+        "operaciones",
+        "direccion",
+        "servicio_tecnico",
+        "importaciones",
+      ],
+      expense_category: [
+        "personal",
+        "administracion",
+        "ventas",
+        "logistica",
+        "importaciones",
+        "financieros",
+        "servicio_tecnico",
+        "legales_contables",
+        "otros",
+      ],
+      expense_type: ["fijo", "variable"],
     },
   },
 } as const
