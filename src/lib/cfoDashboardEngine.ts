@@ -130,24 +130,67 @@ export interface MonthlyFlowItem {
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
+/** Parse monthlySales month label to a comparable key: 'Ene 24' -> '2024-01' */
+const MONTH_MAP: Record<string, string> = {
+  'Ene': '01', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'May': '05', 'Jun': '06',
+  'Jul': '07', 'Ago': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dic': '12',
+};
+
+export function parseMonthLabel(label: string): string {
+  const parts = label.split(' ');
+  if (parts.length !== 2) return '9999-99';
+  const mm = MONTH_MAP[parts[0]] ?? '01';
+  const yy = parts[1].length === 2 ? `20${parts[1]}` : parts[1];
+  return `${yy}-${mm}`;
+}
+
+export interface PeriodRange {
+  from: string; // 'YYYY-MM'
+  to: string;   // 'YYYY-MM'
+}
+
+function filterSalesByPeriod(period?: PeriodRange) {
+  if (!period) return monthlySales;
+  return monthlySales.filter(m => {
+    const key = parseMonthLabel(m.month);
+    return key >= period.from && key <= period.to;
+  });
+}
+
+function filterExpensesByPeriod(expenses: OperatingExpense[], period?: PeriodRange) {
+  if (!period) return expenses;
+  return expenses.filter(e => {
+    const d = e.fecha.slice(0, 7); // 'YYYY-MM'
+    return d >= period.from && d <= period.to;
+  });
+}
+
 // ─── Income Statement Calculator ────────────────────────────────
 export function calcIncomeStatement(
   expenses: OperatingExpense[],
   assets: Asset[],
   months = 12,
+  period?: PeriodRange,
 ): IncomeStatement {
-  const totalSales = sum(monthlySales.slice(-months).map(m => m.sales));
+  const salesData = filterSalesByPeriod(period);
+  const filteredExpenses = filterExpensesByPeriod(expenses, period);
+  const effectiveMonths = period ? Math.max(salesData.length, 1) : months;
+
+  const totalSales = period
+    ? sum(salesData.map(m => m.sales))
+    : sum(monthlySales.slice(-months).map(m => m.sales));
   const costoVentas = totalSales * (1 - dashboardMetrics.grossMargin / 100);
   const utilidadBruta = totalSales - costoVentas;
 
-  const gastosVentas = sum(expenses.filter(e => e.categoria === 'ventas').map(e => e.monto));
-  const gastosFinancieros = sum(expenses.filter(e => e.categoria === 'financieros').map(e => e.monto));
-  const totalExp = sum(expenses.map(e => e.monto));
+  const expSource = period ? filteredExpenses : expenses;
+  const gastosVentas = sum(expSource.filter(e => e.categoria === 'ventas').map(e => e.monto));
+  const gastosFinancieros = sum(expSource.filter(e => e.categoria === 'financieros').map(e => e.monto));
+  const totalExp = sum(expSource.map(e => e.monto));
   const gastosAdmin = totalExp - gastosVentas - gastosFinancieros;
   const gastosOperativos = gastosVentas + gastosAdmin;
 
   const ebitda = utilidadBruta - gastosOperativos;
-  const depAmort = getTotalMonthlyDepAmort(assets) * months;
+  const depAmort = getTotalMonthlyDepAmort(assets) * effectiveMonths;
   const ebit = ebitda - depAmort;
   const intereses = gastosFinancieros;
   const utilidadAntesImpuestos = ebit - intereses;
@@ -283,13 +326,15 @@ export function calcCashFlow(
 }
 
 // ─── Monthly cash flow series ───────────────────────────────────
-export function calcMonthlyFlow(expenses: OperatingExpense[]): MonthlyFlowItem[] {
-  const totalExpMonthly = expenses.length > 0
-    ? sum(expenses.map(e => e.monto)) / 12
+export function calcMonthlyFlow(expenses: OperatingExpense[], period?: PeriodRange): MonthlyFlowItem[] {
+  const expSource = period ? filterExpensesByPeriod(expenses, period) : expenses;
+  const totalExpMonthly = expSource.length > 0
+    ? sum(expSource.map(e => e.monto)) / Math.max(expSource.length / 3, 1) // rough monthly avg
     : sum(demoExpenses.map(e => e.monto)) / 12;
 
+  const salesData = filterSalesByPeriod(period);
   let acumulado = 850000;
-  return monthlySales.map(m => {
+  return salesData.map(m => {
     const entradas = m.sales;
     const salidas = m.sales * (1 - dashboardMetrics.grossMargin / 100) + totalExpMonthly;
     const neto = entradas - salidas;

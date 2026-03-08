@@ -6,7 +6,9 @@ import { demoExpenses } from '@/lib/operatingExpensesEngine';
 import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
   calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
+  type PeriodRange, parseMonthLabel,
 } from '@/lib/cfoDashboardEngine';
+import { monthlySales } from '@/data/demo-data';
 import {
   calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
   detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
@@ -62,11 +64,26 @@ export default function CFODashboardPage() {
     utilidadesAcumuladas: 500000,
   });
 
-  const income = useMemo(() => calcIncomeStatement(expenses, assets, 12), [expenses, assets]);
+  // Period selector — derive available months from monthlySales
+  const availableMonths = useMemo(() =>
+    monthlySales.map(m => ({ label: m.month, value: parseMonthLabel(m.month) })),
+    [],
+  );
+  const [periodFrom, setPeriodFrom] = useState(availableMonths[0]?.value ?? '2024-01');
+  const [periodTo, setPeriodTo] = useState(availableMonths[availableMonths.length - 1]?.value ?? '2025-03');
+  const period: PeriodRange = useMemo(() => ({ from: periodFrom, to: periodTo }), [periodFrom, periodTo]);
+
+  const periodLabel = useMemo(() => {
+    const fromItem = availableMonths.find(m => m.value === periodFrom);
+    const toItem = availableMonths.find(m => m.value === periodTo);
+    return `${fromItem?.label ?? periodFrom} — ${toItem?.label ?? periodTo}`;
+  }, [periodFrom, periodTo, availableMonths]);
+
+  const income = useMemo(() => calcIncomeStatement(expenses, assets, 12, period), [expenses, assets, period]);
   const balance = useMemo(() => calcBalanceSheet(income, assets, payables, bsConfig), [income, assets, payables, bsConfig]);
   const cashFlow = useMemo(() => calcCashFlow(income, payables, { saldoInicial: bsConfig.bancos }), [income, payables, bsConfig.bancos]);
   const kpis = useMemo(() => calcStrategicKPIs(balance, income, payables), [balance, income, payables]);
-  const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses), [expenses]);
+  const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses, period), [expenses, period]);
   const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
 
   // Leak detector data
@@ -242,16 +259,52 @@ export default function CFODashboardPage() {
     { name: 'Activos Fijos', value: balance.activosFijosNeto },
   ];
 
-  return (
+   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard Financiero del Director</h1>
           <p className="page-subtitle">Visión consolidada: Estado de Resultados · Balance General · Flujo de Efectivo · Radar · KPIs</p>
         </div>
-        <Button onClick={handleExportAll} className="gap-2">
-          <Download size={16} /> Exportar Excel
-        </Button>
+        <div className="flex flex-wrap items-center gap-3 mt-3 sm:mt-0">
+          {/* Period selector */}
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-1.5">
+            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Periodo:</span>
+            <select
+              value={periodFrom}
+              onChange={e => setPeriodFrom(e.target.value)}
+              className="text-xs bg-transparent border-0 focus:ring-0 py-0.5 font-medium"
+            >
+              {availableMonths.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <span className="text-xs text-muted-foreground">a</span>
+            <select
+              value={periodTo}
+              onChange={e => setPeriodTo(e.target.value)}
+              className="text-xs bg-transparent border-0 focus:ring-0 py-0.5 font-medium"
+            >
+              {availableMonths.filter(m => m.value >= periodFrom).map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <Button onClick={handleExportAll} className="gap-2">
+            <Download size={16} /> Exportar Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Period badge */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+          <Activity size={12} />
+          {periodLabel}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {monthlySales.filter(m => { const k = parseMonthLabel(m.month); return k >= periodFrom && k <= periodTo; }).length} meses seleccionados
+        </span>
       </div>
 
       {/* ─── Top KPIs — Executive style ──────────────────────── */}
