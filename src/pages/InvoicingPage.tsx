@@ -610,16 +610,22 @@ function ProductFiscalTab() {
   );
 }
 
-// ─── TAB 5: Invoices History (placeholder for Phase 2) ───
+// ─── TAB 5: Invoices History ───
 function InvoicesTab() {
   const { data: invoices, isLoading } = useInvoices();
+  const { data: customers } = useCustomers();
   const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Cargando facturas...</div>;
 
+  const customerMap = new Map((customers ?? []).map(c => [c.id, c]));
+
   const filtered = (invoices ?? []).filter(inv =>
     inv.folio.toLowerCase().includes(search.toLowerCase()) ||
-    inv.uuid.toLowerCase().includes(search.toLowerCase())
+    (inv.uuid ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (inv.customer_id && customerMap.get(inv.customer_id)?.name?.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -627,9 +633,12 @@ function InvoicesTab() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-          <Input placeholder="Buscar folio o UUID..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Buscar folio, UUID o cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Badge variant="outline">{filtered.length} facturas</Badge>
+        <Button onClick={() => setShowCreate(true)} className="gap-1.5 ml-auto">
+          <Plus size={14} /> Nueva Factura
+        </Button>
       </div>
 
       {filtered.length === 0 ? (
@@ -638,7 +647,7 @@ function InvoicesTab() {
             <FileBadge className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No hay facturas aún</p>
             <p className="text-xs text-muted-foreground mt-1">
-              En la Fase 2 podrás generar facturas desde pedidos y ventas
+              Haz clic en "Nueva Factura" para generar una desde un pedido
             </p>
           </CardContent>
         </Card>
@@ -660,19 +669,22 @@ function InvoicesTab() {
             <TableBody>
               {filtered.map(inv => {
                 const st = STATUS_MAP[inv.status] ?? STATUS_MAP.borrador;
+                const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
                 return (
                   <TableRow key={inv.id}>
                     <TableCell className="text-sm">{new Date(inv.created_at).toLocaleDateString('es-MX')}</TableCell>
                     <TableCell className="font-mono text-sm">{inv.series}-{inv.folio}</TableCell>
-                    <TableCell>—</TableCell>
+                    <TableCell>{cust?.name || '—'}</TableCell>
                     <TableCell className="font-mono text-xs max-w-[120px] truncate">{inv.uuid || '—'}</TableCell>
                     <TableCell className="text-right">{fmt(inv.subtotal)}</TableCell>
                     <TableCell className="text-right font-medium">{fmt(inv.total)}</TableCell>
                     <TableCell><Badge className={`${st.color} text-xs`}>{st.label}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" title="Ver detalle"><Eye size={14} /></Button>
-                        <Button size="icon" variant="ghost" title="Descargar XML"><Download size={14} /></Button>
+                        <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
+                        {inv.status === 'timbrada' && (
+                          <Button size="icon" variant="ghost" title="Descargar XML"><Download size={14} /></Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -682,6 +694,9 @@ function InvoicesTab() {
           </Table>
         </Card>
       )}
+
+      <InvoiceCreateDialog open={showCreate} onOpenChange={setShowCreate} />
+      <InvoiceDetailDialog invoice={selectedInvoice} open={!!selectedInvoice} onOpenChange={open => { if (!open) setSelectedInvoice(null); }} />
     </div>
   );
 }
