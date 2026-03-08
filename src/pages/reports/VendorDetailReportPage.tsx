@@ -139,7 +139,7 @@ export default function VendorDetailReportPage() {
           search: true, searchPlaceholder: 'Buscar por cliente, SKU, producto...',
           dateRange: true,
           selects: [{ key: 'vendedor', label: 'Vendedor', options: vendorOptions }],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
