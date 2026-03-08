@@ -61,6 +61,55 @@ export default function AssetsPage() {
   const [form, setForm] = useState<Omit<Asset, 'id'>>(emptyForm);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
+  // Excel download
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const dlFilteredCount = useMemo(() => {
+    if (!dlDateFrom && !dlDateTo) return assets.length;
+    return assets.filter(a => {
+      if (dlDateFrom && a.fechaCompra < dlDateFrom) return false;
+      if (dlDateTo && a.fechaCompra > dlDateTo) return false;
+      return true;
+    }).length;
+  }, [assets, dlDateFrom, dlDateTo]);
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const filteredAssets = assets.filter(a => {
+      if (dlDateFrom && a.fechaCompra < dlDateFrom) return false;
+      if (dlDateTo && a.fechaCompra > dlDateTo) return false;
+      return true;
+    });
+    const wb = XLSX.utils.book_new();
+    const data = filteredAssets.map(a => {
+      const dep = calcDepreciation(a);
+      return {
+        Nombre: a.nombre, Categoría: CATEGORY_LABELS[a.categoria], Tipo: TYPE_LABELS[a.tipo],
+        Descripción: a.descripcion, 'Fecha compra': a.fechaCompra,
+        'Costo adquisición': a.costoAdquisicion, 'Vida útil (meses)': a.vidaUtilMeses,
+        'Valor rescate': a.valorRescate, 'Cargo mensual': dep.cargoMensual,
+        'Dep. acumulada': dep.depAcumulada, 'Valor en libros': dep.valorLibros,
+        Estatus: a.estatus === 'activo' ? 'Activo' : 'Dado de baja',
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Activos');
+    const resumen = [
+      { Indicador: 'Periodo', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Todos' },
+      { Indicador: 'Total activos', Valor: filteredAssets.length },
+      { Indicador: 'Costo total', Valor: filteredAssets.reduce((s, a) => s + a.costoAdquisicion, 0) },
+      { Indicador: 'Valor en libros', Valor: filteredAssets.filter(a => a.estatus === 'activo').reduce((s, a) => s + calcDepreciation(a).valorLibros, 0) },
+      { Indicador: 'Cargo mensual total', Valor: filteredAssets.filter(a => a.estatus === 'activo').reduce((s, a) => s + calcDepreciation(a).cargoMensual, 0) },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      `activos-depreciacion_${dlDateFrom || 'inicio'}_${dlDateTo || 'fin'}.xlsx`);
+    setDlOpen(false);
+  };
+
   const filtered = useMemo(() => {
     let list = assets;
     if (filterCategory !== 'all') list = list.filter(a => a.categoria === filterCategory);
