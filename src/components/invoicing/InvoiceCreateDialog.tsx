@@ -17,9 +17,11 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preselectedOrderId?: string;
+  preselectedOrderFolio?: string;
 }
 
-export default function InvoiceCreateDialog({ open, onOpenChange }: Props) {
+export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrderId, preselectedOrderFolio }: Props) {
   const { data: orders } = useOrders();
   const { data: fiscal } = useFiscalSettings();
   const { data: customerFiscal } = useAllCustomerFiscalData();
@@ -46,8 +48,6 @@ export default function InvoiceCreateDialog({ open, onOpenChange }: Props) {
   // Reset on open
   useEffect(() => {
     if (open) {
-      setStep('select');
-      setSelectedOrder(null);
       setSearch('');
       setSeries(fiscal?.default_series || 'A');
       setFolio('');
@@ -57,8 +57,23 @@ export default function InvoiceCreateDialog({ open, onOpenChange }: Props) {
       setExchangeRate(1);
       setConditions('');
       setNotes('');
+
+      // Auto-select preselected order
+      if ((preselectedOrderId || preselectedOrderFolio) && orders) {
+        const found = orders.find(o =>
+          (preselectedOrderId && o.id === preselectedOrderId) ||
+          (preselectedOrderFolio && o.folio === preselectedOrderFolio)
+        );
+        if (found) {
+          setSelectedOrder(found);
+          setStep('configure');
+          return;
+        }
+      }
+      setStep('select');
+      setSelectedOrder(null);
     }
-  }, [open, fiscal]);
+  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders]);
 
   // Filter orders that can be invoiced
   const eligibleOrders = (orders ?? []).filter(o =>

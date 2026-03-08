@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
-import { useNavigate } from 'react-router-dom';
+import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 const vendors = demoUsers.filter(u => u.role === 'vendedor');
@@ -39,7 +39,7 @@ export default function OrdersPage() {
   const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
-  const navigate = useNavigate();
+  const [invoiceOrderFolio, setInvoiceOrderFolio] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
@@ -310,7 +310,7 @@ export default function OrdersPage() {
                       <button onClick={() => setPaymentOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-success" title="Registrar pago"><DollarSign size={14} /></button>
                       {isAdmin && <button onClick={() => { setEditFolioOrder(o); setNewFolio(o.folio); }} className="p-1.5 rounded-md hover:bg-muted" title="Editar folio"><Edit2 size={14} /></button>}
                       {!['cancelado', 'nuevo'].includes(o.status) && (
-                        <button onClick={() => navigate('/facturacion', { state: { invoiceOrderId: o.id, invoiceOrderFolio: o.folio } })} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
+                        <button onClick={() => setInvoiceOrderFolio(o.folio)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
                       )}
                     </div>
                   </td>
@@ -631,6 +631,11 @@ export default function OrdersPage() {
       </Dialog>
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
+      <InvoiceCreateDialog
+        open={!!invoiceOrderFolio}
+        onOpenChange={open => { if (!open) setInvoiceOrderFolio(null); }}
+        preselectedOrderFolio={invoiceOrderFolio ?? undefined}
+      />
     </div>
   );
 }
