@@ -2,8 +2,12 @@ import { useState, useMemo } from 'react';
 import {
   DollarSign, TrendingUp, TrendingDown, PlusCircle, Trash2, BarChart3,
   PieChart as PieChartIcon, Target, ArrowUpRight, ArrowDownRight, Banknote,
-  Layers, Calculator, FileText, Copy, Loader2,
+  Layers, Calculator, FileText, Copy, Loader2, Download,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
