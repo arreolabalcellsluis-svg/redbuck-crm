@@ -723,10 +723,18 @@ export default function QuotationsPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          {zipDateFrom && zipDateTo && (
+            <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
+              <span className="font-semibold text-primary">{zipFilteredCount}</span> cotización{zipFilteredCount !== 1 ? 'es' : ''} encontrada{zipFilteredCount !== 1 ? 's' : ''} en el periodo seleccionado
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <button onClick={() => setShowZipDialog(false)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleZipDownload} disabled={zipLoading} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
-              {zipLoading ? 'Generando...' : 'Descargar ZIP'}
+            <button onClick={handleExcelDownload} className="px-4 py-2 rounded-lg border border-primary/30 text-primary text-sm font-medium hover:bg-primary/5 flex items-center gap-2">
+              <FileText size={16} /> Descargar Excel
+            </button>
+            <button onClick={handleZipDownload} disabled={zipLoading} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+              <Download size={16} /> {zipLoading ? 'Generando...' : 'Descargar ZIP'}
             </button>
           </DialogFooter>
         </DialogContent>
