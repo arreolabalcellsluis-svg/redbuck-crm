@@ -3,7 +3,8 @@
  * Views: daily, weekly, monthly, pending list.
  * CRUD, reschedule, duplicate, export.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
