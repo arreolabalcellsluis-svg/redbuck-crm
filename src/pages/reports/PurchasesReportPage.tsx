@@ -111,7 +111,7 @@ export default function PurchasesReportPage() {
         config={{
           search: true, searchPlaceholder: 'Buscar por producto o número de orden...',
           selects: [{ key: 'proveedor', label: 'Proveedor', options: supplierOptions }],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
