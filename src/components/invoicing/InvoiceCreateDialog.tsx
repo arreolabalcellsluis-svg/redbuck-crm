@@ -180,7 +180,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
         sales_person_id: '',
         series,
         folio,
-        invoice_type: 'I',
+        invoice_type: invoiceType,
         payment_form: paymentForm,
         payment_method: paymentMethod,
         currency,
