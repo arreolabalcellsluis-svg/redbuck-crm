@@ -82,6 +82,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
         if (found) {
           setSelectedOrder(found);
           setStep('configure');
+          setNotes(`Pedido: ${found.folio}`);
           return;
         }
       }
