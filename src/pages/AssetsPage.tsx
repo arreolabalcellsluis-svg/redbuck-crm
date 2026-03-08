@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Building2, Car, Monitor, Code, Package, MoreHorizontal } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Car, Monitor, Code, Package, MoreHorizontal, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,25 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-
-// ─── Types & Catalogs ───────────────────────────────────────────
-type AssetCategory = 'vehiculos' | 'maquinaria' | 'computadoras' | 'software' | 'mobiliario' | 'equipo_oficina' | 'otros';
-type AssetType = 'depreciacion' | 'amortizacion';
-type AssetStatus = 'activo' | 'dado_de_baja';
-
-interface Asset {
-  id: string;
-  nombre: string;
-  categoria: AssetCategory;
-  tipo: AssetType;
-  descripcion: string;
-  fechaCompra: string;
-  costoAdquisicion: number;
-  vidaUtilMeses: number;
-  valorRescate: number;
-  estatus: AssetStatus;
-  notas?: string;
-}
+import {
+  useAssets, useAddAsset, useUpdateAsset, useDeleteAsset,
+  calcDepreciation, getTotalMonthlyDepAmort,
+  type Asset, type AssetCategory, type AssetType, type AssetStatus,
+} from '@/hooks/useAssets';
 
 const CATEGORY_LABELS: Record<AssetCategory, string> = {
   vehiculos: 'Vehículos', maquinaria: 'Maquinaria', computadoras: 'Computadoras',
@@ -41,30 +27,7 @@ const TYPE_LABELS: Record<AssetType, string> = { depreciacion: 'Depreciación', 
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-// ─── Depreciation calculations (reusable) ───────────────────────
-export function calcDepreciation(asset: Asset) {
-  const baseDepreciable = asset.costoAdquisicion - asset.valorRescate;
-  const cargoMensual = asset.vidaUtilMeses > 0 ? baseDepreciable / asset.vidaUtilMeses : 0;
-  const hoy = new Date();
-  const compra = new Date(asset.fechaCompra);
-  const mesesTranscurridos = Math.max(0, (hoy.getFullYear() - compra.getFullYear()) * 12 + (hoy.getMonth() - compra.getMonth()));
-  const depAcumuladaRaw = cargoMensual * mesesTranscurridos;
-  const depAcumulada = Math.min(depAcumuladaRaw, baseDepreciable);
-  const valorLibros = asset.costoAdquisicion - depAcumulada;
-  return { baseDepreciable, cargoMensual, mesesTranscurridos, depAcumulada, valorLibros };
-}
-
-/** Total monthly depreciation+amortization charge for active assets */
-export function getTotalMonthlyDepAmort(assets: Asset[]): number {
-  return assets
-    .filter(a => a.estatus === 'activo')
-    .reduce((sum, a) => {
-      const { cargoMensual, depAcumulada, baseDepreciable } = calcDepreciation(a);
-      return sum + (depAcumulada < baseDepreciable ? cargoMensual : 0);
-    }, 0);
-}
-
-// ─── Demo data ──────────────────────────────────────────────────
+// Demo data used as fallback when DB is empty
 const demoAssets: Asset[] = [
   { id: 'a1', nombre: 'Camioneta Nissan NP300', categoria: 'vehiculos', tipo: 'depreciacion', descripcion: 'Camioneta de reparto principal', fechaCompra: '2023-06-15', costoAdquisicion: 420000, vidaUtilMeses: 60, valorRescate: 120000, estatus: 'activo' },
   { id: 'a2', nombre: 'Camioneta RAM 700', categoria: 'vehiculos', tipo: 'depreciacion', descripcion: 'Vehículo de ventas', fechaCompra: '2024-01-10', costoAdquisicion: 350000, vidaUtilMeses: 60, valorRescate: 100000, estatus: 'activo' },
@@ -74,15 +37,25 @@ const demoAssets: Asset[] = [
   { id: 'a6', nombre: 'Escritorios ejecutivos (5)', categoria: 'mobiliario', tipo: 'depreciacion', descripcion: 'Mobiliario oficina', fechaCompra: '2023-01-15', costoAdquisicion: 35000, vidaUtilMeses: 120, valorRescate: 5000, estatus: 'activo' },
 ];
 
-// ─── Empty form ─────────────────────────────────────────────────
 const emptyForm: Omit<Asset, 'id'> = {
   nombre: '', categoria: 'otros', tipo: 'depreciacion', descripcion: '',
   fechaCompra: new Date().toISOString().split('T')[0], costoAdquisicion: 0,
   vidaUtilMeses: 60, valorRescate: 0, estatus: 'activo',
 };
 
+// Re-export for use by IncomeStatementReportPage
+export { calcDepreciation, getTotalMonthlyDepAmort };
+export type { Asset };
+
 export default function AssetsPage() {
-  const [assets, setAssets] = useState<Asset[]>(demoAssets);
+  const { data: dbAssets, isLoading } = useAssets();
+  const addAssetMutation = useAddAsset();
+  const updateAssetMutation = useUpdateAsset();
+  const deleteAssetMutation = useDeleteAsset();
+
+  // Use DB data if available, fallback to demo
+  const assets: Asset[] = dbAssets && dbAssets.length > 0 ? dbAssets : demoAssets;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Asset, 'id'>>(emptyForm);
@@ -94,7 +67,6 @@ export default function AssetsPage() {
     return list;
   }, [assets, filterCategory]);
 
-  // Summary KPIs
   const summary = useMemo(() => {
     const activos = assets.filter(a => a.estatus === 'activo');
     const totalCosto = activos.reduce((s, a) => s + a.costoAdquisicion, 0);
@@ -109,28 +81,47 @@ export default function AssetsPage() {
     const { id, ...rest } = a;
     setForm(rest); setEditingId(id); setDialogOpen(true);
   };
+
+  const isDbConnected = dbAssets && dbAssets.length > 0;
+  const isDemoId = (id: string) => id.startsWith('a') && id.length <= 3;
+
   const handleSave = () => {
     if (!form.nombre.trim()) { toast({ title: 'Nombre requerido', variant: 'destructive' }); return; }
-    if (editingId) {
-      setAssets(prev => prev.map(a => a.id === editingId ? { ...form, id: editingId } : a));
-      toast({ title: 'Activo actualizado' });
+    if (editingId && !isDemoId(editingId)) {
+      updateAssetMutation.mutate({ ...form, id: editingId });
     } else {
-      setAssets(prev => [...prev, { ...form, id: `a${Date.now()}` }]);
-      toast({ title: 'Activo registrado' });
+      addAssetMutation.mutate(form);
     }
     setDialogOpen(false);
   };
+
   const handleDelete = (id: string) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, estatus: 'dado_de_baja' as AssetStatus } : a));
-    toast({ title: 'Activo dado de baja' });
+    if (isDemoId(id)) {
+      toast({ title: 'Los activos demo no se pueden eliminar', description: 'Registra un activo real para usar la base de datos', variant: 'destructive' });
+      return;
+    }
+    deleteAssetMutation.mutate(id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <span className="ml-3 text-muted-foreground">Cargando activos...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2"><Building2 size={22} className="text-primary" /> Activos y Depreciación</h1>
-          <p className="page-subtitle">Registro y cálculo de depreciación / amortización</p>
+          <p className="page-subtitle">
+            Registro y cálculo de depreciación / amortización
+            {isDbConnected && <span className="ml-2 text-xs text-success">● Conectado a base de datos</span>}
+            {!isDbConnected && <span className="ml-2 text-xs text-warning">● Datos demo — registra tu primer activo para activar</span>}
+          </p>
         </div>
         <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Agregar Activo</Button>
       </div>
@@ -262,7 +253,10 @@ export default function AssetsPage() {
               </Select>
             </div>
             <div><Label>Notas</Label><Textarea value={form.notas || ''} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2} /></div>
-            <Button onClick={handleSave} className="w-full">{editingId ? 'Guardar cambios' : 'Registrar activo'}</Button>
+            <Button onClick={handleSave} className="w-full" disabled={addAssetMutation.isPending || updateAssetMutation.isPending}>
+              {(addAssetMutation.isPending || updateAssetMutation.isPending) && <Loader2 size={16} className="mr-2 animate-spin" />}
+              {editingId ? 'Guardar cambios' : 'Registrar activo'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -2,17 +2,19 @@ import { useState, useMemo } from 'react';
 import {
   DollarSign, TrendingUp, TrendingDown, PlusCircle, Trash2, BarChart3,
   PieChart as PieChartIcon, Target, ArrowUpRight, ArrowDownRight, Banknote,
-  Layers, Calculator, FileText, Copy,
+  Layers, Calculator, FileText, Copy, Loader2,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import {
-  demoExpenses, EXPENSE_CATEGORIES, AREA_LABELS, TYPE_LABELS,
+  EXPENSE_CATEGORIES, AREA_LABELS, TYPE_LABELS,
   calculateExpenseSummary, calculateFinancialMetrics,
   type OperatingExpense, type ExpenseCategory, type ExpenseType, type ExpenseArea,
+  demoExpenses,
 } from '@/lib/operatingExpensesEngine';
+import { useExpenses, useAddExpense, useDeleteExpense } from '@/hooks/useExpenses';
 import { dashboardMetrics } from '@/data/demo-data';
 
 const fmt = (n: number) =>
@@ -29,7 +31,14 @@ type Tab = 'registro' | 'dashboard' | 'director';
 
 export default function OperatingExpensesPage() {
   const [tab, setTab] = useState<Tab>('dashboard');
-  const [expenses, setExpenses] = useState<OperatingExpense[]>(demoExpenses);
+
+  // DB data
+  const { data: dbExpenses, isLoading } = useExpenses();
+  const addExpenseMutation = useAddExpense();
+  const deleteExpenseMutation = useDeleteExpense();
+
+  // Use DB data if available, fallback to demo
+  const expenses: OperatingExpense[] = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
 
   // Form state
   const [formCat, setFormCat] = useState<ExpenseCategory>('personal');
@@ -54,8 +63,7 @@ export default function OperatingExpensesPage() {
 
   const addExpense = () => {
     if (!formDesc || formMonto <= 0) return;
-    const newExp: OperatingExpense = {
-      id: `e${Date.now()}`,
+    addExpenseMutation.mutate({
       fecha: formFecha,
       categoria: formCat,
       subcategoria: formSub || EXPENSE_CATEGORIES[formCat].subcategories[0],
@@ -64,16 +72,24 @@ export default function OperatingExpensesPage() {
       tipo: formTipo,
       area: formArea,
       notas: formNotas || undefined,
-    };
-    setExpenses(prev => [newExp, ...prev]);
+    });
     setFormDesc('');
     setFormMonto(0);
     setFormNotas('');
   };
 
-  const removeExpense = (id: string) => setExpenses(prev => prev.filter(e => e.id !== id));
+  const removeExpense = (id: string) => deleteExpenseMutation.mutate(id);
   const duplicateExpense = (exp: OperatingExpense) => {
-    setExpenses(prev => [{ ...exp, id: `e${Date.now()}` }, ...prev]);
+    addExpenseMutation.mutate({
+      fecha: exp.fecha,
+      categoria: exp.categoria,
+      subcategoria: exp.subcategoria,
+      descripcion: exp.descripcion + ' (copia)',
+      monto: exp.monto,
+      tipo: exp.tipo,
+      area: exp.area,
+      notas: exp.notas,
+    });
   };
 
   const tabs: { key: Tab; label: string }[] = [
@@ -85,11 +101,28 @@ export default function OperatingExpensesPage() {
   const inputCls = 'w-full text-sm rounded-lg border px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40';
   const selectCls = inputCls;
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <span className="ml-3 text-muted-foreground">Cargando gastos...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Gastos Operativos</h1>
-        <p className="text-sm text-muted-foreground">Registro, análisis y control de gastos de operación</p>
+        <p className="text-sm text-muted-foreground">
+          Registro, análisis y control de gastos de operación
+          {dbExpenses && dbExpenses.length > 0 && (
+            <span className="ml-2 text-xs text-success">● Conectado a base de datos</span>
+          )}
+          {dbExpenses && dbExpenses.length === 0 && (
+            <span className="ml-2 text-xs text-warning">● Mostrando datos demo — registra tu primer gasto para activar</span>
+          )}
+        </p>
       </div>
 
       {/* Tabs */}
@@ -105,7 +138,6 @@ export default function OperatingExpensesPage() {
       {/* ═══ TAB: DASHBOARD ═══ */}
       {tab === 'dashboard' && (
         <div className="space-y-6">
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { label: 'Gasto Mensual', value: fmt(summary.totalMensual), icon: DollarSign, color: 'text-destructive' },
@@ -123,9 +155,7 @@ export default function OperatingExpensesPage() {
             ))}
           </div>
 
-          {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* By Category */}
             <div className="bg-card rounded-xl border p-5">
               <h3 className="font-display font-semibold mb-4">Gastos por Categoría</h3>
               <ResponsiveContainer width="100%" height={280}>
@@ -139,7 +169,6 @@ export default function OperatingExpensesPage() {
               </ResponsiveContainer>
             </div>
 
-            {/* By Area */}
             <div className="bg-card rounded-xl border p-5">
               <h3 className="font-display font-semibold mb-4">Gastos por Área</h3>
               <ResponsiveContainer width="100%" height={280}>
@@ -154,7 +183,6 @@ export default function OperatingExpensesPage() {
             </div>
           </div>
 
-          {/* Expenses by month + Top 10 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-card rounded-xl border p-5">
               <h3 className="font-display font-semibold mb-4">Gastos por Mes</h3>
@@ -188,7 +216,6 @@ export default function OperatingExpensesPage() {
             </div>
           </div>
 
-          {/* % by area table */}
           <div className="bg-card rounded-xl border p-5">
             <h3 className="font-display font-semibold mb-4">Distribución por Área</h3>
             <div className="overflow-x-auto">
@@ -224,7 +251,6 @@ export default function OperatingExpensesPage() {
       {/* ═══ TAB: REGISTRO ═══ */}
       {tab === 'registro' && (
         <div className="space-y-6">
-          {/* Add expense form */}
           <div className="bg-card rounded-xl border p-5">
             <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
               <PlusCircle size={18} className="text-primary" /> Registrar Gasto
@@ -280,13 +306,13 @@ export default function OperatingExpensesPage() {
                 <input type="text" value={formNotas} onChange={e => setFormNotas(e.target.value)} placeholder="Notas" className={inputCls} />
               </div>
             </div>
-            <button onClick={addExpense}
-              className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2">
-              <PlusCircle size={16} /> Agregar Gasto
+            <button onClick={addExpense} disabled={addExpenseMutation.isPending}
+              className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50">
+              {addExpenseMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <PlusCircle size={16} />}
+              Agregar Gasto
             </button>
           </div>
 
-          {/* Filter */}
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="text-sm border rounded-lg px-3 py-1.5 bg-background text-foreground">
@@ -298,7 +324,6 @@ export default function OperatingExpensesPage() {
             <span className="text-xs text-muted-foreground">{filteredExpenses.length} gastos · Total: {fmt(filteredExpenses.reduce((a, e) => a + e.monto, 0))}</span>
           </div>
 
-          {/* Expenses table */}
           <div className="bg-card rounded-xl border overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -352,7 +377,6 @@ export default function OperatingExpensesPage() {
       {/* ═══ TAB: DIRECTOR ═══ */}
       {tab === 'director' && (
         <div className="space-y-6">
-          {/* Executive KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { label: 'Ventas del Mes', value: fmt(financial.ventasMes), sub: '', positive: true },
@@ -370,7 +394,6 @@ export default function OperatingExpensesPage() {
             ))}
           </div>
 
-          {/* Income Statement Summary */}
           <div className="bg-card rounded-xl border p-6">
             <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
               <FileText size={18} className="text-primary" /> Estado de Resultados Simplificado
@@ -387,14 +410,12 @@ export default function OperatingExpensesPage() {
                   <span className={`text-sm ${row.bold ? 'font-bold' : 'text-muted-foreground'}`}>{row.label}</span>
                   <span className={`text-sm font-mono ${row.bold ? 'font-bold' : ''} ${row.highlight ? (row.value >= 0 ? 'text-success' : 'text-destructive') : ''} ${row.value < 0 ? 'text-destructive' : ''}`}>
                     {fmt(Math.abs(row.value))}
-                    {row.value < 0 && !row.highlight ? '' : ''}
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Break-even visual */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-card rounded-xl border p-6">
               <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
@@ -409,7 +430,6 @@ export default function OperatingExpensesPage() {
                   <div className="w-full bg-muted rounded-full h-4 relative">
                     <div className={`rounded-full h-4 transition-all ${financial.ventasMes >= financial.puntoEquilibrio ? 'bg-success' : 'bg-destructive'}`}
                       style={{ width: `${Math.min((financial.ventasMes / (financial.puntoEquilibrio || 1)) * 100, 100)}%` }} />
-                    <div className="absolute top-0 h-4 border-r-2 border-foreground" style={{ left: '100%' }} />
                   </div>
                   <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
                     <span>$0</span>
@@ -429,7 +449,6 @@ export default function OperatingExpensesPage() {
               </div>
             </div>
 
-            {/* Margin comparison */}
             <div className="bg-card rounded-xl border p-6">
               <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
                 <Calculator size={18} className="text-primary" /> Márgenes del Negocio
