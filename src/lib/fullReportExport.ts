@@ -147,9 +147,12 @@ export function exportFullPdf(config: FullReportConfig) {
     </head>
     <body>
       <div class="header">
-        <div>
-          <div class="brand">REDBUCK EQUIPMENT</div>
-          <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="${getCompanyLogoUrl()}" alt="Logo" style="height:36px;max-width:120px;object-fit:contain;" onerror="this.style.display='none'" />
+          <div>
+            <div class="brand">REDBUCK EQUIPMENT</div>
+            <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+          </div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:15px;font-weight:700;">${config.title}</div>
