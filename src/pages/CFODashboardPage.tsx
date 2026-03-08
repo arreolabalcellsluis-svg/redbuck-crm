@@ -26,6 +26,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const fmtDays = (n: number) => `${Math.round(n)} días`;
 const fmtX = (n: number) => `${n.toFixed(1)}x`;
+const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
 const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(280,65%,55%)', 'hsl(190,80%,45%)'];
 
@@ -227,12 +228,13 @@ export default function CFODashboardPage() {
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
       <Tabs defaultValue="radar" className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
-          <TabsTrigger value="radar">Radar Financiero</TabsTrigger>
-          <TabsTrigger value="income">Estado de Resultados</TabsTrigger>
-          <TabsTrigger value="balance">Balance General</TabsTrigger>
-          <TabsTrigger value="cashflow">Flujo de Efectivo</TabsTrigger>
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+          <TabsTrigger value="radar">Radar</TabsTrigger>
+          <TabsTrigger value="income">Resultados</TabsTrigger>
+          <TabsTrigger value="balance">Balance</TabsTrigger>
+          <TabsTrigger value="cashflow">Flujo Efectivo</TabsTrigger>
           <TabsTrigger value="kpis">Indicadores</TabsTrigger>
+          <TabsTrigger value="moneymap">Mapa del Dinero</TabsTrigger>
         </TabsList>
 
         {/* ─── FINANCIAL RADAR TAB ──────────────────────────────── */}
@@ -627,6 +629,125 @@ export default function CFODashboardPage() {
               </div>
               <div className="mt-4 p-3 bg-primary/5 rounded-lg text-xs">
                 <strong>Interpretación:</strong> El inventario rota {kpis.rotacionInventario.toFixed(1)} veces al año, cada unidad permanece {Math.round(kpis.diasInventario)} días en promedio. Capital de {fmt(kpis.capitalEnInventario)} detenido hasta venderse.
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─── MONEY MAP TAB ────────────────────────────────────── */}
+        <TabsContent value="moneymap">
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Flow diagram */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                <Activity size={20} /> Mapa del Dinero del Negocio
+              </h3>
+              <p className="text-xs text-muted-foreground mb-6">Cómo fluye el dinero dentro de la empresa</p>
+              <div className="space-y-0">
+                {[
+                  { stage: 'Dinero en Bancos', value: balance.bancos, icon: '🏦', desc: 'Capital disponible', color: 'bg-green-500' },
+                  { stage: 'Compra Inventario', value: balance.inventario, icon: '📦', desc: `${fmtDays(kpis.diasInventario)} promedio en bodega`, color: 'bg-amber-500' },
+                  { stage: 'Ventas', value: income.ventas, icon: '💰', desc: `${fmt(income.ventas / 12)}/mes promedio`, color: 'bg-blue-500' },
+                  { stage: 'Cuentas por Cobrar', value: balance.cuentasPorCobrar, icon: '📋', desc: `${fmtDays(kpis.diasCxC)} promedio de cobro`, color: 'bg-purple-500' },
+                  { stage: 'Cobro', value: income.ventas - balance.cuentasPorCobrar, icon: '✅', desc: 'Efectivo recuperado', color: 'bg-emerald-500' },
+                  { stage: 'Dinero en Bancos', value: cashFlow.saldoFinal, icon: '🏦', desc: 'Ciclo completo', color: 'bg-green-500' },
+                ].map((step, i, arr) => (
+                  <div key={i}>
+                    <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors">
+                      <div className="text-2xl w-10 text-center">{step.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm">{step.stage}</div>
+                        <div className="text-xs text-muted-foreground">{step.desc}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-bold text-sm">{fmt(step.value)}</div>
+                      </div>
+                      <div className={`w-2 h-8 rounded-full ${step.color}`} />
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div className="flex justify-center py-1">
+                        <div className="w-0.5 h-6 bg-border" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-3 bg-primary/5 rounded-lg text-xs">
+                <strong>Ciclo total:</strong> El dinero tarda <strong>{fmtDays(kpis.cicloConversionEfectivo)}</strong> en regresar al negocio (Inv: {fmtDays(kpis.diasInventario)} + CxC: {fmtDays(kpis.diasCxC)} − CxP: {fmtDays(kpis.diasCxP)})
+              </div>
+            </div>
+
+            {/* Where money is stuck + bottleneck analysis */}
+            <div className="space-y-4">
+              <div className="bg-card rounded-xl border p-6">
+                <h3 className="text-lg font-bold mb-4">¿Dónde está detenido el capital?</h3>
+                {(() => {
+                  const stages = [
+                    { label: 'Inventario', value: balance.inventario, color: 'bg-amber-500', time: kpis.diasInventario },
+                    { label: 'Cuentas por cobrar', value: balance.cuentasPorCobrar, color: 'bg-blue-500', time: kpis.diasCxC },
+                    { label: 'Bancos', value: balance.bancos, color: 'bg-green-500', time: 0 },
+                  ];
+                  const total = stages.reduce((s, st) => s + st.value, 0);
+                  return (
+                    <div className="space-y-4">
+                      {stages.map((st, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium">{st.label}</span>
+                            <div className="text-right">
+                              <span className="font-bold">{fmt(st.value)}</span>
+                              <span className="text-muted-foreground ml-2">({safePct(st.value, total).toFixed(0)}%)</span>
+                            </div>
+                          </div>
+                          <div className="h-5 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full ${st.color} rounded-full transition-all flex items-center justify-end pr-2`}
+                              style={{ width: `${Math.max(5, safePct(st.value, total))}%` }}>
+                              {st.time > 0 && <span className="text-[10px] text-white font-bold">{Math.round(st.time)}d</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Bottleneck detection */}
+              <div className="bg-card rounded-xl border p-6">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Detección de Cuellos de Botella</h3>
+                <div className="space-y-2 text-xs">
+                  <DiagnosticItem
+                    condition={kpis.diasInventario > 90}
+                    warn={`Inventario lento (${Math.round(kpis.diasInventario)} días) → capital congelado por ${fmt(balance.inventario)}`}
+                    ok={`Inventario fluye bien (${Math.round(kpis.diasInventario)} días)`}
+                  />
+                  <DiagnosticItem
+                    condition={kpis.diasCxC > 45}
+                    warn={`Cobranza lenta (${Math.round(kpis.diasCxC)} días) → ${fmt(balance.cuentasPorCobrar)} sin cobrar`}
+                    ok={`Cobranza eficiente (${Math.round(kpis.diasCxC)} días)`}
+                  />
+                  <DiagnosticItem
+                    condition={kpis.diasCxP < 15}
+                    warn={`Pago a proveedores muy rápido (${Math.round(kpis.diasCxP)} días) → no se aprovecha crédito`}
+                    ok={`Uso de crédito comercial adecuado (${Math.round(kpis.diasCxP)} días)`}
+                  />
+                  <DiagnosticItem
+                    condition={kpis.cicloConversionEfectivo > 90}
+                    warn={`Ciclo de efectivo largo (${Math.round(kpis.cicloConversionEfectivo)} días) → presión de liquidez`}
+                    ok={`Ciclo de efectivo saludable (${Math.round(kpis.cicloConversionEfectivo)} días)`}
+                  />
+                </div>
+              </div>
+
+              {/* Quick summary card */}
+              <div className={`rounded-xl border-2 p-6 ${kpis.cicloConversionEfectivo < 90 ? 'bg-green-500/5 border-green-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Velocidad del Dinero</div>
+                <div className={`text-3xl font-bold ${kpis.cicloConversionEfectivo < 90 ? 'text-green-600' : 'text-amber-600'}`}>
+                  {fmtDays(kpis.cicloConversionEfectivo)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tiempo que tarda $1 en salir del banco, convertirse en producto, venderse, cobrarse y regresar.
+                </p>
               </div>
             </div>
           </div>
