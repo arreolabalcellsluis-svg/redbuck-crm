@@ -221,14 +221,22 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       },
       items: invoiceItems,
     }, {
+      onSuccess: (invoiceId) => {
+        setSavedInvoiceId(invoiceId);
+        setStep('preview');
+      },
+    });
+  };
+
+  const handleStampFromPreview = () => {
+    if (!savedInvoiceId) return;
+    stampMutation.mutate(savedInvoiceId, {
       onSuccess: () => onOpenChange(false),
     });
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+  const customerName = selectedOrder?.customer_name || customers?.find(c => c.id === selectedOrder?.customer_id)?.name || '—';
+  const docTypeLabel = DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label || 'Factura';
           <DialogTitle className="flex items-center gap-2">
             <FileText size={18} />
             {step === 'select' ? 'Seleccionar Pedido para Facturar' : 'Configurar Factura'}
