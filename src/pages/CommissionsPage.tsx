@@ -18,8 +18,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
   BadgeDollarSign, Users, TrendingUp, ShieldCheck, BarChart3, AlertTriangle,
-  DollarSign, Target, FileText, ArrowUpDown,
+  DollarSign, Target, FileText, ArrowUpDown, Download,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
