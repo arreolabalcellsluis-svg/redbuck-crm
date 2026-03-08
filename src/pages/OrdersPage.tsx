@@ -39,6 +39,7 @@ export default function OrdersPage() {
   const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
