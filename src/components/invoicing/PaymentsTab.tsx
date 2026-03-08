@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, DollarSign, FileText, CreditCard, AlertTriangle } from 'lucide-react';
+import { Search, Plus, DollarSign, FileText, CreditCard, AlertTriangle, Download, FileCode, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { usePayments, useCreatePayment, useGenerateComplement, useDownloadComplementFile, type Payment } from '@/hooks/usePayments';
