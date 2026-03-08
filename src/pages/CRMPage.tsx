@@ -4,15 +4,26 @@ import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Custom
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportCRMToExcel } from '@/lib/exportUtils';
+import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 type Tab = 'clientes' | 'pipeline';
+
+type FiscalData = {
+  taxRegime: string;
+  fiscalZipCode: string;
+  cfdiUse: string;
+  legalName: string;
+  invoiceEmail: string;
+};
+
+const emptyFiscal = (): FiscalData => ({ taxRegime: '', fiscalZipCode: '', cfdiUse: 'G03', legalName: '', invoiceEmail: '' });
 
 const emptyCustomer = (): Omit<Customer, 'id' | 'createdAt'> => ({
   name: '', type: 'taller_mecanico', phone: '', city: '', state: '', vendorId: '', source: 'llamada', priority: 'media',
