@@ -196,10 +196,19 @@ export const salesByCategory = [
 ];
 
 export const monthlySales = [
-  { month: 'Oct', sales: 980000 },
-  { month: 'Nov', sales: 1120000 },
-  { month: 'Dic', sales: 1450000 },
-  { month: 'Ene', sales: 1080000 },
-  { month: 'Feb', sales: 1350000 },
-  { month: 'Mar', sales: 1245000 },
+  { month: 'Ene 24', sales: 720000 },
+  { month: 'Feb 24', sales: 810000 },
+  { month: 'Mar 24', sales: 890000 },
+  { month: 'Abr 24', sales: 760000 },
+  { month: 'May 24', sales: 920000 },
+  { month: 'Jun 24', sales: 870000 },
+  { month: 'Jul 24', sales: 950000 },
+  { month: 'Ago 24', sales: 1010000 },
+  { month: 'Sep 24', sales: 930000 },
+  { month: 'Oct 24', sales: 980000 },
+  { month: 'Nov 24', sales: 1120000 },
+  { month: 'Dic 24', sales: 1450000 },
+  { month: 'Ene 25', sales: 1080000 },
+  { month: 'Feb 25', sales: 1350000 },
+  { month: 'Mar 25', sales: 1245000 },
 ];

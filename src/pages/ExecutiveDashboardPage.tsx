@@ -42,6 +42,7 @@ export default function ExecutiveDashboardPage() {
   const [daysDialog, setDaysDialog] = useState(false);
   const [deadDialog, setDeadDialog] = useState(false);
   const [excessDialog, setExcessDialog] = useState(false);
+  const [salesMonths, setSalesMonths] = useState(6);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
@@ -137,10 +138,11 @@ export default function ExecutiveDashboardPage() {
   const lowestRotation = analyses.sort((a, b) => b.daysOfStock - a.daysOfStock)[0];
   const topVendor = vendorData.sort((a, b) => b.closeRate - a.closeRate)[0];
 
-  // Monthly growth data with %
-  const monthlyGrowth = monthlySales.map((m, i) => ({
+  // Monthly growth data with % — filtered by selected months
+  const filteredMonthlySales = monthlySales.slice(-salesMonths);
+  const monthlyGrowth = filteredMonthlySales.map((m, i) => ({
     ...m,
-    growth: i > 0 ? Math.round(((m.sales - monthlySales[i - 1].sales) / monthlySales[i - 1].sales) * 100) : 0,
+    growth: i > 0 ? Math.round(((m.sales - filteredMonthlySales[i - 1].sales) / filteredMonthlySales[i - 1].sales) * 100) : 0,
   }));
 
   // Inventory rotation
@@ -287,12 +289,24 @@ export default function ExecutiveDashboardPage() {
       {/* ═══ SECCIÓN 2: VENTAS ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ventas últimos meses */}
-        <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group"
-          onClick={() => navigate('/reportes/ventas')}>
-          <h3 className="font-display font-semibold mb-1 group-hover:text-primary transition-colors">
-            Ventas últimos 6 meses
-            <span className="text-[10px] text-muted-foreground ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</span>
-          </h3>
+        <div className="bg-card rounded-xl border p-5 hover:shadow-lg hover:border-primary/30 transition-all group">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-display font-semibold group-hover:text-primary transition-colors cursor-pointer"
+              onClick={() => navigate('/reportes/ventas')}>
+              Ventas últimos {salesMonths} meses
+              <span className="text-[10px] text-muted-foreground ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</span>
+            </h3>
+            <select
+              value={salesMonths}
+              onChange={e => { e.stopPropagation(); setSalesMonths(+e.target.value); }}
+              onClick={e => e.stopPropagation()}
+              className="text-xs border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {[3, 4, 5, 6, 9, 12, 15].filter(n => n <= monthlySales.length).map(n => (
+                <option key={n} value={n}>{n} meses</option>
+              ))}
+            </select>
+          </div>
           <p className="text-xs text-muted-foreground mb-4">Crecimiento mensual: <span className={`font-bold ${growthMoM >= 0 ? 'text-success' : 'text-destructive'}`}>{fmtPct(growthMoM)}</span></p>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={monthlyGrowth}>
