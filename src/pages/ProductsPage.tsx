@@ -255,6 +255,15 @@ export default function ProductsPage() {
             <input value={form.satUnitKey || ''} onChange={e => setForm(p => ({ ...p, satUnitKey: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="H87" />
             <p className="text-[10px] text-muted-foreground mt-0.5">Ej: H87 — Pieza, E48 — Servicio</p>
           </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Objeto de Impuestos</label>
+            <select value={form.taxObject || '02'} onChange={e => setForm(p => ({ ...p, taxObject: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+              <option value="01">01 — No objeto de impuestos</option>
+              <option value="02">02 — Sí objeto de impuestos</option>
+              <option value="03">03 — Sí objeto de impuestos y no obligado al desglose</option>
+              <option value="04">04 — Sí objeto de impuesto y no causa de impuestos</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
