@@ -917,9 +917,7 @@ function InvoicesTab() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
-                        {inv.status === 'timbrada' && (
-                          <Button size="icon" variant="ghost" title="Descargar XML"><Download size={14} /></Button>
-                        )}
+                        <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSinglePdf(inv)}><Download size={14} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
