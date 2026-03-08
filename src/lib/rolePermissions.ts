@@ -11,6 +11,7 @@ const VENDEDOR_BLOCKED_PATHS = [
   '/pedidos',
   '/historial-pedidos',
   '/ejecutivo',
+  '/financiero',
   '/reportes-ejecutivos',
   '/importaciones',
   '/planeacion',
