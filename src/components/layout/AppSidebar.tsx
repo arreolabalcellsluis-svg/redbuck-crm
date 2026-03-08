@@ -34,6 +34,7 @@ const navItems = [
   { label: 'Proveedores', icon: Building2, path: '/proveedores' },
   { label: 'Servicio Técnico', icon: Cog, path: '/servicio' },
   { label: 'Comisiones', icon: BadgeDollarSign, path: '/comisiones' },
+  { label: 'Metas Vendedores', icon: Target, path: '/metas-vendedores' },
   { label: 'Gastos Operativos', icon: Wallet, path: '/gastos' },
   { label: 'Activos / Depreciación', icon: Building2, path: '/activos' },
   { label: 'Planeación', icon: Brain, path: '/planeacion' },
