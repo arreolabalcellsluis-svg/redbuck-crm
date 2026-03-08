@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { analyzeProducts } from '@/lib/planningEngine';
 import { demoProducts } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
@@ -64,16 +65,50 @@ export default function ProfitabilityReportPage() {
 
   const hasActiveFilters = !!(filters.search || filters.categoria);
 
+  const totalUtilidad = filtered.reduce((s, r) => s + r.utilidad, 0);
+  const totalAnual = filtered.reduce((s, r) => s + r.utilidadAnual, 0);
+  const avgMargen = filtered.length > 0 ? filtered.reduce((s, r) => s + r.margen, 0) / filtered.length : 0;
+
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      SKU: r.sku, Producto: r.producto,
-      Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
-      'Costo compra': r.costoCompra, 'Costo importación': r.costoImportacion,
-      'Costo total': r.costoTotal, 'Precio venta prom.': r.precioVentaProm,
-      Utilidad: r.utilidad, 'Margen %': r.margen.toFixed(1),
-      'Utilidad anual est.': r.utilidadAnual,
-    }));
-    exportToExcel(data, `Rentabilidad_por_producto_semestre_actual`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const kpis = [
+      { label: 'Productos', value: filtered.length as number },
+      { label: 'Utilidad prom/ud', value: fmt(filtered.length > 0 ? totalUtilidad / filtered.length : 0) },
+      { label: 'Margen promedio', value: `${avgMargen.toFixed(1)}%`, color: 'success' as const },
+      { label: 'Utilidad anual est.', value: fmt(totalAnual), color: 'primary' as const },
+    ];
+    const headers = ['SKU', 'Producto', 'Categoría', 'Costo compra', 'Costo import.', 'Costo total', 'P. venta prom.', 'Utilidad/ud', 'Margen %', 'Utilidad anual'];
+    const rows = filtered.map(r => [
+      r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
+      fmt(r.costoCompra), fmt(r.costoImportacion), fmt(r.costoTotal), fmt(r.precioVentaProm),
+      fmt(r.utilidad), `${r.margen.toFixed(1)}%`, fmt(r.utilidadAnual),
+    ]);
+    const chartHeaders = ['SKU', 'Utilidad/ud'];
+    const chartRows = filtered.slice(0, 10).map(r => [r.sku, fmt(r.utilidad)]);
+    exportFullExcel({
+      title: 'Rentabilidad por Producto', subtitle: `Top ${filtered.length} productos`, filename: `Rentabilidad_${dateStr}`,
+      kpis, sections: [
+        { title: 'Utilidad por producto (Top 10)', headers: chartHeaders, rows: chartRows },
+        { title: 'Detalle completo', headers, rows },
+      ],
+    });
+  };
+
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Rentabilidad por Producto', subtitle: `Top ${filtered.length} productos`, filename: `Rentabilidad_${dateStr}`,
+      kpis: [
+        { label: 'Productos', value: filtered.length },
+        { label: 'Utilidad prom/ud', value: fmt(filtered.length > 0 ? totalUtilidad / filtered.length : 0) },
+        { label: 'Margen promedio', value: `${avgMargen.toFixed(1)}%`, color: 'success' },
+        { label: 'Utilidad anual est.', value: fmt(totalAnual), color: 'primary' },
+      ],
+      sections: [
+        { title: 'Top 10 Utilidad por producto', headers: ['SKU', 'Producto', 'Utilidad/ud', 'Margen %'], rows: filtered.slice(0, 10).map(r => [r.sku, r.producto, fmt(r.utilidad), `${r.margen.toFixed(1)}%`]) },
+        { title: 'Detalle completo', headers: ['SKU', 'Producto', 'Categoría', 'Costo total', 'P. venta', 'Utilidad/ud', 'Margen %', 'Ut. anual'], rows: filtered.map(r => [r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, fmt(r.costoTotal), fmt(r.precioVentaProm), fmt(r.utilidad), `${r.margen.toFixed(1)}%`, fmt(r.utilidadAnual)]) },
+      ],
+    });
   };
 
   return (
@@ -95,12 +130,13 @@ export default function ProfitabilityReportPage() {
           selects: [
             { key: 'categoria', label: 'Categoría', options: Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v })) },
           ],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', categoria: '', dateFrom: subMonths(new Date(), 6), dateTo: new Date() })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 

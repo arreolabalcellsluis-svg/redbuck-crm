@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoCustomers, demoOrders, demoAccountsReceivable } from '@/data/demo-data';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -61,14 +62,32 @@ export default function DistributorsReportPage() {
   const stateOptions = [...new Set(records.map(r => r.estado))].map(s => ({ value: s, label: s }));
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      Distribuidor: r.distribuidor, Tipo: r.tipo, Ciudad: r.ciudad, Estado: r.estado,
-      'Ventas acumuladas': r.ventasAcum, 'No. pedidos': r.numPedidos,
-      'Ticket promedio': r.ticketProm, 'Saldo pendiente': r.saldoPendiente,
-      'Productos más comprados': r.topProducts,
-      Activo: r.activo ? 'Sí' : 'No', 'Cartera vencida': r.carteraVencida ? 'Sí' : 'No',
-    }));
-    exportToExcel(data, `Distribuidores_${new Date().toISOString().split('T')[0]}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const totalVentas = filtered.reduce((s, r) => s + r.ventasAcum, 0);
+    const totalSaldo = filtered.reduce((s, r) => s + r.saldoPendiente, 0);
+    exportFullExcel({
+      title: 'Distribuidores / Clientes', filename: `Distribuidores_${dateStr}`,
+      kpis: [
+        { label: 'Total clientes', value: filtered.length },
+        { label: 'Activos', value: filtered.filter(r => r.activo).length, color: 'success' },
+        { label: 'Ventas totales', value: fmt(totalVentas), color: 'primary' },
+        { label: 'Saldo total', value: fmt(totalSaldo), color: 'warning' },
+      ],
+      sections: [{ title: 'Ranking de clientes', headers: ['#', 'Distribuidor', 'Ciudad', 'Estado', 'Ventas', 'Pedidos', 'Ticket prom.', 'Saldo', 'Top productos', 'Estatus'], rows: filtered.map((r, i) => [i+1, r.distribuidor, r.ciudad, r.estado, fmt(r.ventasAcum), r.numPedidos, fmt(r.ticketProm), fmt(r.saldoPendiente), r.topProducts, r.carteraVencida ? 'Cartera vencida' : r.activo ? 'Activo' : 'Inactivo']) }],
+    });
+  };
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Distribuidores / Clientes', filename: `Distribuidores_${dateStr}`,
+      kpis: [
+        { label: 'Total clientes', value: filtered.length },
+        { label: 'Activos', value: filtered.filter(r => r.activo).length, color: 'success' },
+        { label: 'Ventas totales', value: fmt(filtered.reduce((s, r) => s + r.ventasAcum, 0)), color: 'primary' },
+        { label: 'Saldo total', value: fmt(filtered.reduce((s, r) => s + r.saldoPendiente, 0)), color: 'warning' },
+      ],
+      sections: [{ title: 'Ranking', headers: ['#', 'Distribuidor', 'Ciudad', 'Ventas', 'Pedidos', 'Ticket', 'Saldo', 'Estatus'], rows: filtered.map((r, i) => [i+1, r.distribuidor, r.ciudad, fmt(r.ventasAcum), r.numPedidos, fmt(r.ticketProm), fmt(r.saldoPendiente), r.carteraVencida ? 'Vencida' : r.activo ? 'Activo' : 'Inactivo']) }],
+    });
   };
 
   return (
@@ -94,12 +113,13 @@ export default function DistributorsReportPage() {
         config={{
           search: true, searchPlaceholder: 'Buscar por nombre o ciudad...',
           selects: [{ key: 'estado', label: 'Estado', options: stateOptions }],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', estado: '', clasificacion: '' })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 

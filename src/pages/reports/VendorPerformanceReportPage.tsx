@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Users, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { exportToPdf } from '@/lib/pdfExport';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoOrders, demoProducts, demoQuotations, salesByVendor, demoUsers, dashboardMetrics } from '@/data/demo-data';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -54,27 +54,34 @@ export default function VendorPerformanceReportPage() {
   }));
 
   const handleExportExcel = () => {
-    const data = records.map(r => ({
-      Vendedor: r.vendedor, Email: r.email,
-      'Ventas totales': r.ventasTotales, '# Ventas': r.numVentas,
-      'Ticket promedio': r.ticketProm, 'Productos vendidos': r.productosVendidos,
-      'Cotizaciones enviadas': r.cotizacionesEnviadas, 'Cotizaciones aceptadas': r.cotizacionesAceptadas,
-      'Conversión %': r.conversion.toFixed(1), 'Meta': r.meta,
-      'Cumplimiento %': r.cumplimiento.toFixed(1), 'Comisión generada': r.comisionGenerada,
-    }));
-    exportToExcel(data, `Desempeno_vendedores_${new Date().toISOString().split('T')[0]}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const totalVentas = records.reduce((s, r) => s + r.ventasTotales, 0);
+    exportFullExcel({
+      title: 'Desempeño de Vendedores', filename: `Desempeno_vendedores_${dateStr}`,
+      kpis: [
+        { label: 'Total ventas equipo', value: fmt(totalVentas), color: 'primary' },
+        { label: 'Vendedores', value: records.length },
+        { label: 'Ticket promedio', value: fmt(dashboardMetrics.avgTicket) },
+      ],
+      sections: [
+        { title: 'Ventas vs Meta (gráfica)', headers: ['Vendedor', 'Ventas', 'Meta', 'Cumpl. %'], rows: records.map(r => [r.vendedor, fmt(r.ventasTotales), fmt(r.meta), `${r.cumplimiento.toFixed(0)}%`]) },
+        { title: 'Ranking completo', headers: ['#', 'Vendedor', 'Email', 'Ventas', '# Ventas', 'Ticket prom.', 'Productos', 'Cot. enviadas', 'Cot. aceptadas', 'Conv. %', 'Meta', 'Cumpl. %', 'Comisión'], rows: records.map((r, i) => [i+1, r.vendedor, r.email, fmt(r.ventasTotales), r.numVentas, fmt(r.ticketProm), r.productosVendidos, r.cotizacionesEnviadas, r.cotizacionesAceptadas, `${r.conversion.toFixed(1)}%`, fmt(r.meta), `${r.cumplimiento.toFixed(0)}%`, fmt(r.comisionGenerada)]) },
+      ],
+    });
   };
 
   const handleExportPdf = () => {
-    exportToPdf({
-      title: 'Desempeño de Vendedores',
-      filename: `Desempeno_vendedores_${new Date().toISOString().split('T')[0]}`,
-      headers: ['#', 'Vendedor', 'Ventas', '# Ventas', 'Ticket', 'Conv. %', 'Cumpl. %', 'Comisión'],
-      rows: records.map((r, i) => [i + 1, r.vendedor, fmt(r.ventasTotales), r.numVentas, fmt(r.ticketProm), `${r.conversion.toFixed(0)}%`, `${r.cumplimiento.toFixed(0)}%`, fmt(r.comisionGenerada)]),
-      summary: [
-        { label: 'Total ventas equipo', value: fmt(records.reduce((s, r) => s + r.ventasTotales, 0)) },
-        { label: 'Vendedores', value: `${records.length}` },
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Desempeño de Vendedores', filename: `Desempeno_vendedores_${dateStr}`,
+      kpis: [
+        { label: 'Total ventas equipo', value: fmt(records.reduce((s, r) => s + r.ventasTotales, 0)), color: 'primary' },
+        { label: 'Vendedores', value: records.length },
         { label: 'Ticket promedio', value: fmt(dashboardMetrics.avgTicket) },
+      ],
+      sections: [
+        { title: 'Ventas vs Meta', headers: ['Vendedor', 'Ventas', 'Meta', 'Cumpl. %'], rows: records.map(r => [r.vendedor, fmt(r.ventasTotales), fmt(r.meta), `${r.cumplimiento.toFixed(0)}%`]) },
+        { title: 'Ranking completo', headers: ['#', 'Vendedor', 'Ventas', '# Ventas', 'Ticket', 'Conv. %', 'Cumpl. %', 'Comisión'], rows: records.map((r, i) => [i+1, r.vendedor, fmt(r.ventasTotales), r.numVentas, fmt(r.ticketProm), `${r.conversion.toFixed(0)}%`, `${r.cumplimiento.toFixed(0)}%`, fmt(r.comisionGenerada)]) },
       ],
     });
   };

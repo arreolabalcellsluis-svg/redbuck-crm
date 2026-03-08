@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Skull } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { analyzeProducts } from '@/lib/planningEngine';
 import { demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
@@ -58,13 +59,38 @@ export default function DeadStockReportPage() {
   const hasActiveFilters = !!(filters.search || filters.categoria);
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      SKU: r.sku, Producto: r.producto, Modelo: r.modelo,
-      Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
-      'Última venta': r.ultimaVenta, 'Días sin vender': r.diasSinVender,
-      Stock: r.stock, Costo: r.costo, 'Valor detenido': r.valorDetenido, Sugerencia: r.sugerencia,
-    }));
-    exportToExcel(data, `Inventario_muerto_${new Date().toISOString().split('T')[0]}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const totalUnits = filtered.reduce((s, r) => s + r.stock, 0);
+    const headers = ['SKU', 'Producto', 'Modelo', 'Categoría', 'Última venta', 'Días sin vender', 'Stock', 'Costo', 'Valor detenido', 'Sugerencia'];
+    const rows = filtered.map(r => [r.sku, r.producto, r.modelo, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, r.ultimaVenta, `${r.diasSinVender}d`, r.stock, fmt(r.costo), fmt(r.valorDetenido), r.sugerencia]);
+    exportFullExcel({
+      title: 'Inventario Muerto', subtitle: `Productos sin rotación > ${filters.periodo} días`, filename: `Inventario_muerto_${dateStr}`,
+      kpis: [
+        { label: 'Productos muertos', value: filtered.length, color: 'destructive' },
+        { label: 'Unidades estancadas', value: totalUnits },
+        { label: 'Valor detenido', value: fmt(totalValue), color: 'destructive' },
+      ],
+      sections: [{ title: `Productos sin rotación > ${filters.periodo} días`, headers, rows }],
+    });
+  };
+
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const totalUnits = filtered.reduce((s, r) => s + r.stock, 0);
+    exportFullPdf({
+      title: 'Inventario Muerto', subtitle: `Productos sin rotación > ${filters.periodo} días`, filename: `Inventario_muerto_${dateStr}`,
+      kpis: [
+        { label: 'Productos muertos', value: filtered.length, color: 'destructive' },
+        { label: 'Unidades estancadas', value: totalUnits },
+        { label: 'Valor detenido', value: fmt(totalValue), color: 'destructive' },
+      ],
+      sections: [{
+        title: 'Detalle de inventario muerto',
+        headers: ['SKU', 'Producto', 'Categoría', 'Días sin vender', 'Stock', 'Valor detenido', 'Sugerencia'],
+        rows: filtered.map(r => [r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, `${r.diasSinVender}d`, r.stock, fmt(r.valorDetenido), r.sugerencia]),
+        totalsRow: ['TOTAL', '', '', '', totalUnits, fmt(totalValue), ''],
+      }],
+    });
   };
 
   return (
@@ -94,12 +120,13 @@ export default function DeadStockReportPage() {
           selects: [
             { key: 'categoria', label: 'Categoría', options: Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v })) },
           ],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', categoria: '', bodega: '', periodo: filters.periodo })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 

@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoAccountsReceivable, demoCustomers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
-import { exportToPdf } from '@/lib/pdfExport';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -67,27 +67,32 @@ export default function ReceivablesReportPage() {
   const hasActiveFilters = !!(filters.search || filters.aging);
 
   const handleExportExcel = () => {
-    const data = filtered.map(r => ({
-      Cliente: r.customerName, 'Folio pedido': r.orderFolio,
-      'Fecha vencimiento': r.dueDate, Total: r.total, Pagado: r.paid,
-      'Saldo pendiente': r.balance, 'Días vencido': r.daysOverdue, Estatus: r.status,
-    }));
-    exportToExcel(data, `Cuentas_por_cobrar_${new Date().toISOString().split('T')[0]}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullExcel({
+      title: 'Cuentas por Cobrar', subtitle: `Al ${new Date().toLocaleDateString('es-MX')}`, filename: `CxC_${dateStr}`,
+      kpis: [
+        { label: 'Total facturado', value: fmt(totals.total) },
+        { label: 'Total pagado', value: fmt(totals.pagado), color: 'success' },
+        { label: 'Saldo pendiente', value: fmt(totals.saldo), color: 'warning' },
+        { label: 'Al corriente', value: fmt(totals.alCorriente), color: 'success' },
+        { label: 'Cartera vencida', value: fmt(totals.vencido), color: 'destructive' },
+      ],
+      sections: [{ title: 'Detalle de cobranza', headers: ['Cliente', 'Folio', 'Vencimiento', 'Total', 'Pagado', 'Saldo', 'Días vencido', 'Estatus'], rows: filtered.map(r => [r.customerName, r.orderFolio, r.dueDate, fmt(r.total), fmt(r.paid), fmt(r.balance), r.daysOverdue > 0 ? `${r.daysOverdue}d` : '0', r.status]), totalsRow: ['TOTAL', '', '', fmt(totals.total), fmt(totals.pagado), fmt(totals.saldo), '', ''] }],
+    });
   };
 
   const handleExportPdf = () => {
-    exportToPdf({
-      title: 'Reporte de Cuentas por Cobrar',
-      subtitle: `Al ${new Date().toLocaleDateString('es-MX')}`,
-      filename: `CxC_${new Date().toISOString().split('T')[0]}`,
-      headers: ['Cliente', 'Folio', 'Vencimiento', 'Total', 'Pagado', 'Saldo', 'Días vencido', 'Estatus'],
-      rows: filtered.map(r => [r.customerName, r.orderFolio, r.dueDate, fmt(r.total), fmt(r.paid), fmt(r.balance), r.daysOverdue, r.status]),
-      summary: [
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Cuentas por Cobrar', subtitle: `Al ${new Date().toLocaleDateString('es-MX')}`, filename: `CxC_${dateStr}`,
+      kpis: [
         { label: 'Total facturado', value: fmt(totals.total) },
-        { label: 'Total pagado', value: fmt(totals.pagado) },
-        { label: 'Saldo pendiente', value: fmt(totals.saldo) },
-        { label: 'Cartera vencida', value: fmt(totals.vencido) },
+        { label: 'Total pagado', value: fmt(totals.pagado), color: 'success' },
+        { label: 'Saldo pendiente', value: fmt(totals.saldo), color: 'warning' },
+        { label: 'Al corriente', value: fmt(totals.alCorriente), color: 'success' },
+        { label: 'Cartera vencida', value: fmt(totals.vencido), color: 'destructive' },
       ],
+      sections: [{ title: 'Detalle', headers: ['Cliente', 'Folio', 'Vencimiento', 'Total', 'Pagado', 'Saldo', 'Días vencido', 'Estatus'], rows: filtered.map(r => [r.customerName, r.orderFolio, r.dueDate, fmt(r.total), fmt(r.paid), fmt(r.balance), r.daysOverdue > 0 ? `${r.daysOverdue}d` : '0', r.status]), totalsRow: ['TOTAL', '', '', fmt(totals.total), fmt(totals.pagado), fmt(totals.saldo), '', ''] }],
     });
   };
 

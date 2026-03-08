@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoOrders, demoProducts } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
@@ -61,14 +62,42 @@ export default function SkuSalesReportPage() {
 
   const hasActiveFilters = !!(filters.search || filters.categoria || filters.dateFrom || filters.dateTo);
 
+  const totalMonto = filtered.reduce((s, r) => s + r.monto, 0);
+  const totalUnidades = filtered.reduce((s, r) => s + r.unidades, 0);
+  const totalUtilidad = filtered.reduce((s, r) => s + r.utilidad, 0);
+
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      SKU: r.sku, Producto: r.producto,
-      Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
-      Unidades: r.unidades, 'Monto vendido': r.monto,
-      Utilidad: r.utilidad, 'Margen %': r.margen.toFixed(1),
-    }));
-    exportToExcel(data, `Ventas_por_SKU_${new Date().toISOString().split('T')[0]}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullExcel({
+      title: 'Ventas por SKU', filename: `Ventas_por_SKU_${dateStr}`,
+      kpis: [
+        { label: 'SKUs', value: filtered.length },
+        { label: 'Unidades vendidas', value: totalUnidades },
+        { label: 'Monto total', value: fmt(totalMonto), color: 'primary' },
+        { label: 'Utilidad total', value: fmt(totalUtilidad), color: 'success' },
+      ],
+      sections: [
+        { title: 'Top 10 SKU (gráfica)', headers: ['SKU', 'Producto', viewMode === 'unidades' ? 'Unidades' : viewMode === 'rentabilidad' ? 'Utilidad' : 'Monto'], rows: filtered.slice(0, 10).map(r => [r.sku, r.producto, viewMode === 'unidades' ? r.unidades : viewMode === 'rentabilidad' ? fmt(r.utilidad) : fmt(r.monto)]) },
+        { title: 'Detalle completo', headers: ['SKU', 'Producto', 'Categoría', 'Unidades', 'Monto', 'Utilidad', 'Margen %'], rows: filtered.map(r => [r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, r.unidades, fmt(r.monto), fmt(r.utilidad), `${r.margen.toFixed(1)}%`]), totalsRow: ['TOTAL', '', '', totalUnidades, fmt(totalMonto), fmt(totalUtilidad), ''] },
+      ],
+    });
+  };
+
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Ventas por SKU', filename: `Ventas_por_SKU_${dateStr}`,
+      kpis: [
+        { label: 'SKUs', value: filtered.length },
+        { label: 'Unidades vendidas', value: totalUnidades },
+        { label: 'Monto total', value: fmt(totalMonto), color: 'primary' },
+        { label: 'Utilidad total', value: fmt(totalUtilidad), color: 'success' },
+      ],
+      sections: [
+        { title: 'Top 10 SKU', headers: ['SKU', 'Producto', 'Unidades', 'Monto', 'Utilidad', 'Margen %'], rows: filtered.slice(0, 10).map(r => [r.sku, r.producto, r.unidades, fmt(r.monto), fmt(r.utilidad), `${r.margen.toFixed(1)}%`]) },
+        { title: 'Detalle completo', headers: ['SKU', 'Producto', 'Categoría', 'Uds', 'Monto', 'Utilidad', 'Margen %'], rows: filtered.map(r => [r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, r.unidades, fmt(r.monto), fmt(r.utilidad), `${r.margen.toFixed(1)}%`]), totalsRow: ['TOTAL', '', '', totalUnidades, fmt(totalMonto), fmt(totalUtilidad), ''] },
+      ],
+    });
   };
 
   return (
@@ -90,12 +119,13 @@ export default function SkuSalesReportPage() {
           selects: [
             { key: 'categoria', label: 'Categoría', options: Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v })) },
           ],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 
