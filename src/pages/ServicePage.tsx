@@ -2,12 +2,14 @@ import { demoServiceOrders, demoCustomers, demoProducts, demoUsers } from '@/dat
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Wrench, Calendar, CheckCircle, Clock, Plus, Edit2, ImagePlus, X, ZoomIn, FileDown, MessageCircle } from 'lucide-react';
+import { Wrench, Calendar, CheckCircle, Clock, Plus, Edit2, ImagePlus, X, ZoomIn, FileDown, MessageCircle, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ServiceOrder, ServiceType, ServiceStatus } from '@/types';
 import { addAuditLog } from '@/lib/auditLog';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   instalacion: 'Instalación', garantia: 'Garantía', mantenimiento: 'Mantenimiento',
