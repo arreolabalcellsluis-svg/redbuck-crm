@@ -97,10 +97,24 @@ export function useCreatePayment() {
 
       return data.id;
     },
-    onSuccess: () => {
+    onSuccess: async (paymentId) => {
       qc.invalidateQueries({ queryKey: ['payments'] });
       qc.invalidateQueries({ queryKey: ['invoices'] });
       toast.success('Pago registrado correctamente');
+
+      // Auto-generate complement (CFDI tipo P)
+      try {
+        const { data: compData, error: compErr } = await supabase.functions.invoke('facturama-cfdi', {
+          body: { action: 'generate-complement', payment_id: paymentId },
+        });
+        if (compErr) throw compErr;
+        if (!compData?.success) throw new Error(compData?.error || 'Error al generar complemento');
+        qc.invalidateQueries({ queryKey: ['payments'] });
+        toast.success(`Complemento de pago generado — UUID: ${compData.uuid}`);
+      } catch (err: any) {
+        console.error('Auto-complement error:', err);
+        toast.warning('Pago registrado, pero el complemento no se generó automáticamente: ' + err.message);
+      }
     },
     onError: (e: any) => toast.error('Error al registrar pago: ' + e.message),
   });
