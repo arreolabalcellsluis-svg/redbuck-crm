@@ -73,6 +73,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const [exchangeRate, setExchangeRate] = useState(1);
   const [conditions, setConditions] = useState('');
   const [notes, setNotes] = useState('');
+  const [relationType, setRelationType] = useState('');
+  const [relatedUuid, setRelatedUuid] = useState('');
 
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
