@@ -1,4 +1,5 @@
 import { demoCustomers, demoProducts, demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate } from '@/data/demo-data';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { getProductImage } from '@/lib/productImages';
