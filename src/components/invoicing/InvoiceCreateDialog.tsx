@@ -168,7 +168,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
     const unitPrice = Number(item.unitPrice || item.price || 0);
     const qty = Number(item.qty || item.quantity || 1);
     const subtotal = unitPrice * qty;
-    const vatRate = pf?.vat_rate ?? 16;
+    const taxObject = pf?.tax_object ?? '02';
+    const vatRate = (taxObject === '01' || taxObject === '04') ? 0 : (pf?.vat_rate ?? 16);
     const taxAmount = subtotal * (vatRate / 100);
     return {
       product_id: item.productId || null,

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { demoProducts as initialProducts, demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
+import { useAllProductFiscalData, useSaveProductFiscalData } from '@/hooks/useInvoicing';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
@@ -24,6 +25,10 @@ type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: strin
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
+  const { data: productFiscalData } = useAllProductFiscalData();
+  const saveFiscalMutation = useSaveProductFiscalData();
+  const fiscalMap = useMemo(() => new Map((productFiscalData ?? []).map(f => [f.product_id, f])), [productFiscalData]);
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ProductCategory | ''>('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -68,6 +73,18 @@ export default function ProductsPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const saveFiscalData = (productId: string) => {
+    const vatRate = form.taxFamily === 'exento' ? 0 : Number(form.taxFamily || 16);
+    saveFiscalMutation.mutate({
+      product_id: productId,
+      sat_product_key: form.satProductKey || '',
+      sat_unit_key: form.satUnitKey || '',
+      tax_object: form.taxObject || '02',
+      vat_rate: vatRate,
+      fiscal_description: form.name,
+    });
+  };
+
   const handleCreate = () => {
     if (!form.name.trim()) { toast.error('El nombre del producto es obligatorio'); return; }
     if (!form.sku.trim()) { toast.error('El SKU es obligatorio'); return; }
@@ -75,6 +92,10 @@ export default function ProductsPage() {
 
     const newProduct: Product = { ...form, id: `p-${Date.now()}` };
     setProducts(prev => [newProduct, ...prev]);
+    // Save fiscal data to DB
+    if (form.satProductKey || form.satUnitKey) {
+      saveFiscalData(newProduct.id);
+    }
     toast.success(`Producto "${form.name}" creado correctamente`);
     setShowCreate(false);
     setForm(emptyProduct());
@@ -83,7 +104,15 @@ export default function ProductsPage() {
 
   const openEdit = (p: Product) => {
     setEditId(p.id);
-    setForm({ ...p });
+    const existing = fiscalMap.get(p.id);
+    const taxFamily = existing ? (existing.vat_rate === 0 ? (existing.tax_object === '01' || existing.tax_object === '04' ? 'exento' : '0') : String(existing.vat_rate)) : '16';
+    setForm({
+      ...p,
+      satProductKey: existing?.sat_product_key || (p as any).satProductKey || '',
+      satUnitKey: existing?.sat_unit_key || (p as any).satUnitKey || '',
+      taxObject: existing?.tax_object || (p as any).taxObject || '02',
+      taxFamily,
+    });
     setImagePreview(p.image || null);
     setShowEdit(true);
   };
@@ -100,6 +129,8 @@ export default function ProductsPage() {
 
     const doEdit = () => {
       setProducts(prev => prev.map(p => p.id === editId ? { ...form, id: editId } : p));
+      // Save fiscal data to DB
+      saveFiscalData(editId);
       toast.success(`Producto "${form.name}" actualizado correctamente`);
       setShowEdit(false);
       setEditId(null);
