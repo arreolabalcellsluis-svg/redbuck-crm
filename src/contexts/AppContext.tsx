@@ -94,6 +94,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateQuotation = useCallback((q: Quotation) => {
+    setQuotations(prev => prev.map(existing => existing.id === q.id ? q : existing));
+  }, []);
+
   const updateQuotationStatus = useCallback((id: string, status: QuotationStatus) => {
     setQuotations(prev => prev.map(q => q.id === id ? { ...q, status } : q));
   }, []);
