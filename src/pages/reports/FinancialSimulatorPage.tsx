@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { getFinancialAnalysis } from '@/lib/financialSimulator';
