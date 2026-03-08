@@ -619,6 +619,8 @@ function ProductFiscalTab() {
 function InvoicesTab() {
   const { data: invoices, isLoading } = useInvoices();
   const { data: customers } = useCustomers();
+  const { data: fiscalSettings } = useFiscalSettings();
+  const { data: allCustomerFiscal } = useAllCustomerFiscalData();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -626,6 +628,7 @@ function InvoicesTab() {
   const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const customerMap = useMemo(() => new Map((customers ?? []).map(c => [c.id, c])), [customers]);
+  const customerFiscalMap = useMemo(() => new Map((allCustomerFiscal ?? []).map(f => [f.customer_id, f])), [allCustomerFiscal]);
 
   const filtered = useMemo(() => {
     return (invoices ?? []).filter(inv => {
