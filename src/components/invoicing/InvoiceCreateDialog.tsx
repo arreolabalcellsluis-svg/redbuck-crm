@@ -27,6 +27,20 @@ const DOCUMENT_TYPES = [
   { code: 'T', label: 'Traslado' },
 ] as const;
 
+
+const RELATION_TYPES = [
+  { code: '', label: 'Sin relación' },
+  { code: '01', label: '01 — Nota de crédito de los documentos relacionados' },
+  { code: '02', label: '02 — Nota de débito de los documentos relacionados' },
+  { code: '03', label: '03 — Devolución de mercancía sobre facturas o traslados previos' },
+  { code: '04', label: '04 — Sustitución de los CFDI previos' },
+  { code: '05', label: '05 — Traslados de mercancías facturados previamente' },
+  { code: '06', label: '06 — Factura generada por los traslados previos' },
+  { code: '07', label: '07 — CFDI por aplicación de anticipos' },
+  { code: '08', label: '08 — Factura generada por pagos en parcialidades' },
+  { code: '09', label: '09 — Factura generada por pagos diferidos' },
+] as const;
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
