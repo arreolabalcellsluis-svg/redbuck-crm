@@ -20,8 +20,9 @@ import {
   DollarSign, TrendingUp, Package, CreditCard, Building2,
   Wallet, BarChart3, Download, AlertTriangle,
   CheckCircle, RefreshCw, Banknote, Layers, Activity, Target, Radar,
-  ShieldAlert, Eye,
+  ShieldAlert, Eye, Sparkles,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell,
