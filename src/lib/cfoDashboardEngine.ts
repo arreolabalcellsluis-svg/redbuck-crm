@@ -202,16 +202,23 @@ export function calcBalanceSheet(
   const activePay = payables.filter(p => p.status !== 'liquidada' && p.status !== 'cancelada');
   const cuentasPorPagar = sum(activePay.map(p => p.balance));
 
-  const agingBuckets = (days: number) => sum(activePay.filter(p => {
+  // Aging buckets: how many days overdue
+  const agingRange = (minDays: number, maxDays: number) => sum(activePay.filter(p => {
     const due = new Date(p.due_date);
     const diff = Math.floor((now.getTime() - due.getTime()) / 86400000);
-    return diff >= 0 && diff < days;
+    return diff >= minDays && diff < maxDays;
   }).map(p => p.balance));
 
-  const cxpPor30 = agingBuckets(30);
-  const cxpPor60 = agingBuckets(60) - cxpPor30;
-  const cxpPor90 = agingBuckets(90) - agingBuckets(60);
-  const cxpPor120Plus = cuentasPorPagar - agingBuckets(90);
+  // Also include not-yet-due in "0-30" bucket
+  const notYetDue = sum(activePay.filter(p => new Date(p.due_date) >= now).map(p => p.balance));
+  const cxpPor30 = notYetDue + agingRange(0, 30);
+  const cxpPor60 = agingRange(30, 60);
+  const cxpPor90 = agingRange(60, 90);
+  const cxpPor120 = agingRange(90, 120);
+  const cxpPor150 = agingRange(120, 150);
+  const cxpPor180 = agingRange(150, 180);
+  const cxpPor365 = agingRange(180, 365);
+  const cxpMas365 = agingRange(365, 99999);
 
   const creditosBancarios = config.creditosBancarios ?? 0;
   const impuestosPorPagar = income.impuestos * 0.25; // estimated quarterly
@@ -223,12 +230,15 @@ export function calcBalanceSheet(
   const utilidadEjercicio = income.utilidadNeta;
   const totalCapital = aportacionSocios + utilidadesAcumuladas + utilidadEjercicio;
 
+  const capitalDeTrabajo = totalCirculantes - (cuentasPorPagar + impuestosPorPagar);
+
   return {
     bancos, cuentasPorCobrar, inventario, totalCirculantes,
     activosFijosValor, depreciacionAcumulada, activosFijosNeto, totalActivos,
-    cuentasPorPagar, cxpPor30, cxpPor60, cxpPor90, cxpPor120Plus,
+    cuentasPorPagar, cxpPor30, cxpPor60, cxpPor90, cxpPor120, cxpPor150, cxpPor180, cxpPor365, cxpMas365,
     creditosBancarios, impuestosPorPagar, totalPasivos,
     aportacionSocios, utilidadesAcumuladas, utilidadEjercicio, totalCapital,
+    capitalDeTrabajo,
     ecuacionBalanceada: Math.abs(totalActivos - (totalPasivos + totalCapital)) < 1,
   };
 }
