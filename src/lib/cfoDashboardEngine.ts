@@ -326,13 +326,15 @@ export function calcCashFlow(
 }
 
 // ─── Monthly cash flow series ───────────────────────────────────
-export function calcMonthlyFlow(expenses: OperatingExpense[]): MonthlyFlowItem[] {
-  const totalExpMonthly = expenses.length > 0
-    ? sum(expenses.map(e => e.monto)) / 12
+export function calcMonthlyFlow(expenses: OperatingExpense[], period?: PeriodRange): MonthlyFlowItem[] {
+  const expSource = period ? filterExpensesByPeriod(expenses, period) : expenses;
+  const totalExpMonthly = expSource.length > 0
+    ? sum(expSource.map(e => e.monto)) / Math.max(expSource.length / 3, 1) // rough monthly avg
     : sum(demoExpenses.map(e => e.monto)) / 12;
 
+  const salesData = filterSalesByPeriod(period);
   let acumulado = 850000;
-  return monthlySales.map(m => {
+  return salesData.map(m => {
     const entradas = m.sales;
     const salidas = m.sales * (1 - dashboardMetrics.grossMargin / 100) + totalExpMonthly;
     const neto = entradas - salidas;
