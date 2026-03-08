@@ -109,12 +109,71 @@ export default function CRMPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title={isVendedor ? "Mis clientes" : "Clientes"} value={allCustomers.length} icon={Users} />
-        <MetricCard title={isVendedor ? "Mis oportunidades" : "Oportunidades"} value={allOpportunities.length} icon={Target} />
-        <MetricCard title="Pipeline activo" value={fmt(allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0))} icon={TrendingUp} variant="primary" />
-        <MetricCard title="Cierre ganado" value={fmt(allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0))} icon={UserPlus} variant="success" />
-      </div>
+      {(() => {
+        const pipelineTotal = allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0);
+        const cierreGanado = allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0);
+        const activeOps = allOpportunities.filter(o => !['cierre_ganado', 'cierre_perdido'].includes(o.stage));
+        const clickCard = (path: string) => ({
+          className: 'bg-card rounded-xl border p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 hover:scale-[1.02] transition-all duration-200 group',
+          onClick: () => {},
+        });
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {/* Clientes */}
+            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Users size={14} /> {isVendedor ? 'Mis clientes' : 'Clientes'}
+              </div>
+              <div className="text-xl font-bold">{allCustomers.length}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Alta prioridad:</span> <span className="font-semibold">{allCustomers.filter(c => c.priority === 'alta').length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Nuevos este mes:</span> <span className="font-semibold">{allCustomers.filter(c => c.createdAt >= new Date().toISOString().slice(0, 7)).length}</span></div>
+              </div>
+            </div>
+
+            {/* Oportunidades */}
+            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Target size={14} /> {isVendedor ? 'Mis oportunidades' : 'Oportunidades'}
+              </div>
+              <div className="text-xl font-bold">{allOpportunities.length}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Activas:</span> <span className="font-semibold">{activeOps.length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ganadas:</span> <span className="font-semibold text-success">{allOpportunities.filter(o => o.stage === 'cierre_ganado').length}</span></div>
+              </div>
+            </div>
+
+            {/* Pipeline activo */}
+            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <TrendingUp size={14} /> Pipeline activo
+              </div>
+              <div className="text-xl font-bold">{fmt(pipelineTotal)}</div>
+              <div className="space-y-0.5 mt-2 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Promedio/op:</span> <span className="font-medium">{fmt(activeOps.length > 0 ? Math.round(activeOps.reduce((s, o) => s + o.estimatedAmount, 0) / activeOps.length) : 0)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">En negociación:</span> <span className="font-semibold">{allOpportunities.filter(o => o.stage === 'negociacion').length}</span></div>
+              </div>
+            </div>
+
+            {/* Cierre ganado */}
+            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <UserPlus size={14} /> Cierre ganado
+              </div>
+              <div className="text-xl font-bold text-success">{fmt(cierreGanado)}</div>
+              {pipelineTotal > 0 && (
+                <div className="flex items-center justify-between mt-2">
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${Math.min(Math.round((cierreGanado / pipelineTotal) * 100), 100)}%` }} />
+                  </div>
+                  <span className="text-xs font-bold ml-2 whitespace-nowrap">{Math.round((cierreGanado / pipelineTotal) * 100)}%</span>
+                </div>
+              )}
+              <div className="text-[10px] text-muted-foreground mt-1">del pipeline total</div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex items-center gap-1 mb-4 border-b">
         {(['clientes', 'pipeline'] as Tab[]).map(t => (
