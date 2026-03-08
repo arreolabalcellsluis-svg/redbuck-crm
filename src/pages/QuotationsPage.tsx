@@ -572,11 +572,43 @@ export default function QuotationsPage() {
         <MetricCard title="Valor total" value={fmt(quotations.reduce((s, q) => s + q.total, 0))} icon={FileText} />
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por folio o cliente..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateFrom ? format(dateFrom, 'dd/MM/yy') : 'Desde'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateTo ? format(dateTo, 'dd/MM/yy') : 'Hasta'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-xs text-muted-foreground h-8 px-2">
+            <X size={12} /> Limpiar
+          </Button>
+        )}
+
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} cotizaciones</span>
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
