@@ -217,6 +217,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
         tax_amount: taxTotal,
         total,
         status: 'borrador',
+        payment_status: 'pendiente',
         pac_provider: fiscal.pac_provider || 'facturama',
         conditions,
         notes,
