@@ -250,13 +250,21 @@ export default function CFODashboardPage() {
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
       <Tabs defaultValue="radar" className="space-y-4">
-        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+        <TabsList className="grid grid-cols-7 w-full max-w-5xl">
           <TabsTrigger value="radar">Radar</TabsTrigger>
           <TabsTrigger value="income">Resultados</TabsTrigger>
           <TabsTrigger value="balance">Balance</TabsTrigger>
-          <TabsTrigger value="cashflow">Flujo Efectivo</TabsTrigger>
-          <TabsTrigger value="kpis">Indicadores</TabsTrigger>
-          <TabsTrigger value="moneymap">Mapa del Dinero</TabsTrigger>
+          <TabsTrigger value="cashflow">Flujo</TabsTrigger>
+          <TabsTrigger value="kpis">KPIs</TabsTrigger>
+          <TabsTrigger value="moneymap">Mapa Dinero</TabsTrigger>
+          <TabsTrigger value="leaks" className="gap-1">
+            <ShieldAlert size={14} /> Fugas
+            {leakSummary.alertas.length > 0 && (
+              <span className="ml-1 bg-destructive text-destructive-foreground text-[10px] rounded-full px-1.5 py-0.5 font-bold">
+                {leakSummary.alertas.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── FINANCIAL RADAR TAB ──────────────────────────────── */}
