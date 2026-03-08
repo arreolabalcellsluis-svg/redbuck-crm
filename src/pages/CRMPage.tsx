@@ -462,6 +462,45 @@ export default function CRMPage() {
             </div>
           </div>
 
+          {/* Datos de facturación (colapsable) */}
+          <div className="border rounded-lg overflow-hidden">
+            <button type="button" onClick={() => setShowFiscal(v => !v)} className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted transition-colors text-sm font-medium">
+              <span>📄 Datos de facturación (opcional)</span>
+              {showFiscal ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {showFiscal && (
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Razón social (receptor)</label>
+                  <input value={fiscal.legalName} onChange={e => setFiscal(p => ({ ...p, legalName: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Empresa S.A. de C.V." />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Régimen fiscal receptor</label>
+                  <select value={fiscal.taxRegime} onChange={e => setFiscal(p => ({ ...p, taxRegime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+                    <option value="">Seleccionar régimen fiscal...</option>
+                    {SAT_TAX_REGIMES.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Domicilio fiscal (C.P.)</label>
+                  <input value={fiscal.fiscalZipCode} onChange={e => setFiscal(p => ({ ...p, fiscalZipCode: e.target.value.replace(/\D/g, '').slice(0, 5) }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="64000" maxLength={5} />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Código postal del domicilio fiscal</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Correo para factura</label>
+                  <input value={fiscal.invoiceEmail} onChange={e => setFiscal(p => ({ ...p, invoiceEmail: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="facturacion@empresa.com" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Uso de CFDI</label>
+                  <select value={fiscal.cfdiUse} onChange={e => setFiscal(p => ({ ...p, cfdiUse: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+                    <option value="">Seleccionar uso de CFDI...</option>
+                    {SAT_CFDI_USES.map(u => <option key={u.code} value={u.code}>{u.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <button onClick={() => { setEditingCustomer(null); setForm(emptyCustomer()); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button onClick={handleUpdate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
