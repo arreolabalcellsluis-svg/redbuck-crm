@@ -26,6 +26,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const fmtDays = (n: number) => `${Math.round(n)} días`;
 const fmtX = (n: number) => `${n.toFixed(1)}x`;
+const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
 const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(280,65%,55%)', 'hsl(190,80%,45%)'];
 
