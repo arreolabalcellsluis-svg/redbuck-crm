@@ -372,7 +372,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama API Web to stamp complement
       console.log("Complement payload:", JSON.stringify(complementPayload));
-      const compRes = await facturama("/2/cfdis", "POST", complementPayload);
+      const compRes = await facturama("/3/cfdis", "POST", complementPayload);
       const compData = await safeJson(compRes);
 
       console.log("Facturama complement response status:", compRes.status, "data:", JSON.stringify(compData));
