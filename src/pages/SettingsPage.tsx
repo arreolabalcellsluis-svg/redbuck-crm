@@ -52,7 +52,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   ],
   vendedor: [
     'dashboard', 'crm', 'agenda', 'asistente', 'mapa_mercado',
-    'productos', 'refacciones', 'inventario', 'cotizaciones', 'cobranza', 'comisiones',
+    'productos', 'refacciones', 'inventario', 'cotizaciones', 'cobranza', 'comisiones', 'metas_vendedores',
   ],
   administracion: [
     'dashboard', 'ejecutivo', 'financiero', 'cobranza', 'cuentas_pagar',

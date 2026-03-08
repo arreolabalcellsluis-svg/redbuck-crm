@@ -128,6 +128,30 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           city: string
@@ -456,7 +480,9 @@ export type Database = {
       sales_goals: {
         Row: {
           created_at: string
+          goal_collections: number
           goal_followups: number
+          goal_min_margin: number
           goal_new_customers: number
           goal_orders: number
           goal_quotations: number
@@ -471,7 +497,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          goal_collections?: number
           goal_followups?: number
+          goal_min_margin?: number
           goal_new_customers?: number
           goal_orders?: number
           goal_quotations?: number
@@ -486,7 +514,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          goal_collections?: number
           goal_followups?: number
+          goal_min_margin?: number
           goal_new_customers?: number
           goal_orders?: number
           goal_quotations?: number
