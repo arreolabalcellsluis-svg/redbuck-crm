@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          categoria: Database["public"]["Enums"]["asset_category"]
+          costo_adquisicion: number
+          created_at: string
+          descripcion: string
+          estatus: Database["public"]["Enums"]["asset_status"]
+          fecha_compra: string
+          id: string
+          nombre: string
+          notas: string | null
+          tipo: Database["public"]["Enums"]["asset_type"]
+          updated_at: string
+          user_id: string | null
+          valor_rescate: number
+          vida_util_meses: number
+        }
+        Insert: {
+          categoria?: Database["public"]["Enums"]["asset_category"]
+          costo_adquisicion?: number
+          created_at?: string
+          descripcion?: string
+          estatus?: Database["public"]["Enums"]["asset_status"]
+          fecha_compra?: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          tipo?: Database["public"]["Enums"]["asset_type"]
+          updated_at?: string
+          user_id?: string | null
+          valor_rescate?: number
+          vida_util_meses?: number
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["asset_category"]
+          costo_adquisicion?: number
+          created_at?: string
+          descripcion?: string
+          estatus?: Database["public"]["Enums"]["asset_status"]
+          fecha_compra?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          tipo?: Database["public"]["Enums"]["asset_type"]
+          updated_at?: string
+          user_id?: string | null
+          valor_rescate?: number
+          vida_util_meses?: number
+        }
+        Relationships: []
+      }
       operating_expenses: {
         Row: {
           area: Database["public"]["Enums"]["expense_area"]
@@ -106,6 +157,16 @@ export type Database = {
         | "vendedor"
         | "almacen"
         | "tecnico"
+      asset_category:
+        | "vehiculos"
+        | "maquinaria"
+        | "computadoras"
+        | "software"
+        | "mobiliario"
+        | "equipo_oficina"
+        | "otros"
+      asset_status: "activo" | "dado_de_baja"
+      asset_type: "depreciacion" | "amortizacion"
       expense_area:
         | "ventas"
         | "administracion"
@@ -261,6 +322,17 @@ export const Constants = {
         "almacen",
         "tecnico",
       ],
+      asset_category: [
+        "vehiculos",
+        "maquinaria",
+        "computadoras",
+        "software",
+        "mobiliario",
+        "equipo_oficina",
+        "otros",
+      ],
+      asset_status: ["activo", "dado_de_baja"],
+      asset_type: ["depreciacion", "amortizacion"],
       expense_area: [
         "ventas",
         "administracion",
