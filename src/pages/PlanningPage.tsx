@@ -11,6 +11,7 @@ import {
   AlertTriangle, TrendingUp, Package, DollarSign, Truck, BarChart3,
   ShieldAlert, Zap, Star, ArrowUpDown, Crown, Skull, Clock, Target,
   Calculator, Warehouse, ShoppingCart, Filter, ChevronDown, ChevronUp, Copy,
+  Download, FileSpreadsheet,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -209,11 +210,264 @@ export default function PlanningPage() {
     { name: 'Problemático', value: summary.problematicos, fill: 'hsl(var(--destructive))' },
   ];
 
+  // ─── Export helpers ─────────────────────────────────────────────
+  const CAT_LABELS: Record<string, string> = { elevadores: 'Elevadores', balanceadoras: 'Balanceadoras', desmontadoras: 'Desmontadoras', alineadoras: 'Alineadoras', hidraulico: 'Hidráulico', lubricacion: 'Lubricación', aire: 'Aire', otros: 'Otros' };
+
+  const handleExportAllExcel = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const wb = XLSX.utils.book_new();
+
+    // 1. Dashboard KPIs
+    const dashKpis = [
+      { Indicador: 'Reporte', Valor: 'Planeación de Inventario — Completo' },
+      { Indicador: 'Generado', Valor: new Date().toLocaleString('es-MX') },
+      { Indicador: 'Productos en riesgo', Valor: summary.criticalProducts },
+      { Indicador: 'Alertas de reorden', Valor: summary.alertProducts },
+      { Indicador: 'Capital necesario', Valor: summary.capitalNeeded },
+      { Indicador: 'Inventario muerto', Valor: summary.deadStockValue },
+      { Indicador: 'Valor inventario total', Valor: summary.totalStockValue },
+      { Indicador: 'Prod. Estrella', Valor: summary.estrellas },
+      { Indicador: 'Prod. Rotación', Valor: summary.rotacion },
+      { Indicador: 'Prod. Premium', Valor: summary.premium },
+      { Indicador: 'Prod. Problemáticos', Valor: summary.problematicos },
+      { Indicador: 'Compra sugerida valor', Valor: summary.suggestedPurchaseValue },
+      { Indicador: 'Próxima compra valor', Valor: summary.nextPurchaseValue },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dashKpis), 'Dashboard KPIs');
+
+    // 2. Productos urgentes (dashboard)
+    const urgentData = analyses
+      .filter(a => a.riskLevel === 'critico' || a.riskLevel === 'alerta')
+      .sort((a, b) => (a.riskLevel === 'critico' ? -1 : 1))
+      .map(a => ({
+        Producto: a.product.name, 'Stock actual': a.totalStock, 'En tránsito': a.inTransit,
+        'Punto reorden': a.reorderPoint, 'Demanda 3M': a.demand3m,
+        'Compra sugerida': a.suggestedPurchase, Riesgo: RISK_CONFIG[a.riskLevel].label,
+      }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(urgentData), 'Compra Urgente');
+
+    // 3. Demanda
+    const demandaData = analyses.map(a => ({
+      Producto: a.product.name, SKU: a.product.sku, 'Venta/mes': Number(a.monthlySales.toFixed(1)),
+      'Venta/trimestre': Number(a.quarterlySales.toFixed(1)), 'Venta/año': Number(a.annualSales.toFixed(1)),
+      'Demanda 3M': a.demand3m, 'Demanda 6M': a.demand6m, 'Demanda 12M': a.demand12m,
+      'En cotizaciones': a.quotationDemand,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(demandaData), 'Demanda');
+
+    // 4. Reorden
+    const reordenData = analyses.map(a => ({
+      Producto: a.product.name, SKU: a.product.sku, 'Demanda diaria': Number(a.dailyDemand.toFixed(2)),
+      'Lead Time total': a.leadTime.total, 'Punto reorden': a.reorderPoint,
+      'Stock actual': a.totalStock, 'Días de stock': a.daysOfStock > 900 ? 999 : a.daysOfStock,
+      Estado: RISK_CONFIG[a.riskLevel].label,
+      'LT Producción': a.leadTime.production, 'LT Flete China': a.leadTime.freightChina,
+      'LT Barco': a.leadTime.ocean, 'LT Aduana': a.leadTime.customs, 'LT Transporte Nal': a.leadTime.nationalTransport,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reordenData), 'Reorden');
+
+    // 5. Planeador Compras
+    const comprasData = analyses
+      .filter(a => a.suggestedPurchase > 0 && !a.shouldNotBuy)
+      .sort((a, b) => {
+        const po: Record<string, number> = { critico: 0, alerta: 1, ok: 2, excedente: 3 };
+        return (po[a.riskLevel] ?? 3) - (po[b.riskLevel] ?? 3);
+      })
+      .map(a => ({
+        Producto: a.product.name, SKU: a.product.sku,
+        Categoría: CAT_LABELS[a.product.category] || a.product.category,
+        'Existencia actual': a.totalStock, 'En tránsito': a.effectiveTransit > 0 ? a.effectiveTransit : a.inTransit || 0,
+        'Ventas prom/mes': Number(a.predictiveMonthlyDemand.toFixed(1)),
+        'Días de inv': a.daysOfStock > 900 ? 999 : a.daysOfStock,
+        'Inv objetivo': a.idealStock, 'Compra sugerida': a.suggestedPurchase,
+        Prioridad: RISK_CONFIG[a.riskLevel].label,
+      }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comprasData), 'Planeador Compras');
+
+    // 6. Simulador Import
+    if (simCalc.length > 0) {
+      const simData = simCalc.map(r => ({
+        SKU: r.product?.sku ?? '', Producto: r.product?.name ?? '',
+        'Costo unitario': r.costoUnitario, Cantidad: r.qty, 'CBM unit': r.cbm,
+        'Valor total': r.valorTotal, 'IGI %': r.igiPct, 'IGI monto': Math.round(r.igiMonto),
+        'Flete local': r.fleteLocal, 'Aduana asignada': Math.round(r.aduanaAsignada),
+        'Flete marítimo asig': Math.round(r.fleteMarAsignado), 'IVA asignado': Math.round(r.ivaAsignado),
+        'Costo total importado': Math.round(r.costoTotalImportado),
+        'Costo unit bodega': Math.round(r.costoUnitarioFinal),
+        'Margen %': r.margenPct, 'Precio venta sug': Math.round(r.precioVenta),
+        'Utilidad unitaria': Math.round(r.utilidadUnit), 'Utilidad total': Math.round(r.utilidadTotal),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(simData), 'Simulador Import');
+    }
+
+    // 7. Inventario Ideal
+    const invIdealData = analyses.map(a => ({
+      Producto: a.product.name, SKU: a.product.sku, 'Venta mensual': Number(a.monthlySales.toFixed(1)),
+      'Stock actual': a.totalStock, 'En tránsito': a.inTransit, 'Stock ideal': a.idealStock,
+      Diferencia: a.stockDifference, Estado: RISK_CONFIG[a.riskLevel].label,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invIdealData), 'Inventario Ideal');
+
+    // 8. Inventario Muerto
+    const muertoData = analyses
+      .filter(a => a.daysOfStock > 90)
+      .sort((a, b) => b.daysOfStock - a.daysOfStock)
+      .map(a => ({
+        Producto: a.product.name, SKU: a.product.sku, Categoría: a.product.category,
+        Stock: a.totalStock, 'Valor inventario': a.stockValue,
+        'Días de stock': a.daysOfStock > 900 ? 999 : a.daysOfStock,
+        'Venta mensual': Number(a.monthlySales.toFixed(1)),
+        'Acción sugerida': a.daysOfStock > 365 ? 'Liquidación' : a.daysOfStock > 180 ? 'Descuento' : 'Promoción',
+      }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(muertoData), 'Inv Muerto');
+
+    // 9. Clasificación Estratégica
+    const clasifData = analyses.map(a => ({
+      Producto: a.product.name, SKU: a.product.sku,
+      Clasificación: CAT_CONFIG[a.category].label, 'Venta/mes': Number(a.monthlySales.toFixed(1)),
+      'Margen %': a.margin, 'Ingreso anual': a.annualRevenue, 'Utilidad anual': a.annualProfit,
+      Costo: a.product.cost, Precio: a.product.listPrice,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clasifData), 'Clasificación');
+
+    // 10. Crecimiento
+    const crecData = [
+      { Indicador: 'Factor crecimiento', Valor: growthFactor },
+      { Indicador: 'Ingreso actual anual', Valor: growth.currentRevenue },
+      { Indicador: `Ingreso objetivo (${growthFactor}x)`, Valor: growth.targetRevenue },
+      { Indicador: 'Capital requerido', Valor: growth.capitalRequired },
+      { Indicador: 'Utilidad estimada anual', Valor: growth.estimatedProfit },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crecData), 'Crecimiento');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `planeacion-completo_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportAllPdf = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+
+    const kpiRow = (items: { label: string; value: string }[]) => `
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        ${items.map(i => `<div style="background:#f8f8f8;padding:8px 14px;border-radius:8px;text-align:center;min-width:100px;flex:1;border-left:3px solid #c41e2a;">
+          <div style="font-size:8px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">${i.label}</div>
+          <div style="font-size:13px;font-weight:700;margin-top:2px;">${i.value}</div>
+        </div>`).join('')}
+      </div>`;
+
+    const table = (headers: string[], rows: string[][]) => `
+      <table style="width:100%;border-collapse:collapse;margin-top:6px;margin-bottom:12px;">
+        <thead><tr>${headers.map(h => `<th style="background:#f0f0f0;font-weight:600;text-align:left;padding:4px 6px;font-size:8px;text-transform:uppercase;border-bottom:2px solid #ddd;">${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td style="padding:3px 6px;border-bottom:1px solid #eee;font-size:9px;text-align:${i === 0 ? 'left' : 'right'};">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>`;
+
+    const section = (title: string, content: string) => `
+      <div style="margin-bottom:20px;page-break-inside:avoid;">
+        <h2 style="font-size:12px;font-weight:700;border-bottom:2px solid #c41e2a;padding-bottom:3px;margin-bottom:8px;">${title}</h2>
+        ${content}
+      </div>`;
+
+    w.document.write(`<!DOCTYPE html><html><head><title>Planeación Completa</title><style>
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:20px;color:#1a1a1a;font-size:10px;}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:3px solid #c41e2a;padding-bottom:10px;}
+      .brand{font-size:18px;font-weight:800;color:#c41e2a;letter-spacing:1px;}
+      .brand-sub{font-size:8px;color:#666;letter-spacing:2px;}
+      .footer{margin-top:20px;padding-top:8px;border-top:1px solid #ddd;font-size:8px;color:#999;display:flex;justify-content:space-between;}
+      @media print{body{padding:10px;} @page{size:landscape;margin:8mm;}}
+    </style></head><body>
+      <div class="header">
+        <div><div class="brand">REDBUCK EQUIPMENT</div><div class="brand-sub">ERP · PLANEACIÓN DE INVENTARIO Y COMPRAS</div></div>
+        <div style="text-align:right;"><div style="font-size:14px;font-weight:700;">Planeación — Reporte Integral</div>
+        <div style="font-size:9px;color:#666;">Generado: ${new Date().toLocaleString('es-MX')}</div></div>
+      </div>
+
+      ${section('1. Dashboard — Indicadores', kpiRow([
+        { label: 'Productos en riesgo', value: String(summary.criticalProducts) },
+        { label: 'Alertas reorden', value: String(summary.alertProducts) },
+        { label: 'Capital necesario', value: fmt(summary.capitalNeeded) },
+        { label: 'Inv. muerto', value: fmt(summary.deadStockValue) },
+      ]) + kpiRow([
+        { label: 'Estrella', value: String(summary.estrellas) },
+        { label: 'Rotación', value: String(summary.rotacion) },
+        { label: 'Premium', value: String(summary.premium) },
+        { label: 'Problemáticos', value: String(summary.problematicos) },
+      ]))}
+
+      ${section('2. Productos con compra urgente', table(
+        ['Producto', 'Stock', 'Tránsito', 'Pto. reorden', 'Demanda 3M', 'Compra sug.', 'Riesgo'],
+        analyses.filter(a => a.riskLevel === 'critico' || a.riskLevel === 'alerta')
+          .map(a => [a.product.name, String(a.totalStock), String(a.inTransit), String(a.reorderPoint), String(a.demand3m), String(a.suggestedPurchase), RISK_CONFIG[a.riskLevel].label])
+      ))}
+
+      ${section('3. Predicción de demanda', table(
+        ['Producto', 'Vta/mes', 'Vta/trim', 'Vta/año', 'Dem 3M', 'Dem 6M', 'Dem 12M', 'Cotiz.'],
+        analyses.map(a => [a.product.name, a.monthlySales.toFixed(1), a.quarterlySales.toFixed(1), a.annualSales.toFixed(1), String(a.demand3m), String(a.demand6m), String(a.demand12m), String(a.quotationDemand)])
+      ))}
+
+      ${section('4. Punto de reorden', table(
+        ['Producto', 'Dem. diaria', 'Lead Time', 'Pto. reorden', 'Stock', 'Días stock', 'Estado'],
+        analyses.map(a => [a.product.name, a.dailyDemand.toFixed(2), `${a.leadTime.total}d`, String(a.reorderPoint), String(a.totalStock), a.daysOfStock > 900 ? '∞' : `${a.daysOfStock}d`, RISK_CONFIG[a.riskLevel].label])
+      ))}
+
+      ${section('5. Planeador de compras', table(
+        ['Producto', 'Categoría', 'Stock', 'Tránsito', 'Vta/mes', 'Días inv', 'Inv obj', 'Compra sug', 'Prior.'],
+        analyses.filter(a => a.suggestedPurchase > 0 && !a.shouldNotBuy)
+          .map(a => [a.product.name, CAT_LABELS[a.product.category] || a.product.category, String(a.totalStock), String(a.effectiveTransit > 0 ? a.effectiveTransit : a.inTransit || 0), a.predictiveMonthlyDemand.toFixed(1), a.daysOfStock > 900 ? '∞' : `${a.daysOfStock}d`, String(a.idealStock), `${a.suggestedPurchase} uds`, RISK_CONFIG[a.riskLevel].label])
+      ))}
+
+      ${section('6. Inventario ideal (cobertura 3 meses)', table(
+        ['Producto', 'Vta/mes', 'Stock', 'Tránsito', 'Stock ideal', 'Diferencia', 'Estado'],
+        analyses.map(a => [a.product.name, a.monthlySales.toFixed(1), String(a.totalStock), String(a.inTransit), String(a.idealStock), a.stockDifference > 0 ? `Faltan ${a.stockDifference}` : a.stockDifference < 0 ? `Sobran ${Math.abs(a.stockDifference)}` : 'Justo', RISK_CONFIG[a.riskLevel].label])
+      ))}
+
+      ${section('7. Inventario muerto / baja rotación', kpiRow([
+        { label: 'Valor sin movimiento', value: fmt(summary.deadStockValue) },
+        { label: 'Productos baja rotación', value: String(analyses.filter(a => a.daysOfStock > 180).length) },
+        { label: 'Valor total inventario', value: fmt(summary.totalStockValue) },
+      ]) + table(
+        ['Producto', 'Categoría', 'Stock', 'Valor inv', 'Días stock', 'Vta/mes', 'Acción'],
+        analyses.filter(a => a.daysOfStock > 90).sort((a, b) => b.daysOfStock - a.daysOfStock)
+          .map(a => [a.product.name, a.product.category, String(a.totalStock), fmt(a.stockValue), a.daysOfStock > 900 ? '>1 año' : `${a.daysOfStock}d`, a.monthlySales.toFixed(1), a.daysOfStock > 365 ? 'Liquidación' : a.daysOfStock > 180 ? 'Descuento' : 'Promoción'])
+      ))}
+
+      ${section('8. Clasificación estratégica', table(
+        ['Producto', 'Clasificación', 'Vta/mes', 'Margen %', 'Ingreso anual', 'Utilidad anual', 'Costo', 'Precio'],
+        analyses.map(a => [a.product.name, CAT_CONFIG[a.category].label, a.monthlySales.toFixed(1), `${a.margin}%`, fmt(a.annualRevenue), fmt(a.annualProfit), fmt(a.product.cost), fmt(a.product.listPrice)])
+      ))}
+
+      ${section('9. Simulación de crecimiento', kpiRow([
+        { label: `Factor: ${growthFactor}x`, value: '' },
+        { label: 'Ingreso actual', value: fmt(growth.currentRevenue) },
+        { label: `Ingreso objetivo (${growthFactor}x)`, value: fmt(growth.targetRevenue) },
+        { label: 'Capital requerido', value: fmt(growth.capitalRequired) },
+        { label: 'Utilidad estimada', value: fmt(growth.estimatedProfit) },
+      ]))}
+
+      <div class="footer"><span>REDBUCK EQUIPMENT — Reporte confidencial</span><span>${new Date().toLocaleString('es-MX')}</span></div>
+      <script>setTimeout(()=>{window.print();},600);</script>
+    </body></html>`);
+    w.document.close();
+  };
+
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Planeación de Inventario y Compras</h1>
-        <p className="page-subtitle">Análisis inteligente para decisiones de compra — "Qué comprar, cuándo comprar y cuánto comprar"</p>
+      <div className="page-header flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Planeación de Inventario y Compras</h1>
+          <p className="page-subtitle">Análisis inteligente para decisiones de compra — "Qué comprar, cuándo comprar y cuánto comprar"</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportAllExcel}>
+            <FileSpreadsheet size={14} className="mr-1" /> Excel Completo
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportAllPdf}>
+            <Download size={14} className="mr-1" /> PDF Completo
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

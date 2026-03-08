@@ -43,70 +43,113 @@ export default function FinancialSimulatorPage() {
     );
   }
 
+  const handleExportAllExcel = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: KPIs resumen
+    const kpiData = [
+      { Indicador: 'Reporte', Valor: 'Simulador Financiero Completo' },
+      { Indicador: 'Generado', Valor: new Date().toLocaleString('es-MX') },
+      { Indicador: 'Capital en inventario', Valor: fin.totalInventoryValue },
+      { Indicador: 'Capital detenido (>180d)', Valor: fin.slowInventoryValue },
+      { Indicador: 'Capital muerto (>365d)', Valor: fin.deadInventoryValue },
+      { Indicador: 'Inventario saludable', Valor: fin.healthyInventoryValue },
+      { Indicador: '% lento', Valor: Number(fin.slowInventoryPct.toFixed(1)) },
+      { Indicador: '% muerto', Valor: Number(fin.deadInventoryPct.toFixed(1)) },
+      { Indicador: 'Rotación anual', Valor: Number(fin.inventoryRotation.toFixed(2)) },
+      { Indicador: 'Días de inventario', Valor: fin.daysOfInventory },
+      { Indicador: 'ROI inventario %', Valor: Number(fin.roi.toFixed(1)) },
+      { Indicador: 'Utilidad anual', Valor: fin.annualProfit },
+      { Indicador: 'Ingresos anuales', Valor: fin.annualRevenue },
+      { Indicador: 'COGS anual', Valor: fin.annualCOGS },
+      { Indicador: 'Inv. necesario', Valor: fin.requiredInventoryForCurrentSales },
+      { Indicador: fin.inventoryDifference > 0 ? 'Excedente' : 'Faltante', Valor: Math.abs(fin.inventoryDifference) },
+      { Indicador: 'Compras recomendadas', Valor: fin.purchasePlanValue },
+    ];
+    const ws0 = XLSX.utils.json_to_sheet(kpiData);
+    ws0['!cols'] = [{ wch: 30 }, { wch: 22 }];
+    XLSX.utils.book_append_sheet(wb, ws0, 'KPIs Resumen');
+
+    // Sheet 2: Capital por categoría
+    const catData = fin.capitalByCategory.map(c => ({
+      Categoría: c.category, Unidades: c.units, Valor: c.value, '% del total': Number(c.pct.toFixed(1)),
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(catData), 'Capital por Categoría');
+
+    // Sheet 3: Capital por bodega
+    const whData = fin.capitalByWarehouse.map(w => ({
+      Bodega: w.warehouse, Unidades: w.units, Valor: w.value, '% del total': Number(w.pct.toFixed(1)),
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(whData), 'Capital por Bodega');
+
+    // Sheet 4: Salud del inventario
+    const healthData = [
+      { Categoría: 'Saludable', Valor: fin.healthyInventoryValue, '% del total': Number(((fin.healthyInventoryValue / fin.totalInventoryValue) * 100).toFixed(1)) },
+      { Categoría: 'Lento (>180 días)', Valor: fin.slowInventoryValue - fin.deadInventoryValue, '% del total': Number((((fin.slowInventoryValue - fin.deadInventoryValue) / fin.totalInventoryValue) * 100).toFixed(1)) },
+      { Categoría: 'Muerto (>365 días)', Valor: fin.deadInventoryValue, '% del total': Number(fin.deadInventoryPct.toFixed(1)) },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(healthData), 'Salud Inventario');
+
+    // Sheet 5: Top productos por capital
+    const prodData = fin.topCapitalProducts.map(p => ({
+      SKU: p.sku, Producto: p.name, Categoría: p.category, Stock: p.stock,
+      'Costo unitario': p.cost, 'Valor inventario': p.value, Rotación: Number(p.rotation.toFixed(1)),
+      'Margen %': p.margin, 'ROI %': Number(p.roi.toFixed(1)), 'Venta mensual': Number(p.monthlySales.toFixed(1)),
+      'Días stock': p.daysOfStock, 'Utilidad anual': p.annualProfit,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(prodData), 'Top Capital Productos');
+
+    // Sheet 6: Inventario lento
+    const slowData = fin.slowInventory.map(s => ({
+      SKU: s.sku, Producto: s.name, Categoría: s.category, Stock: s.stock,
+      'Costo unitario': s.cost, 'Valor detenido': s.value, 'Cobertura días': s.coverageDays,
+      'Cobertura meses': Number(s.coverageMonths.toFixed(1)), 'Venta mensual': Number(s.monthlySales.toFixed(2)),
+      '% del total': Number(s.pctOfTotal.toFixed(1)),
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slowData), 'Inventario Lento');
+
+    // Sheet 7: Rotación por categoría
+    const rotData = fin.rotationByCategory.map(r => ({
+      Categoría: r.category, 'COGS anual': r.annualCOGS, 'Inv. promedio': r.avgInventory,
+      Rotación: Number(r.rotation.toFixed(2)), 'Días inventario': r.daysOfInventory,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rotData), 'Rotación por Categoría');
+
+    // Sheet 8: Top ROI
+    const roiData = fin.topROIProducts.map((p, i) => ({
+      '#': i + 1, Producto: p.name, SKU: p.sku, 'Valor inventario': p.value,
+      'Utilidad anual': p.annualProfit, 'ROI %': Number(p.roi.toFixed(1)), 'Margen %': p.margin,
+      'Venta mensual': Number(p.monthlySales.toFixed(1)),
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roiData), 'Top ROI');
+
+    // Sheet 9: Peor ROI
+    const worstData = fin.worstROIProducts.map((p, i) => ({
+      '#': i + 1, Producto: p.name, SKU: p.sku, 'Valor inventario': p.value,
+      'Utilidad anual': p.annualProfit, 'ROI %': Number(p.roi.toFixed(1)), 'Margen %': p.margin,
+      'Venta mensual': Number(p.monthlySales.toFixed(1)),
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(worstData), 'Peor ROI');
+
+    // Sheet 10: Simulación crecimiento
+    const growthData = fin.growthScenarios.map(g => ({
+      Escenario: g.label, 'Ventas actuales': g.currentRevenue, 'Ventas objetivo': g.targetRevenue,
+      'Inventario actual': g.currentInventory, 'Inventario requerido': g.requiredInventory,
+      'Capital adicional': g.additionalCapital, 'Utilidad estimada': g.estimatedProfit,
+      'Impacto flujo': g.cashFlowImpact,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(growthData), 'Simulación Crecimiento');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `simulador-financiero-completo_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const handleExportExcel = async (tab: string) => {
     if (tab === 'capital') {
-      const XLSX = await import('xlsx');
-      const { saveAs } = await import('file-saver');
-      const wb = XLSX.utils.book_new();
-
-      // Sheet 1: Top productos
-      const prodData = fin.topCapitalProducts.map(p => ({
-        SKU: p.sku, Producto: p.name, Categoría: p.category, Stock: p.stock,
-        'Costo unitario': p.cost, 'Valor inventario': p.value, Rotación: Number(p.rotation.toFixed(1)),
-        'Margen %': p.margin, 'ROI %': Number(p.roi.toFixed(1)), 'Venta mensual': Number(p.monthlySales.toFixed(1)),
-        'Días stock': p.daysOfStock, 'Utilidad anual': p.annualProfit,
-      }));
-      const ws1 = XLSX.utils.json_to_sheet(prodData);
-      ws1['!cols'] = Object.keys(prodData[0] || {}).map(() => ({ wch: 18 }));
-      XLSX.utils.book_append_sheet(wb, ws1, 'Top Productos');
-
-      // Sheet 2: Capital por categoría (chart data)
-      const catData = fin.capitalByCategory.map(c => ({
-        Categoría: c.category, Unidades: c.units, Valor: c.value, '% del total': Number(c.pct.toFixed(1)),
-      }));
-      const ws2 = XLSX.utils.json_to_sheet(catData);
-      ws2['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(wb, ws2, 'Capital por Categoría');
-
-      // Sheet 3: Capital por bodega (chart data)
-      const whData = fin.capitalByWarehouse.map(w => ({
-        Bodega: w.warehouse, Unidades: w.units, Valor: w.value, '% del total': Number(w.pct.toFixed(1)),
-      }));
-      const ws3 = XLSX.utils.json_to_sheet(whData);
-      ws3['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 18 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(wb, ws3, 'Capital por Bodega');
-
-      // Sheet 4: Salud del inventario (chart data)
-      const healthData = [
-        { Categoría: 'Saludable', Valor: fin.healthyInventoryValue, '% del total': Number(((fin.healthyInventoryValue / fin.totalInventoryValue) * 100).toFixed(1)) },
-        { Categoría: 'Lento (>180 días)', Valor: fin.slowInventoryValue - fin.deadInventoryValue, '% del total': Number((((fin.slowInventoryValue - fin.deadInventoryValue) / fin.totalInventoryValue) * 100).toFixed(1)) },
-        { Categoría: 'Muerto (>365 días)', Valor: fin.deadInventoryValue, '% del total': Number(fin.deadInventoryPct.toFixed(1)) },
-      ];
-      const ws4 = XLSX.utils.json_to_sheet(healthData);
-      ws4['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(wb, ws4, 'Salud Inventario');
-
-      // Sheet 5: KPIs resumen
-      const kpiData = [
-        { Indicador: 'Capital en inventario', Valor: fin.totalInventoryValue },
-        { Indicador: 'Capital detenido (>180d)', Valor: fin.slowInventoryValue },
-        { Indicador: 'Capital muerto (>365d)', Valor: fin.deadInventoryValue },
-        { Indicador: 'Inventario saludable', Valor: fin.healthyInventoryValue },
-        { Indicador: 'Rotación anual', Valor: Number(fin.inventoryRotation.toFixed(2)) },
-        { Indicador: 'Días de inventario', Valor: fin.daysOfInventory },
-        { Indicador: 'ROI inventario %', Valor: Number(fin.roi.toFixed(1)) },
-        { Indicador: 'Utilidad anual', Valor: fin.annualProfit },
-        { Indicador: 'Ingresos anuales', Valor: fin.annualRevenue },
-        { Indicador: 'Inv. necesario', Valor: fin.requiredInventoryForCurrentSales },
-        { Indicador: fin.inventoryDifference > 0 ? 'Excedente' : 'Faltante', Valor: Math.abs(fin.inventoryDifference) },
-      ];
-      const ws5 = XLSX.utils.json_to_sheet(kpiData);
-      ws5['!cols'] = [{ wch: 28 }, { wch: 20 }];
-      XLSX.utils.book_append_sheet(wb, ws5, 'KPIs');
-
-      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, `simulador-financiero-completo_${new Date().toISOString().split('T')[0]}.xlsx`);
+      handleExportAllExcel();
     } else if (tab === 'slow') {
       exportToExcel(fin.slowInventory.map(s => ({
         SKU: s.sku, Producto: s.name, Categoría: s.category, Stock: s.stock,
@@ -315,8 +358,11 @@ export default function FinancialSimulatorPage() {
           <p className="page-subtitle">Análisis de impacto financiero, ROI y simulación de crecimiento</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportAllExcel}>
+            <FileSpreadsheet size={14} className="mr-1" /> Excel Completo
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportPdf}>
-            <Download size={14} className="mr-1" /> PDF
+            <Download size={14} className="mr-1" /> PDF Completo
           </Button>
         </div>
       </div>
