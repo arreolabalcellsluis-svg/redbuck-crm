@@ -15,6 +15,11 @@ export interface User {
   seriesStart?: number;
   seriesCurrent?: number;
   commissionRate?: number; // porcentaje de comisión (e.g. 5 = 5%)
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  photoUrl?: string;
+  contractUrl?: string;
 }
 
 export type CustomerType = 'taller_mecanico' | 'llantera' | 'suspension_frenos' | 'agencia' | 'flotilla' | 'transportista' | 'vulcanizadora' | 'particular' | 'distribuidor';
