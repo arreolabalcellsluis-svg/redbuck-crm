@@ -28,6 +28,12 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // Configurable: set FACTURAMA_ENV=production to use live API
+    const FACTURAMA_ENV = Deno.env.get("FACTURAMA_ENV") || "sandbox";
+    const baseUrl = FACTURAMA_ENV === "production"
+      ? "https://api.facturama.mx"
+      : "https://apisandbox.facturama.mx";
+
     const facturama = (path: string, method = "GET", payload?: any) => {
       const auth = btoa(`${FACTURAMA_USERNAME}:${FACTURAMA_PASSWORD}`);
       const opts: RequestInit = {
@@ -38,8 +44,6 @@ Deno.serve(async (req) => {
         },
       };
       if (payload) opts.body = JSON.stringify(payload);
-      // Use sandbox for testing, production: https://api.facturama.mx
-      const baseUrl = "https://apisandbox.facturama.mx";
       return fetch(`${baseUrl}${path}`, opts);
     };
 
