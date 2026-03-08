@@ -7,15 +7,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { FileText, Plus, Search, AlertTriangle, CalendarIcon, X } from 'lucide-react';
+import { FileText, Plus, Search, AlertTriangle, CalendarIcon, X, Stamp, CheckCircle, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
-import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
+import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, useStampInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
+import { useCustomers } from '@/hooks/useCustomers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
@@ -54,9 +56,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const { data: customerFiscal } = useAllCustomerFiscalData();
   const { data: productFiscal } = useAllProductFiscalData();
   const { data: existingInvoices } = useInvoices();
+  const { data: customers } = useCustomers();
   const createMutation = useCreateInvoice();
+  const stampMutation = useStampInvoice();
 
-  const [step, setStep] = useState<'select' | 'configure'>('select');
+  const [step, setStep] = useState<'select' | 'configure' | 'preview'>('select');
+  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
@@ -101,6 +106,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setNotes('');
       setRelationType('');
       setRelatedUuid('');
+      setSavedInvoiceId(null);
 
       // Auto-select: first try direct preselectedOrder object, then search DB orders
       if (preselectedOrder) {
@@ -215,9 +221,22 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       },
       items: invoiceItems,
     }, {
+      onSuccess: (invoiceId) => {
+        setSavedInvoiceId(invoiceId);
+        setStep('preview');
+      },
+    });
+  };
+
+  const handleStampFromPreview = () => {
+    if (!savedInvoiceId) return;
+    stampMutation.mutate(savedInvoiceId, {
       onSuccess: () => onOpenChange(false),
     });
   };
+
+  const customerName = selectedOrder?.customer_name || customers?.find(c => c.id === selectedOrder?.customer_id)?.name || '—';
+  const docTypeLabel = DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label || 'Factura';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -225,10 +244,15 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText size={18} />
-            {step === 'select' ? 'Seleccionar Pedido para Facturar' : 'Configurar Factura'}
+            {step === 'select' ? 'Seleccionar Pedido para Facturar' : step === 'configure' ? `Configurar ${docTypeLabel}` : `Vista Previa — ${docTypeLabel}`}
           </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Selecciona el pedido del cual generar la factura' : `Pedido ${selectedOrder?.folio} — ${selectedOrder?.customer_name}`}
+            {step === 'select'
+              ? 'Selecciona el pedido del cual generar la factura'
+              : step === 'configure'
+                ? `Pedido ${selectedOrder?.folio} — ${customerName}`
+                : `Borrador ${series}-${folio} guardado correctamente`
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -451,16 +475,117 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
           </div>
         )}
 
-        <DialogFooter>
+        {/* ===================== PREVIEW STEP ===================== */}
+        {step === 'preview' && selectedOrder && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 p-4 rounded-lg border border-green-200 bg-green-50">
+              <CheckCircle size={20} className="text-green-600 shrink-0" />
+              <div>
+                <p className="font-medium text-green-800">Borrador guardado exitosamente</p>
+                <p className="text-sm text-green-700">Puedes facturar ahora o encontrarlo después en la pestaña de Facturas.</p>
+              </div>
+            </div>
+
+            {/* Invoice preview card */}
+            <div className="border rounded-lg p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg">{docTypeLabel}</h3>
+                  <p className="text-sm text-muted-foreground">Serie {series} — Folio {folio}</p>
+                </div>
+                <Badge className="bg-muted text-muted-foreground text-xs">Borrador</Badge>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Cliente</p>
+                  <p className="font-medium">{customerName}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Pedido</p>
+                  <p className="font-medium">{selectedOrder.folio}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Forma de Pago</p>
+                  <p className="font-medium">{SAT_PAYMENT_FORMS.find(f => f.code === paymentForm)?.label || paymentForm}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Método de Pago</p>
+                  <p className="font-medium">{SAT_PAYMENT_METHODS.find(m => m.code === paymentMethod)?.label || paymentMethod}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Items table */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-right">Cant.</TableHead>
+                    <TableHead className="text-right">P.Unit.</TableHead>
+                    <TableHead className="text-right">Subtotal</TableHead>
+                    <TableHead className="text-right">IVA</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoiceItems.map((it, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="max-w-[200px] truncate">{it.description || '—'}</TableCell>
+                      <TableCell className="text-right">{it.qty}</TableCell>
+                      <TableCell className="text-right">{fmt(it.unit_price)}</TableCell>
+                      <TableCell className="text-right">{fmt(it.subtotal)}</TableCell>
+                      <TableCell className="text-right">{fmt(it.tax_amount)}</TableCell>
+                      <TableCell className="text-right font-medium">{fmt(it.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Totals */}
+              <div className="flex justify-end">
+                <div className="space-y-1 text-right text-sm">
+                  <div>Subtotal: <span className="font-medium">{fmt(subtotal)}</span></div>
+                  <div>IVA: <span className="font-medium">{fmt(taxTotal)}</span></div>
+                  <div className="text-lg font-bold border-t pt-1 mt-1">Total: {fmt(total)}</div>
+                </div>
+              </div>
+
+              {notes && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Observaciones: </span>{notes}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 flex-wrap">
           {step === 'configure' && (
             <Button variant="outline" onClick={() => setStep('select')}>← Cambiar pedido</Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          {step !== 'preview' && (
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          )}
           {step === 'configure' && (
             <Button onClick={handleCreate} disabled={createMutation.isPending} className="gap-1.5">
               <Plus size={14} />
-              {createMutation.isPending ? 'Creando...' : `Crear ${DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label.split(' (')[0] || 'Factura'} (Borrador)`}
+              {createMutation.isPending ? 'Guardando...' : `Crear ${docTypeLabel} (Borrador)`}
             </Button>
+          )}
+          {step === 'preview' && (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="gap-1.5">
+                <Save size={14} /> Guardar como borrador
+              </Button>
+              <Button onClick={handleStampFromPreview} disabled={stampMutation.isPending} className="gap-1.5 bg-green-600 hover:bg-green-700">
+                <Stamp size={14} />
+                {stampMutation.isPending ? 'Timbrando...' : `Facturar ahora`}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
