@@ -152,6 +152,56 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_fiscal_data: {
+        Row: {
+          cfdi_use_default: string
+          created_at: string
+          customer_id: string
+          fiscal_zip_code: string
+          id: string
+          invoice_email: string | null
+          legal_name: string
+          rfc: string
+          tax_regime: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cfdi_use_default?: string
+          created_at?: string
+          customer_id: string
+          fiscal_zip_code?: string
+          id?: string
+          invoice_email?: string | null
+          legal_name?: string
+          rfc?: string
+          tax_regime?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cfdi_use_default?: string
+          created_at?: string
+          customer_id?: string
+          fiscal_zip_code?: string
+          id?: string
+          invoice_email?: string | null
+          legal_name?: string
+          rfc?: string
+          tax_regime?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_fiscal_data_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           city: string
@@ -208,6 +258,290 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      fiscal_settings: {
+        Row: {
+          created_at: string
+          csd_cer_path: string | null
+          csd_expiration_date: string | null
+          csd_key_path: string | null
+          csd_password_encrypted: string | null
+          csd_status: string | null
+          default_series: string | null
+          expedition_zip_code: string
+          id: string
+          issuer_name: string
+          issuer_rfc: string
+          issuer_tax_regime: string
+          issuer_trade_name: string | null
+          pac_api_url: string | null
+          pac_provider: string
+          pac_token_encrypted: string | null
+          pac_username: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          csd_cer_path?: string | null
+          csd_expiration_date?: string | null
+          csd_key_path?: string | null
+          csd_password_encrypted?: string | null
+          csd_status?: string | null
+          default_series?: string | null
+          expedition_zip_code?: string
+          id?: string
+          issuer_name?: string
+          issuer_rfc?: string
+          issuer_tax_regime?: string
+          issuer_trade_name?: string | null
+          pac_api_url?: string | null
+          pac_provider?: string
+          pac_token_encrypted?: string | null
+          pac_username?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          csd_cer_path?: string | null
+          csd_expiration_date?: string | null
+          csd_key_path?: string | null
+          csd_password_encrypted?: string | null
+          csd_status?: string | null
+          default_series?: string | null
+          expedition_zip_code?: string
+          id?: string
+          issuer_name?: string
+          issuer_rfc?: string
+          issuer_tax_regime?: string
+          issuer_trade_name?: string | null
+          pac_api_url?: string | null
+          pac_provider?: string
+          pac_token_encrypted?: string | null
+          pac_username?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      invoice_cancellations: {
+        Row: {
+          canceled_at: string
+          canceled_by: string
+          cancellation_ack_path: string | null
+          cancellation_reason: Database["public"]["Enums"]["cancellation_reason"]
+          created_at: string
+          id: string
+          invoice_id: string
+          substitute_uuid: string | null
+          user_id: string | null
+        }
+        Insert: {
+          canceled_at?: string
+          canceled_by?: string
+          cancellation_ack_path?: string | null
+          cancellation_reason?: Database["public"]["Enums"]["cancellation_reason"]
+          created_at?: string
+          id?: string
+          invoice_id: string
+          substitute_uuid?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          canceled_at?: string
+          canceled_by?: string
+          cancellation_ack_path?: string | null
+          cancellation_reason?: Database["public"]["Enums"]["cancellation_reason"]
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          substitute_uuid?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_cancellations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount: number
+          id: string
+          invoice_id: string
+          product_id: string | null
+          qty: number
+          sat_product_key: string
+          sat_unit_key: string
+          subtotal: number
+          tax_amount: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          discount?: number
+          id?: string
+          invoice_id: string
+          product_id?: string | null
+          qty?: number
+          sat_product_key?: string
+          sat_unit_key?: string
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount?: number
+          id?: string
+          invoice_id?: string
+          product_id?: string | null
+          qty?: number
+          sat_product_key?: string
+          sat_unit_key?: string
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          canceled_at: string | null
+          conditions: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          customer_id: string | null
+          exchange_rate: number
+          export_code: string | null
+          folio: string
+          id: string
+          invoice_type: Database["public"]["Enums"]["cfdi_type"]
+          issued_at: string | null
+          notes: string | null
+          order_id: string | null
+          pac_provider: string | null
+          pac_response: Json | null
+          payment_form: string
+          payment_method: string
+          pdf_path: string | null
+          sales_person_id: string | null
+          series: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount: number
+          total: number
+          updated_at: string
+          user_id: string | null
+          uuid: string | null
+          xml_path: string | null
+        }
+        Insert: {
+          canceled_at?: string | null
+          conditions?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          exchange_rate?: number
+          export_code?: string | null
+          folio?: string
+          id?: string
+          invoice_type?: Database["public"]["Enums"]["cfdi_type"]
+          issued_at?: string | null
+          notes?: string | null
+          order_id?: string | null
+          pac_provider?: string | null
+          pac_response?: Json | null
+          payment_form?: string
+          payment_method?: string
+          pdf_path?: string | null
+          sales_person_id?: string | null
+          series?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          uuid?: string | null
+          xml_path?: string | null
+        }
+        Update: {
+          canceled_at?: string | null
+          conditions?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          exchange_rate?: number
+          export_code?: string | null
+          folio?: string
+          id?: string
+          invoice_type?: Database["public"]["Enums"]["cfdi_type"]
+          issued_at?: string | null
+          notes?: string | null
+          order_id?: string | null
+          pac_provider?: string | null
+          pac_response?: Json | null
+          payment_form?: string
+          payment_method?: string
+          pdf_path?: string | null
+          sales_person_id?: string | null
+          series?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          uuid?: string | null
+          xml_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operating_expenses: {
         Row: {
@@ -327,6 +661,56 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_fiscal_data: {
+        Row: {
+          commercial_unit: string | null
+          created_at: string
+          fiscal_description: string | null
+          id: string
+          product_id: string
+          sat_product_key: string
+          sat_unit_key: string
+          tax_object: string
+          updated_at: string
+          user_id: string | null
+          vat_rate: number
+        }
+        Insert: {
+          commercial_unit?: string | null
+          created_at?: string
+          fiscal_description?: string | null
+          id?: string
+          product_id: string
+          sat_product_key?: string
+          sat_unit_key?: string
+          tax_object?: string
+          updated_at?: string
+          user_id?: string | null
+          vat_rate?: number
+        }
+        Update: {
+          commercial_unit?: string | null
+          created_at?: string
+          fiscal_description?: string | null
+          id?: string
+          product_id?: string
+          sat_product_key?: string
+          sat_unit_key?: string
+          tax_object?: string
+          updated_at?: string
+          user_id?: string | null
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_fiscal_data_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -588,6 +972,8 @@ export type Database = {
         | "otros"
       asset_status: "activo" | "dado_de_baja"
       asset_type: "depreciacion" | "amortizacion"
+      cancellation_reason: "01" | "02" | "03" | "04"
+      cfdi_type: "I" | "E" | "P" | "N" | "T"
       customer_priority: "alta" | "media" | "baja"
       customer_type:
         | "taller_mecanico"
@@ -618,6 +1004,12 @@ export type Database = {
         | "legales_contables"
         | "otros"
       expense_type: "fijo" | "variable"
+      invoice_status:
+        | "borrador"
+        | "lista_timbrar"
+        | "timbrada"
+        | "cancelada"
+        | "error_timbrado"
       lead_source:
         | "facebook"
         | "whatsapp"
@@ -823,6 +1215,8 @@ export const Constants = {
       ],
       asset_status: ["activo", "dado_de_baja"],
       asset_type: ["depreciacion", "amortizacion"],
+      cancellation_reason: ["01", "02", "03", "04"],
+      cfdi_type: ["I", "E", "P", "N", "T"],
       customer_priority: ["alta", "media", "baja"],
       customer_type: [
         "taller_mecanico",
@@ -856,6 +1250,13 @@ export const Constants = {
         "otros",
       ],
       expense_type: ["fijo", "variable"],
+      invoice_status: [
+        "borrador",
+        "lista_timbrar",
+        "timbrada",
+        "cancelada",
+        "error_timbrado",
+      ],
       lead_source: [
         "facebook",
         "whatsapp",
