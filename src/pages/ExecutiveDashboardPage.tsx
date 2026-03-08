@@ -42,6 +42,7 @@ export default function ExecutiveDashboardPage() {
   const [daysDialog, setDaysDialog] = useState(false);
   const [deadDialog, setDeadDialog] = useState(false);
   const [excessDialog, setExcessDialog] = useState(false);
+  const [salesMonths, setSalesMonths] = useState(6);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
