@@ -149,7 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{
       currentRole, setCurrentRole,
       sidebarOpen, setSidebarOpen,
-      quotations, addQuotation, updateQuotationStatus,
+      quotations, addQuotation, updateQuotation, updateQuotationStatus,
       vendorSeries, getNextFolio, consumeFolio,
       orders, setOrders,
       receivables, setReceivables,
