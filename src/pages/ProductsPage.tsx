@@ -129,6 +129,8 @@ export default function ProductsPage() {
 
     const doEdit = () => {
       setProducts(prev => prev.map(p => p.id === editId ? { ...form, id: editId } : p));
+      // Save fiscal data to DB
+      saveFiscalData(editId);
       toast.success(`Producto "${form.name}" actualizado correctamente`);
       setShowEdit(false);
       setEditId(null);
