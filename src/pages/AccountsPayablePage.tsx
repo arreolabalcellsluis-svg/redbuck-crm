@@ -55,6 +55,9 @@ export default function AccountsPayablePage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showPayment, setShowPayment] = useState<string | null>(null);
+  const [showDownload, setShowDownload] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
 
   // Form state for new invoice
   const [form, setForm] = useState({
