@@ -56,9 +56,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const { data: customerFiscal } = useAllCustomerFiscalData();
   const { data: productFiscal } = useAllProductFiscalData();
   const { data: existingInvoices } = useInvoices();
+  const { data: customers } = useCustomers();
   const createMutation = useCreateInvoice();
+  const stampMutation = useStampInvoice();
 
-  const [step, setStep] = useState<'select' | 'configure'>('select');
+  const [step, setStep] = useState<'select' | 'configure' | 'preview'>('select');
+  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
