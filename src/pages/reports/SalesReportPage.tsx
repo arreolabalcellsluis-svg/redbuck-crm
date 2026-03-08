@@ -191,6 +191,7 @@ export default function SalesReportPage() {
             { key: 'categoria', label: 'Categoría', options: catOptions },
           ],
           exportExcel: true,
+          exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
