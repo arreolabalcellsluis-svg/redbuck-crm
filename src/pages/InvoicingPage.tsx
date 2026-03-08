@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { openInvoicePdf, type InvoicePdfData } from '@/lib/invoicePdfExport';
+import { openInvoicePdf, generateInvoicePdfHtml as generateProInvoiceHtml, generateDemoXml, type InvoicePdfData } from '@/lib/invoicePdfExport';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -783,12 +783,15 @@ function InvoicesTab() {
   };
 
   const handlePreviewInvoicePdf = (inv: Invoice) => {
+    openInvoicePdf(buildPdfDataForInvoice(inv));
+  };
+
+  const buildPdfDataForInvoice = (inv: Invoice): InvoicePdfData => {
     const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
     const custFiscal = inv.customer_id ? customerFiscalMap.get(inv.customer_id) : null;
     const payFormEntry = SAT_PAYMENT_FORMS.find(f => f.code === inv.payment_form);
     const payMethodEntry = SAT_PAYMENT_METHODS.find(m => m.code === inv.payment_method);
-
-    const pdfData: InvoicePdfData = {
+    return {
       issuerName: fiscalSettings?.issuer_name ?? 'EMPRESA',
       issuerRfc: fiscalSettings?.issuer_rfc ?? 'XAXX010101000',
       issuerTaxRegime: fiscalSettings?.issuer_tax_regime ?? '601',
@@ -814,26 +817,31 @@ function InvoicesTab() {
       issuedAt: inv.issued_at ?? inv.created_at,
       conditions: inv.conditions ?? undefined,
       notes: inv.notes ?? undefined,
-      items: [{ description: 'Ver detalle para conceptos', satProductKey: '—', satUnitKey: '—', qty: 1, unitPrice: inv.subtotal, discount: 0, subtotal: inv.subtotal, taxAmount: inv.tax_amount, total: inv.total }],
+      items: [{ description: 'Conceptos de factura', satProductKey: '—', satUnitKey: '—', qty: 1, unitPrice: inv.subtotal, discount: 0, subtotal: inv.subtotal, taxAmount: inv.tax_amount, total: inv.total }],
       subtotal: inv.subtotal,
       taxTotal: inv.tax_amount,
       total: inv.total,
       isDemo: !inv.uuid,
     };
-    openInvoicePdf(pdfData);
   };
 
   const handleDownloadZip = async () => {
     if (filtered.length === 0) return;
-    toast.info('Generando ZIP con las facturas...');
+    toast.info('Generando ZIP con PDFs y XMLs...');
     const zip = new JSZip();
+    const pdfFolder = zip.folder('PDF');
+    const xmlFolder = zip.folder('XML');
 
     for (const inv of filtered) {
-      const html = generateInvoicePdfHtml(inv);
-      zip.file(`Factura_${inv.series}-${inv.folio}.html`, html);
+      const pdfData = buildPdfDataForInvoice(inv);
+      const label = `${inv.series}-${inv.folio}`;
+      // PDF (HTML for print)
+      pdfFolder!.file(`Factura_${label}.html`, generateProInvoiceHtml(pdfData));
+      // XML
+      xmlFolder!.file(`${label}${pdfData.isDemo ? '-DEMO' : ''}.xml`, generateDemoXml(pdfData));
     }
 
-    // Also add Excel summary
+    // Excel summary
     const rows = filtered.map(inv => {
       const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
       const st = STATUS_MAP[inv.status] ?? STATUS_MAP.borrador;
@@ -856,7 +864,7 @@ function InvoicesTab() {
       ? `_${dateFrom ? format(dateFrom, 'yyyyMMdd') : ''}${dateTo ? '_' + format(dateTo, 'yyyyMMdd') : ''}`
       : '';
     saveAs(blob, `Facturas${periodLabel}.zip`);
-    toast.success(`ZIP con ${filtered.length} facturas descargado`);
+    toast.success(`ZIP con ${filtered.length} facturas (PDF + XML) descargado`);
   };
 
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Cargando facturas...</div>;
