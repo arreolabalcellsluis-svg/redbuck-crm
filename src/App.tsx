@@ -33,6 +33,7 @@ import DailyAssistantPage from "./pages/DailyAssistantPage";
 import MarketMapPage from "./pages/MarketMapPage";
 import PurchaseHistoryPage from "./pages/PurchaseHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import OperatingExpensesPage from "./pages/OperatingExpensesPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -115,6 +116,7 @@ function ProtectedRoutes() {
             <Route path="/servicio" element={<ServicePage />} />
             <Route path="/comisiones" element={<CommissionsPage />} />
             <Route path="/planeacion" element={<PlanningPage />} />
+            <Route path="/gastos" element={<OperatingExpensesPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
             <Route path="/reportes-ejecutivos" element={<ExecutiveReportsPage />} />
             <Route path="/reportes/ventas" element={<SalesReportPage />} />

@@ -8,7 +8,7 @@ import {
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
   BadgeDollarSign, BarChart3, Search, Bell, ChevronLeft, ChevronRight,
   Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw, CalendarDays, Sparkles, MapPin,
-  ClipboardList,
+  ClipboardList, Wallet,
 } from 'lucide-react';
 
 const navItems = [
@@ -32,6 +32,7 @@ const navItems = [
   { label: 'Proveedores', icon: Building2, path: '/proveedores' },
   { label: 'Servicio Técnico', icon: Cog, path: '/servicio' },
   { label: 'Comisiones', icon: BadgeDollarSign, path: '/comisiones' },
+  { label: 'Gastos Operativos', icon: Wallet, path: '/gastos' },
   { label: 'Planeación', icon: Brain, path: '/planeacion' },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
   { label: 'Reportes Ejecutivos', icon: BookOpen, path: '/reportes-ejecutivos' },

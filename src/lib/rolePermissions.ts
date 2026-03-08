@@ -15,6 +15,7 @@ const VENDEDOR_BLOCKED_PATHS = [
   '/importaciones',
   '/planeacion',
   '/servicio',
+  '/gastos',
 ];
 
 export function isPathBlockedForRole(path: string, role: UserRole): boolean {
