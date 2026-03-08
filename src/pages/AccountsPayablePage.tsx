@@ -221,7 +221,6 @@ export default function AccountsPayablePage() {
                   <td>
                     <StatusBadge
                       status={p.computedStatus === 'vencida' ? 'vencido' : p.computedStatus === 'por_vencer' ? 'por_vencer' : p.computedStatus === 'liquidada' ? 'liquidado' : p.computedStatus === 'pago_parcial' ? 'pago_parcial' : p.computedStatus === 'cancelada' ? 'cancelado' : 'al_corriente'}
-                      label={STATUS_LABELS[p.computedStatus]}
                     />
                   </td>
                   <td>
