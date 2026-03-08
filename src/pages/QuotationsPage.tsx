@@ -586,6 +586,7 @@ export default function QuotationsPage() {
                       <button onClick={() => openConversion(q)} className="p-1.5 rounded-md hover:bg-primary/10 text-primary" title="Generar pedido"><ShoppingCart size={14} /></button>
                     )}
                     <button onClick={() => setShowPreview(q)} className="p-1.5 rounded-md hover:bg-muted" title="Vista previa"><Eye size={14} /></button>
+                    <button onClick={() => openEditQuotation(q)} className="p-1.5 rounded-md hover:bg-muted text-amber-600" title="Editar cotización"><Pencil size={14} /></button>
                     <button onClick={() => { setWhatsappMsg(demoWhatsAppTemplate.message); setShowWhatsApp(q); }} className="p-1.5 rounded-md hover:bg-muted text-success" title="Enviar por WhatsApp"><MessageCircle size={14} /></button>
                     <button onClick={() => handleDownloadPdf(q)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Descargar PDF"><Download size={14} /></button>
                   </div>
