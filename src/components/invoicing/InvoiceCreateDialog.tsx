@@ -266,7 +266,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
                   })}
                   {eligibleOrders.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay pedidos disponibles</TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay pedidos disponibles</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
