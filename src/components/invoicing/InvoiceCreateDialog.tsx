@@ -425,7 +425,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
           {step === 'configure' && (
             <Button onClick={handleCreate} disabled={createMutation.isPending} className="gap-1.5">
               <Plus size={14} />
-              {createMutation.isPending ? 'Creando...' : 'Crear Factura (Borrador)'}
+              {createMutation.isPending ? 'Creando...' : `Crear ${DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label.split(' (')[0] || 'Factura'} (Borrador)`}
             </Button>
           )}
         </DialogFooter>
