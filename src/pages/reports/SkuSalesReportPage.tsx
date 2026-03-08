@@ -119,7 +119,7 @@ export default function SkuSalesReportPage() {
           selects: [
             { key: 'categoria', label: 'Categoría', options: Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v })) },
           ],
-          exportExcel: true,
+          exportExcel: true, exportPdf: true,
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
