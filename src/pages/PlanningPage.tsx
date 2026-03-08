@@ -1,4 +1,5 @@
 import { useState, useMemo, Fragment } from 'react';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   analyzeProducts, getPlanningSummary, simulateGrowth,
