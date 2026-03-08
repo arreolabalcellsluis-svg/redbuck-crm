@@ -394,7 +394,7 @@ Deno.serve(async (req) => {
       // Download XML
       let compXmlPath = "";
       try {
-        const xmlRes = await facturama(`/cfdi/xml/${compData.Id || compUuid}/issued`, "GET");
+        const xmlRes = await facturama(`/api/Cfdi/xml/issued/${compData.Id || compUuid}`, "GET");
         if (xmlRes.ok) {
           const xmlContent = await xmlRes.text();
           compXmlPath = `xml/complement_${payment_id}.xml`;
