@@ -164,6 +164,9 @@ export default function ServicePage() {
     diagnosis: '', actionsPerformed: '', completedDate: '', observations: '',
   });
   const [formImages, setFormImages] = useState<string[]>([]);
+  const [showDownload, setShowDownload] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
 
   // Image viewer
   const [viewImage, setViewImage] = useState<string | null>(null);
