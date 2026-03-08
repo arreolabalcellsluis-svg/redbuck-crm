@@ -73,6 +73,18 @@ export default function ProductsPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const saveFiscalData = (productId: string) => {
+    const vatRate = form.taxFamily === 'exento' ? 0 : Number(form.taxFamily || 16);
+    saveFiscalMutation.mutate({
+      product_id: productId,
+      sat_product_key: form.satProductKey || '',
+      sat_unit_key: form.satUnitKey || '',
+      tax_object: form.taxObject || '02',
+      vat_rate: vatRate,
+      fiscal_description: form.name,
+    });
+  };
+
   const handleCreate = () => {
     if (!form.name.trim()) { toast.error('El nombre del producto es obligatorio'); return; }
     if (!form.sku.trim()) { toast.error('El SKU es obligatorio'); return; }
@@ -80,6 +92,10 @@ export default function ProductsPage() {
 
     const newProduct: Product = { ...form, id: `p-${Date.now()}` };
     setProducts(prev => [newProduct, ...prev]);
+    // Save fiscal data to DB
+    if (form.satProductKey || form.satUnitKey) {
+      saveFiscalData(newProduct.id);
+    }
     toast.success(`Producto "${form.name}" creado correctamente`);
     setShowCreate(false);
     setForm(emptyProduct());
