@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { FileText, Plus, Search, AlertTriangle, CalendarIcon, X, Stamp, CheckCircle, Save } from 'lucide-react';
+import { FileText, Plus, Search, AlertTriangle, CalendarIcon, X, Stamp, CheckCircle, Save, Download, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
 import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, useStampInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS, SAT_CFDI_USES } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
+import { openInvoicePdf, downloadXml, type InvoicePdfData } from '@/lib/invoicePdfExport';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
@@ -240,6 +241,47 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
 
   const customerName = selectedOrder?.customer_name || customers?.find(c => c.id === selectedOrder?.customer_id)?.name || '—';
   const docTypeLabel = DOCUMENT_TYPES.find(t => t.code === invoiceType)?.label || 'Factura';
+
+  const buildPdfData = (isDemo: boolean): InvoicePdfData => ({
+    issuerName: fiscal?.issuer_name || 'Emisor',
+    issuerRfc: fiscal?.issuer_rfc || 'XAXX010101000',
+    issuerTaxRegime: fiscal?.issuer_tax_regime || '601',
+    issuerTradeName: fiscal?.issuer_trade_name || '',
+    issuerZipCode: fiscal?.expedition_zip_code || '00000',
+    customerName: customerFiscalData?.legal_name || customerName,
+    customerRfc: customerFiscalData?.rfc || 'XAXX010101000',
+    customerTaxRegime: customerFiscalData?.tax_regime || '601',
+    customerZipCode: customerFiscalData?.fiscal_zip_code || '00000',
+    cfdiUse,
+    cfdiUseLabel: SAT_CFDI_USES.find(u => u.code === cfdiUse)?.label || cfdiUse,
+    series,
+    folio,
+    invoiceType,
+    invoiceTypeLabel: docTypeLabel,
+    paymentForm,
+    paymentFormLabel: SAT_PAYMENT_FORMS.find(f => f.code === paymentForm)?.label || paymentForm,
+    paymentMethod,
+    paymentMethodLabel: SAT_PAYMENT_METHODS.find(m => m.code === paymentMethod)?.label || paymentMethod,
+    currency,
+    exchangeRate,
+    conditions,
+    notes,
+    items: invoiceItems.map(it => ({
+      description: it.description,
+      satProductKey: it.sat_product_key,
+      satUnitKey: it.sat_unit_key,
+      qty: it.qty,
+      unitPrice: it.unit_price,
+      discount: it.discount || 0,
+      subtotal: it.subtotal,
+      taxAmount: it.tax_amount,
+      total: it.total,
+    })),
+    subtotal,
+    taxTotal,
+    total,
+    isDemo,
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -574,7 +616,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
 
         <DialogFooter className="gap-2 flex-wrap">
           {step === 'configure' && (
-            <Button variant="outline" onClick={() => setStep('select')}>← Cambiar pedido</Button>
+            <>
+              <Button variant="outline" onClick={() => setStep('select')}>← Cambiar pedido</Button>
+              <Button variant="outline" onClick={() => openInvoicePdf(buildPdfData(true))} className="gap-1.5">
+                <Eye size={14} /> Vista previa PDF
+              </Button>
+            </>
           )}
           {step !== 'preview' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -587,6 +634,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
           )}
           {step === 'preview' && (
             <>
+              <Button variant="outline" onClick={() => openInvoicePdf(buildPdfData(true))} className="gap-1.5">
+                <Eye size={14} /> Ver PDF (Demo)
+              </Button>
+              <Button variant="outline" onClick={() => downloadXml(buildPdfData(true))} className="gap-1.5">
+                <Download size={14} /> Descargar XML (Demo)
+              </Button>
               <Button variant="outline" onClick={() => onOpenChange(false)} className="gap-1.5">
                 <Save size={14} /> Guardar como borrador
               </Button>
