@@ -6,6 +6,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Safe JSON parse helper — returns null on empty/invalid body
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  if (!text || text.trim().length === 0) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { _raw: text };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,7 +36,12 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No autorizado");
 
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      throw new Error("Body JSON inválido o vacío");
+    }
     const { action } = body;
 
     // Configurable: set FACTURAMA_ENV=production to use live API
@@ -50,7 +66,7 @@ Deno.serve(async (req) => {
     // ─── ACTION: test-connection ───
     if (action === "test-connection") {
       const res = await facturama("/api/Profile");
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(`Facturama error: ${JSON.stringify(data)}`);
       return new Response(JSON.stringify({ success: true, profile: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -142,7 +158,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama API to stamp
       const stampRes = await facturama("/3/cfdis", "POST", cfdiPayload);
-      const stampData = await stampRes.json();
+      const stampData = await safeJson(stampRes);
 
       if (!stampRes.ok) {
         // Update invoice with error
@@ -353,7 +369,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama to stamp complement
       const compRes = await facturama("/3/cfdis", "POST", complementPayload);
-      const compData = await compRes.json();
+      const compData = await safeJson(compRes);
 
       if (!compRes.ok) {
         // Update payment with error
