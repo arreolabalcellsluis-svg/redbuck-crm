@@ -10,7 +10,7 @@ import MetricCard from '@/components/shared/MetricCard';
 import {
   AlertTriangle, TrendingUp, Package, DollarSign, Truck, BarChart3,
   ShieldAlert, Zap, Star, ArrowUpDown, Crown, Skull, Clock, Target,
-  Calculator, Warehouse, ShoppingCart, Filter, ChevronDown, ChevronUp,
+  Calculator, Warehouse, ShoppingCart, Filter, ChevronDown, ChevronUp, Copy,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
