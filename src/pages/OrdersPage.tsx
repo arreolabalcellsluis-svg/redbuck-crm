@@ -2,7 +2,7 @@ import { demoCustomers, demoProducts, demoUsers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package } from 'lucide-react';
+import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
