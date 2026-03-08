@@ -78,7 +78,6 @@ function IssuerConfigTab() {
   const { data: settings, isLoading } = useFiscalSettings();
   const saveMutation = useSaveFiscalSettings();
   const testPacMutation = useTestPacConnection();
-  const saveMutation = useSaveFiscalSettings();
   const [form, setForm] = useState<Partial<FiscalSettings>>({});
   const [initialized, setInitialized] = useState(false);
 
@@ -100,16 +99,8 @@ function IssuerConfigTab() {
     saveMutation.mutate(form as any);
   };
 
-  const handleTestPac = async () => {
-    setTestingPac(true);
-    // Simulated test - in production this would call the edge function
-    await new Promise(r => setTimeout(r, 1500));
-    if (form.pac_api_url && form.pac_username) {
-      toast.success('Conexión con PAC exitosa');
-    } else {
-      toast.error('Configura URL y usuario del PAC antes de probar');
-    }
-    setTestingPac(false);
+  const handleTestPac = () => {
+    testPacMutation.mutate();
   };
 
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Cargando configuración...</div>;
