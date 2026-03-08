@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, CalendarIcon } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -8,9 +8,10 @@ import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportToPdf } from '@/lib/pdfExport';
 import { monthlySales, dashboardMetrics } from '@/data/demo-data';
 import { demoExpenses } from '@/lib/operatingExpensesEngine';
-import { getTotalMonthlyDepAmort } from '@/pages/AssetsPage';
+import { useExpenses } from '@/hooks/useExpenses';
+import { useAssets, getTotalMonthlyDepAmort } from '@/hooks/useAssets';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { format, parse, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,8 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
-const demoAssets = [
+// Fallback demo assets for depreciation
+const fallbackAssets = [
   { id:'a1', nombre:'Camioneta Nissan NP300', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-06-15', costoAdquisicion:420000, vidaUtilMeses:60, valorRescate:120000, estatus:'activo' as const },
   { id:'a2', nombre:'Camioneta RAM 700', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-01-10', costoAdquisicion:350000, vidaUtilMeses:60, valorRescate:100000, estatus:'activo' as const },
   { id:'a3', nombre:'Montacargas Yale', categoria:'maquinaria' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2022-03-01', costoAdquisicion:280000, vidaUtilMeses:120, valorRescate:40000, estatus:'activo' as const },
@@ -27,7 +29,6 @@ const demoAssets = [
   { id:'a6', nombre:'Escritorios', categoria:'mobiliario' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-01-15', costoAdquisicion:35000, vidaUtilMeses:120, valorRescate:5000, estatus:'activo' as const },
 ];
 
-// Parse "Ene 24" → Date
 function parseMonthLabel(label: string): Date {
   const monthMap: Record<string, string> = {
     'Ene':'01','Feb':'02','Mar':'03','Abr':'04','May':'05','Jun':'06',
@@ -38,33 +39,39 @@ function parseMonthLabel(label: string): Date {
   return new Date(fullYear, Number(monthMap[mon] || '01') - 1, 1);
 }
 
-// Preset periods
 const PRESETS = [
-  { label: 'Último trimestre', getRange: () => { const now = new Date(); const s = new Date(now.getFullYear(), now.getMonth() - 3, 1); return { from: s, to: endOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1)) }; } },
-  { label: 'Último semestre', getRange: () => { const now = new Date(); const s = new Date(now.getFullYear(), now.getMonth() - 6, 1); return { from: s, to: endOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1)) }; } },
+  { label: 'Último trimestre', getRange: () => { const now = new Date(); return { from: new Date(now.getFullYear(), now.getMonth() - 3, 1), to: endOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1)) }; } },
+  { label: 'Último semestre', getRange: () => { const now = new Date(); return { from: new Date(now.getFullYear(), now.getMonth() - 6, 1), to: endOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1)) }; } },
   { label: 'Año 2024', getRange: () => ({ from: new Date(2024, 0, 1), to: new Date(2024, 11, 31) }) },
   { label: 'Año 2025', getRange: () => ({ from: new Date(2025, 0, 1), to: new Date(2025, 11, 31) }) },
   { label: 'Todo', getRange: () => ({ from: new Date(2024, 0, 1), to: new Date(2025, 11, 31) }) },
 ];
 
 export default function IncomeStatementReportPage() {
-  // Date range state
   const [dateFrom, setDateFrom] = useState<Date>(new Date(2024, 0, 1));
   const [dateTo, setDateTo] = useState<Date>(new Date(2025, 2, 31));
 
-  // Classify expenses (monthly basis)
+  // Fetch real data from DB
+  const { data: dbExpenses, isLoading: loadingExpenses } = useExpenses();
+  const { data: dbAssets, isLoading: loadingAssets } = useAssets();
+
+  const expenses = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
+  const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
+
+  const isDbConnected = (dbExpenses && dbExpenses.length > 0) || (dbAssets && dbAssets.length > 0);
+
+  // Classify expenses
   const gastosVentas = useMemo(() =>
-    demoExpenses.filter(e => e.categoria === 'ventas').reduce((s, e) => s + e.monto, 0), []);
+    expenses.filter(e => e.categoria === 'ventas').reduce((s, e) => s + e.monto, 0), [expenses]);
   const gastosFinancieros = useMemo(() =>
-    demoExpenses.filter(e => e.categoria === 'financieros').reduce((s, e) => s + e.monto, 0), []);
+    expenses.filter(e => e.categoria === 'financieros').reduce((s, e) => s + e.monto, 0), [expenses]);
   const totalExpensesMensual = useMemo(() =>
-    demoExpenses.reduce((s, e) => s + e.monto, 0), []);
+    expenses.reduce((s, e) => s + e.monto, 0), [expenses]);
   const gastosGeneralesAdmin = useMemo(() =>
     totalExpensesMensual - gastosVentas - gastosFinancieros, [totalExpensesMensual, gastosVentas, gastosFinancieros]);
 
-  const depAmortMensual = useMemo(() => getTotalMonthlyDepAmort(demoAssets), []);
+  const depAmortMensual = useMemo(() => getTotalMonthlyDepAmort(assets), [assets]);
 
-  // Filter monthlySales by date range
   const data = useMemo(() => {
     return monthlySales
       .filter(m => {
@@ -166,6 +173,15 @@ export default function IncomeStatementReportPage() {
     { label: 'Margen neto %', key: 'margenNeto', indent: true, isMargin: true },
   ];
 
+  if (loadingExpenses || loadingAssets) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <span className="ml-3 text-muted-foreground">Cargando datos financieros...</span>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -173,7 +189,10 @@ export default function IncomeStatementReportPage() {
           <Link to="/reportes-ejecutivos"><Button variant="ghost" size="sm"><ArrowLeft size={16} /></Button></Link>
           <div>
             <h1 className="page-title flex items-center gap-2"><TrendingUp size={22} className="text-success" /> Estado de Resultados</h1>
-            <p className="page-subtitle">Reporte financiero por periodo seleccionable</p>
+            <p className="page-subtitle">
+              Reporte financiero por periodo seleccionable
+              {isDbConnected && <span className="ml-2 text-xs text-success">● Datos reales</span>}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -189,7 +208,7 @@ export default function IncomeStatementReportPage() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicio</label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className={cn("w-44 justify-start text-left text-xs", !dateFrom && "text-muted-foreground")}>
+                <Button variant="outline" size="sm" className={cn("w-44 justify-start text-left text-xs")}>
                   <CalendarIcon className="mr-2 h-3.5 w-3.5" />
                   {format(dateFrom, 'dd MMM yyyy', { locale: es })}
                 </Button>
@@ -203,7 +222,7 @@ export default function IncomeStatementReportPage() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha fin</label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className={cn("w-44 justify-start text-left text-xs", !dateTo && "text-muted-foreground")}>
+                <Button variant="outline" size="sm" className={cn("w-44 justify-start text-left text-xs")}>
                   <CalendarIcon className="mr-2 h-3.5 w-3.5" />
                   {format(dateTo, 'dd MMM yyyy', { locale: es })}
                 </Button>
