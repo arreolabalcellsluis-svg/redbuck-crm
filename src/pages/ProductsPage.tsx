@@ -20,7 +20,7 @@ const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?:
   satProductKey: '', satUnitKey: '', taxObject: '02', taxFamily: '16',
 });
 
-type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string };
+type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string };
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
