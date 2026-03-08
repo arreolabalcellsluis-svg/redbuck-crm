@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama API Web to stamp
       console.log("Stamping CFDI payload:", JSON.stringify(cfdiPayload));
-      const stampRes = await facturama("/2/cfdis", "POST", cfdiPayload);
+      const stampRes = await facturama("/3/cfdis", "POST", cfdiPayload);
       const stampData = await safeJson(stampRes);
 
       console.log("Facturama stamp response status:", stampRes.status, "data:", JSON.stringify(stampData));
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       // Download XML
       let xmlPath = "";
       try {
-        const xmlRes = await facturama(`/cfdi/xml/${stampData.Id || uuid}/issued`, "GET");
+        const xmlRes = await facturama(`/api/Cfdi/xml/issued/${stampData.Id || uuid}`, "GET");
         if (xmlRes.ok) {
           const xmlContent = await xmlRes.text();
           xmlPath = `xml/${invoice_id}.xml`;
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
       // Download PDF
       let pdfPath = "";
       try {
-        const pdfRes = await facturama(`/cfdi/pdf/${stampData.Id || uuid}/issued`, "GET");
+        const pdfRes = await facturama(`/api/Cfdi/pdf/issued/${stampData.Id || uuid}`, "GET");
         if (pdfRes.ok) {
           const pdfBlob = await pdfRes.blob();
           pdfPath = `pdf/${invoice_id}.pdf`;
@@ -372,7 +372,7 @@ Deno.serve(async (req) => {
 
       // Call Facturama API Web to stamp complement
       console.log("Complement payload:", JSON.stringify(complementPayload));
-      const compRes = await facturama("/2/cfdis", "POST", complementPayload);
+      const compRes = await facturama("/3/cfdis", "POST", complementPayload);
       const compData = await safeJson(compRes);
 
       console.log("Facturama complement response status:", compRes.status, "data:", JSON.stringify(compData));
@@ -394,7 +394,7 @@ Deno.serve(async (req) => {
       // Download XML
       let compXmlPath = "";
       try {
-        const xmlRes = await facturama(`/cfdi/xml/${compData.Id || compUuid}/issued`, "GET");
+        const xmlRes = await facturama(`/api/Cfdi/xml/issued/${compData.Id || compUuid}`, "GET");
         if (xmlRes.ok) {
           const xmlContent = await xmlRes.text();
           compXmlPath = `xml/complement_${payment_id}.xml`;
@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
       // Download PDF
       let compPdfPath = "";
       try {
-        const pdfRes = await facturama(`/cfdi/pdf/${compData.Id || compUuid}/issued`, "GET");
+        const pdfRes = await facturama(`/api/Cfdi/pdf/issued/${compData.Id || compUuid}`, "GET");
         if (pdfRes.ok) {
           const pdfBlob = await pdfRes.blob();
           compPdfPath = `pdf/complement_${payment_id}.pdf`;
