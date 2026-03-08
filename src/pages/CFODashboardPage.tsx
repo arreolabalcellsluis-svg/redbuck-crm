@@ -5,22 +5,21 @@ import { useAccountsPayable } from '@/hooks/useAccountsPayable';
 import { demoExpenses } from '@/lib/operatingExpensesEngine';
 import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
-  calcStrategicKPIs, calcMonthlyFlow,
+  calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
 } from '@/lib/cfoDashboardEngine';
 import MetricCard from '@/components/shared/MetricCard';
-import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-  DollarSign, TrendingUp, TrendingDown, Package, CreditCard, Building2,
-  Wallet, BarChart3, Download, ArrowUpRight, ArrowDownRight, AlertTriangle,
-  CheckCircle, Loader2, RefreshCw, Banknote, Layers, Activity, Target,
+  DollarSign, TrendingUp, Package, CreditCard, Building2,
+  Wallet, BarChart3, Download, AlertTriangle,
+  CheckCircle, RefreshCw, Banknote, Layers, Activity, Target, Radar,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar,
 } from 'recharts';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -28,7 +27,7 @@ const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const fmtDays = (n: number) => `${Math.round(n)} días`;
 const fmtX = (n: number) => `${n.toFixed(1)}x`;
 
-const COLORS = ['hsl(var(--primary))', 'hsl(142,71%,45%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(210,100%,52%)', 'hsl(280,65%,55%)'];
+const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(280,65%,55%)', 'hsl(190,80%,45%)'];
 
 // Fallback assets
 const fallbackAssets = [
@@ -48,7 +47,6 @@ export default function CFODashboardPage() {
   const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
   const payables = dbPayables ?? [];
 
-  // Editable config for balance sheet
   const [bsConfig, setBsConfig] = useState({
     bancos: 850000,
     creditosBancarios: 0,
@@ -61,8 +59,21 @@ export default function CFODashboardPage() {
   const cashFlow = useMemo(() => calcCashFlow(income, payables, { saldoInicial: bsConfig.bancos }), [income, payables, bsConfig.bancos]);
   const kpis = useMemo(() => calcStrategicKPIs(balance, income, payables), [balance, income, payables]);
   const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses), [expenses]);
+  const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
 
-  // Export all to Excel
+  // Radar chart data (normalized to max for spider chart)
+  const radarChartData = useMemo(() => {
+    const maxVal = Math.max(radar.bancos, radar.cuentasPorCobrar, radar.inventario, radar.cuentasPorPagar, radar.creditosBancarios, Math.abs(radar.utilidadNeta), 1);
+    return [
+      { axis: 'Bancos', value: (radar.bancos / maxVal) * 100, raw: radar.bancos },
+      { axis: 'CxC', value: (radar.cuentasPorCobrar / maxVal) * 100, raw: radar.cuentasPorCobrar },
+      { axis: 'Inventario', value: (radar.inventario / maxVal) * 100, raw: radar.inventario },
+      { axis: 'CxP', value: (radar.cuentasPorPagar / maxVal) * 100, raw: radar.cuentasPorPagar },
+      { axis: 'Créditos', value: (radar.creditosBancarios / maxVal) * 100, raw: radar.creditosBancarios },
+      { axis: 'Utilidad', value: (Math.abs(radar.utilidadNeta) / maxVal) * 100, raw: radar.utilidadNeta },
+    ];
+  }, [radar]);
+
   const handleExportAll = () => {
     const incomeData = [
       { Concepto: 'Ventas', Monto: income.ventas },
@@ -82,7 +93,6 @@ export default function CFODashboardPage() {
       { Concepto: 'Margen EBITDA', Monto: income.margenEbitda },
       { Concepto: 'Margen Neto', Monto: income.margenNeto },
     ];
-
     const balanceData = [
       { Concepto: 'ACTIVOS CIRCULANTES', Monto: '' },
       { Concepto: 'Bancos', Monto: balance.bancos },
@@ -97,6 +107,14 @@ export default function CFODashboardPage() {
       { Concepto: '---', Monto: '' },
       { Concepto: 'PASIVOS', Monto: '' },
       { Concepto: 'Cuentas por pagar', Monto: balance.cuentasPorPagar },
+      { Concepto: '  0-30 días', Monto: balance.cxpPor30 },
+      { Concepto: '  31-60 días', Monto: balance.cxpPor60 },
+      { Concepto: '  61-90 días', Monto: balance.cxpPor90 },
+      { Concepto: '  91-120 días', Monto: balance.cxpPor120 },
+      { Concepto: '  121-150 días', Monto: balance.cxpPor150 },
+      { Concepto: '  151-180 días', Monto: balance.cxpPor180 },
+      { Concepto: '  181-365 días', Monto: balance.cxpPor365 },
+      { Concepto: '  365+ días', Monto: balance.cxpMas365 },
       { Concepto: 'Créditos bancarios', Monto: balance.creditosBancarios },
       { Concepto: 'Impuestos por pagar', Monto: balance.impuestosPorPagar },
       { Concepto: 'TOTAL PASIVOS', Monto: balance.totalPasivos },
@@ -106,8 +124,9 @@ export default function CFODashboardPage() {
       { Concepto: 'Utilidades acumuladas', Monto: balance.utilidadesAcumuladas },
       { Concepto: 'Utilidad del ejercicio', Monto: balance.utilidadEjercicio },
       { Concepto: 'TOTAL CAPITAL', Monto: balance.totalCapital },
+      { Concepto: '---', Monto: '' },
+      { Concepto: 'Capital de trabajo', Monto: balance.capitalDeTrabajo },
     ];
-
     const cashData = [
       { Concepto: 'FLUJO OPERATIVO', Monto: '' },
       { Concepto: 'Cobros de clientes', Monto: cashFlow.cobrosClientes },
@@ -130,7 +149,6 @@ export default function CFODashboardPage() {
       { Concepto: 'Saldo inicial', Monto: cashFlow.saldoInicial },
       { Concepto: 'Saldo final', Monto: cashFlow.saldoFinal },
     ];
-
     const kpiData = [
       { Indicador: 'Liquidez', Valor: kpis.liquidez.toFixed(2) },
       { Indicador: 'Endeudamiento', Valor: kpis.endeudamiento.toFixed(2) },
@@ -140,25 +158,27 @@ export default function CFODashboardPage() {
       { Indicador: 'Ciclo conversión efectivo', Valor: Math.round(kpis.cicloConversionEfectivo) },
       { Indicador: 'Rotación inventario', Valor: kpis.rotacionInventario.toFixed(1) },
       { Indicador: 'Capital en inventario', Valor: kpis.capitalEnInventario },
+      { Indicador: 'Capital de trabajo', Valor: balance.capitalDeTrabajo },
     ];
-
+    const radarData = radar.distribution.map(d => ({
+      Concepto: d.label, Valor: d.value, 'Porcentaje %': d.pct.toFixed(1),
+    }));
     const flowData = monthlyFlow.map(m => ({
       Mes: m.month, Entradas: m.entradas, Salidas: m.salidas, Neto: m.neto, Acumulado: m.acumulado,
     }));
 
-    // Build multi-sheet export
     import('xlsx').then(XLSX => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(incomeData), 'Estado Resultados');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(balanceData), 'Balance General');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cashData), 'Flujo Efectivo');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpiData), 'Indicadores');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(radarData), 'Radar Financiero');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(flowData), 'Flujo Mensual');
       XLSX.writeFile(wb, `Dashboard_Financiero_${new Date().toISOString().split('T')[0]}.xlsx`);
     });
   };
 
-  // Income statement rows for table
   const incomeRows = [
     { label: 'Ventas', value: income.ventas, bold: true, indent: 0 },
     { label: 'Costo de ventas', value: -income.costoVentas, indent: 1 },
@@ -186,7 +206,7 @@ export default function CFODashboardPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard Financiero del Director</h1>
-          <p className="page-subtitle">Visión consolidada: Estado de Resultados · Balance General · Flujo de Efectivo · KPIs</p>
+          <p className="page-subtitle">Visión consolidada: Estado de Resultados · Balance General · Flujo de Efectivo · Radar · KPIs</p>
         </div>
         <Button onClick={handleExportAll} className="gap-2">
           <Download size={16} /> Exportar Excel
@@ -206,13 +226,127 @@ export default function CFODashboardPage() {
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
-      <Tabs defaultValue="income" className="space-y-4">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+      <Tabs defaultValue="radar" className="space-y-4">
+        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+          <TabsTrigger value="radar">Radar Financiero</TabsTrigger>
           <TabsTrigger value="income">Estado de Resultados</TabsTrigger>
           <TabsTrigger value="balance">Balance General</TabsTrigger>
           <TabsTrigger value="cashflow">Flujo de Efectivo</TabsTrigger>
           <TabsTrigger value="kpis">Indicadores</TabsTrigger>
         </TabsList>
+
+        {/* ─── FINANCIAL RADAR TAB ──────────────────────────────── */}
+        <TabsContent value="radar">
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Spider Chart */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                <Radar size={20} /> Radar Financiero del Negocio
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">¿Dónde está el dinero del negocio?</p>
+              <ResponsiveContainer width="100%" height={380}>
+                <RadarChart data={radarChartData} cx="50%" cy="50%" outerRadius="75%">
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="axis" tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }} />
+                  <PolarRadiusAxis tick={false} axisLine={false} />
+                  <RechartsRadar name="Capital" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.25} strokeWidth={2} />
+                  <Tooltip
+                    content={({ payload }) => {
+                      if (!payload?.[0]) return null;
+                      const d = payload[0].payload;
+                      return (
+                        <div className="bg-popover border rounded-lg p-3 shadow-lg">
+                          <div className="font-bold text-sm">{d.axis}</div>
+                          <div className="text-sm">{fmt(d.raw)}</div>
+                        </div>
+                      );
+                    }}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Capital Distribution */}
+            <div className="space-y-4">
+              <div className="bg-card rounded-xl border p-6">
+                <h3 className="text-lg font-bold mb-4">Distribución del Capital</h3>
+                <div className="space-y-3">
+                  {radar.distribution.map((d, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{d.label}</span>
+                        <span className="font-bold">{fmt(d.value)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, Math.abs(d.pct))}%`,
+                              backgroundColor: d.color,
+                              opacity: d.value < 0 ? 0.6 : 1,
+                            }}
+                          />
+                        </div>
+                        <span className={`text-xs font-mono w-14 text-right ${d.value < 0 ? 'text-destructive' : ''}`}>
+                          {d.pct > 0 ? '+' : ''}{d.pct.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Capital de trabajo */}
+              <div className={`rounded-xl border-2 p-6 ${radar.capitalDeTrabajo > 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-destructive/5 border-destructive/20'}`}>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Capital de Trabajo</div>
+                <div className={`text-3xl font-bold ${radar.capitalDeTrabajo > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                  {fmt(radar.capitalDeTrabajo)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Activos circulantes ({fmt(balance.totalCirculantes)}) − Pasivos circulantes ({fmt(balance.cuentasPorPagar + balance.impuestosPorPagar)})
+                </p>
+                <div className="mt-3 p-3 bg-card rounded-lg text-xs">
+                  {radar.capitalDeTrabajo > 0
+                    ? '✅ La empresa tiene capacidad para cubrir sus obligaciones de corto plazo.'
+                    : '⚠️ Los pasivos circulantes superan los activos circulantes. Riesgo de liquidez.'}
+                </div>
+              </div>
+
+              {/* Quick decisions */}
+              <div className="bg-card rounded-xl border p-6">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Diagnóstico Rápido</h3>
+                <div className="space-y-2 text-xs">
+                  <DiagnosticItem
+                    condition={balance.inventario > balance.totalCirculantes * 0.6}
+                    warn="Inventario concentra más del 60% de activos circulantes → capital congelado"
+                    ok="Inventario dentro de rangos normales"
+                  />
+                  <DiagnosticItem
+                    condition={balance.cuentasPorCobrar > income.ventas / 6}
+                    warn="CxC equivale a más de 2 meses de ventas → problema de cobranza"
+                    ok="Cobranza dentro de parámetros saludables"
+                  />
+                  <DiagnosticItem
+                    condition={balance.cuentasPorPagar < balance.inventario * 0.1}
+                    warn="CxP muy bajo → no se aprovecha crédito comercial de proveedores"
+                    ok="Se utiliza crédito comercial adecuadamente"
+                  />
+                  <DiagnosticItem
+                    condition={balance.bancos < income.gastosOperativos / 3}
+                    warn="Liquidez baja: bancos no cubre un mes de operación"
+                    ok="Liquidez bancaria suficiente"
+                  />
+                  <DiagnosticItem
+                    condition={balance.creditosBancarios > balance.totalCapital * 0.5}
+                    warn="Deuda bancaria alta respecto al capital"
+                    ok="Nivel de deuda bancaria controlado"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
 
         {/* ─── INCOME STATEMENT TAB ─────────────────────────────── */}
         <TabsContent value="income">
@@ -244,8 +378,6 @@ export default function CFODashboardPage() {
                 </div>
               </div>
             </div>
-
-            {/* Waterfall-style bar chart for income statement */}
             <div className="bg-card rounded-xl border p-6">
               <h3 className="text-lg font-bold mb-4">Composición del Resultado</h3>
               <ResponsiveContainer width="100%" height={350}>
@@ -305,10 +437,10 @@ export default function CFODashboardPage() {
               </div>
             </div>
 
-            {/* Pasivos */}
+            {/* Pasivos + Capital */}
             <div className="bg-card rounded-xl border p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <AlertTriangle size={18} /> Pasivos
+                <AlertTriangle size={18} /> Pasivos + Capital
               </h3>
               <div className="space-y-3">
                 <div className="space-y-1.5">
@@ -317,7 +449,11 @@ export default function CFODashboardPage() {
                     <div className="flex justify-between"><span>0-30 días</span><span>{fmt(balance.cxpPor30)}</span></div>
                     <div className="flex justify-between"><span>31-60 días</span><span>{fmt(balance.cxpPor60)}</span></div>
                     <div className="flex justify-between"><span>61-90 días</span><span>{fmt(balance.cxpPor90)}</span></div>
-                    <div className="flex justify-between"><span>90+ días</span><span>{fmt(balance.cxpPor120Plus)}</span></div>
+                    <div className="flex justify-between"><span>91-120 días</span><span>{fmt(balance.cxpPor120)}</span></div>
+                    <div className="flex justify-between"><span>121-150 días</span><span>{fmt(balance.cxpPor150)}</span></div>
+                    <div className="flex justify-between"><span>151-180 días</span><span>{fmt(balance.cxpPor180)}</span></div>
+                    <div className="flex justify-between"><span>181-365 días</span><span>{fmt(balance.cxpPor365)}</span></div>
+                    <div className="flex justify-between"><span>365+ días</span><span>{fmt(balance.cxpMas365)}</span></div>
                   </div>
                   <Row label="Créditos bancarios" value={balance.creditosBancarios} editable onEdit={v => setBsConfig(c => ({ ...c, creditosBancarios: v }))} />
                   <Row label="Impuestos por pagar" value={balance.impuestosPorPagar} />
@@ -334,6 +470,9 @@ export default function CFODashboardPage() {
                 </div>
                 <div className="border-t pt-3">
                   <Row label="PASIVOS + CAPITAL" value={balance.totalPasivos + balance.totalCapital} bold highlight />
+                  <div className="mt-1">
+                    <Row label="Capital de trabajo" value={balance.capitalDeTrabajo} bold />
+                  </div>
                   <div className={`mt-2 text-xs font-medium flex items-center gap-1 ${balance.ecuacionBalanceada ? 'text-green-600' : 'text-destructive'}`}>
                     {balance.ecuacionBalanceada ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
                     {balance.ecuacionBalanceada ? 'Ecuación balanceada ✓' : 'Diferencia detectada'}
@@ -365,41 +504,37 @@ export default function CFODashboardPage() {
         <TabsContent value="cashflow">
           <div className="grid lg:grid-cols-2 gap-6">
             <div className="space-y-4">
-              {/* Operativo */}
               <div className="bg-card rounded-xl border p-6">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Flujo Operativo</h3>
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-green-600">+ Cobros de clientes</span><span>{fmt(cashFlow.cobrosClientes)}</span></div>
-                  <div className="flex justify-between"><span className="text-green-600">+ Ventas</span><span>{fmt(cashFlow.ingresosVentas)}</span></div>
-                  <div className="flex justify-between"><span className="text-destructive">- Proveedores</span><span>{fmt(cashFlow.pagosProveedores)}</span></div>
-                  <div className="flex justify-between"><span className="text-destructive">- Gastos operativos</span><span>{fmt(cashFlow.gastosOperativos)}</span></div>
-                  <div className="flex justify-between"><span className="text-destructive">- Nómina</span><span>{fmt(cashFlow.nomina)}</span></div>
-                  <div className="flex justify-between"><span className="text-destructive">- Impuestos</span><span>{fmt(cashFlow.impuestosPagados)}</span></div>
+                  <FlowRow label="+ Cobros de clientes" value={cashFlow.cobrosClientes} positive />
+                  <FlowRow label="+ Ventas" value={cashFlow.ingresosVentas} positive />
+                  <FlowRow label="- Proveedores" value={cashFlow.pagosProveedores} />
+                  <FlowRow label="- Gastos operativos" value={cashFlow.gastosOperativos} />
+                  <FlowRow label="- Nómina" value={cashFlow.nomina} />
+                  <FlowRow label="- Impuestos" value={cashFlow.impuestosPagados} />
                   <div className="flex justify-between font-bold border-t pt-2 mt-2">
                     <span>Total operativo</span>
                     <span className={cashFlow.flujoOperativo >= 0 ? 'text-green-600' : 'text-destructive'}>{fmt(cashFlow.flujoOperativo)}</span>
                   </div>
                 </div>
               </div>
-              {/* Inversión */}
               <div className="bg-card rounded-xl border p-6">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Flujo de Inversión</h3>
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-destructive">- Compra de activos</span><span>{fmt(cashFlow.compraActivos)}</span></div>
+                  <FlowRow label="- Compra de activos" value={cashFlow.compraActivos} />
                   <div className="flex justify-between font-bold border-t pt-2 mt-2"><span>Total inversión</span><span>{fmt(cashFlow.flujoInversion)}</span></div>
                 </div>
               </div>
-              {/* Financiamiento */}
               <div className="bg-card rounded-xl border p-6">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Flujo de Financiamiento</h3>
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-green-600">+ Préstamos</span><span>{fmt(cashFlow.prestamosRecibidos)}</span></div>
-                  <div className="flex justify-between"><span className="text-destructive">- Pagos de deuda</span><span>{fmt(cashFlow.pagosDeuda)}</span></div>
-                  <div className="flex justify-between"><span className="text-green-600">+ Aportaciones</span><span>{fmt(cashFlow.aportacionesSocios)}</span></div>
+                  <FlowRow label="+ Préstamos" value={cashFlow.prestamosRecibidos} positive />
+                  <FlowRow label="- Pagos de deuda" value={cashFlow.pagosDeuda} />
+                  <FlowRow label="+ Aportaciones" value={cashFlow.aportacionesSocios} positive />
                   <div className="flex justify-between font-bold border-t pt-2 mt-2"><span>Total financiamiento</span><span>{fmt(cashFlow.flujoFinanciamiento)}</span></div>
                 </div>
               </div>
-              {/* Summary */}
               <div className="bg-primary/5 rounded-xl border-2 border-primary/20 p-6">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div><div className="text-xs text-muted-foreground">Saldo Inicial</div><div className="text-lg font-bold">{fmt(cashFlow.saldoInicial)}</div></div>
@@ -408,8 +543,6 @@ export default function CFODashboardPage() {
                 </div>
               </div>
             </div>
-
-            {/* Monthly flow chart */}
             <div className="bg-card rounded-xl border p-6">
               <h3 className="text-lg font-bold mb-4">Flujo de Efectivo Mensual</h3>
               <ResponsiveContainer width="100%" height={400}>
@@ -449,29 +582,13 @@ export default function CFODashboardPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
-            {/* CCC Breakdown */}
             <div className="bg-card rounded-xl border p-6">
               <h3 className="text-lg font-bold mb-4">Ciclo de Conversión de Efectivo</h3>
               <div className="text-sm text-muted-foreground mb-4">CCC = Días Inventario + Días CxC − Días CxP</div>
               <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-1"><span>Días de inventario</span><span className="font-bold">{fmtDays(kpis.diasInventario)}</span></div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (kpis.diasInventario / 200) * 100)}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1"><span>Días CxC</span><span className="font-bold">{fmtDays(kpis.diasCxC)}</span></div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, (kpis.diasCxC / 200) * 100)}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1"><span>Días CxP</span><span className="font-bold text-green-600">-{fmtDays(kpis.diasCxP)}</span></div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, (kpis.diasCxP / 200) * 100)}%` }} />
-                  </div>
-                </div>
+                <ProgressBar label="Días de inventario" value={kpis.diasInventario} max={200} color="bg-amber-500" />
+                <ProgressBar label="Días CxC" value={kpis.diasCxC} max={200} color="bg-blue-500" />
+                <ProgressBar label="Días CxP" value={kpis.diasCxP} max={200} color="bg-green-500" negative />
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Ciclo total</span>
@@ -486,7 +603,6 @@ export default function CFODashboardPage() {
               </div>
             </div>
 
-            {/* Capital in inventory */}
             <div className="bg-card rounded-xl border p-6">
               <h3 className="text-lg font-bold mb-4">Capital Invertido en Inventario</h3>
               <div className="text-center mb-6">
@@ -510,7 +626,7 @@ export default function CFODashboardPage() {
                 </div>
               </div>
               <div className="mt-4 p-3 bg-primary/5 rounded-lg text-xs">
-                <strong>Interpretación:</strong> El inventario rota {kpis.rotacionInventario.toFixed(1)} veces al año, lo que significa que cada unidad permanece en promedio {Math.round(kpis.diasInventario)} días antes de venderse. Un inventario de {fmt(kpis.capitalEnInventario)} representa capital que no genera rendimiento hasta que se vende.
+                <strong>Interpretación:</strong> El inventario rota {kpis.rotacionInventario.toFixed(1)} veces al año, cada unidad permanece {Math.round(kpis.diasInventario)} días en promedio. Capital de {fmt(kpis.capitalEnInventario)} detenido hasta venderse.
               </div>
             </div>
           </div>
@@ -554,6 +670,15 @@ function Row({ label, value, bold, highlight, negative, editable, onEdit }: {
   );
 }
 
+function FlowRow({ label, value, positive }: { label: string; value: number; positive?: boolean }) {
+  return (
+    <div className="flex justify-between">
+      <span className={positive ? 'text-green-600' : 'text-destructive'}>{label}</span>
+      <span>{fmt(value)}</span>
+    </div>
+  );
+}
+
 function KPICard({ title, value, desc, good, icon: Icon }: {
   title: string; value: string; desc: string; good: boolean; icon: any;
 }) {
@@ -570,6 +695,31 @@ function KPICard({ title, value, desc, good, icon: Icon }: {
       <div className={`text-xs font-medium mt-2 ${good ? 'text-green-600' : 'text-amber-600'}`}>
         {good ? '● Saludable' : '● Requiere atención'}
       </div>
+    </div>
+  );
+}
+
+function ProgressBar({ label, value, max, color, negative }: {
+  label: string; value: number; max: number; color: string; negative?: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span>{label}</span>
+        <span className={`font-bold ${negative ? 'text-green-600' : ''}`}>{negative ? '-' : ''}{fmtDays(value)}</span>
+      </div>
+      <div className="h-3 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(100, (value / max) * 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function DiagnosticItem({ condition, warn, ok }: { condition: boolean; warn: string; ok: string }) {
+  return (
+    <div className={`flex items-start gap-2 p-2 rounded ${condition ? 'bg-amber-500/10' : 'bg-green-500/5'}`}>
+      <span className="mt-0.5">{condition ? '⚠️' : '✅'}</span>
+      <span>{condition ? warn : ok}</span>
     </div>
   );
 }
