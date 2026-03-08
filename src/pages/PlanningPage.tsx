@@ -381,7 +381,7 @@ export default function PlanningPage() {
       @media print{body{padding:10px;} @page{size:landscape;margin:8mm;}}
     </style></head><body>
       <div class="header">
-        <div><div class="brand">REDBUCK EQUIPMENT</div><div class="brand-sub">ERP · PLANEACIÓN DE INVENTARIO Y COMPRAS</div></div>
+        <div style="display:flex;align-items:center;gap:12px;"><img src="${getCompanyLogoUrl()}" alt="Logo" style="height:32px;max-width:100px;object-fit:contain;" onerror="this.style.display='none'" /><div><div class="brand">REDBUCK EQUIPMENT</div><div class="brand-sub">ERP · PLANEACIÓN DE INVENTARIO Y COMPRAS</div></div></div>
         <div style="text-align:right;"><div style="font-size:14px;font-weight:700;">Planeación — Reporte Integral</div>
         <div style="font-size:9px;color:#666;">Generado: ${new Date().toLocaleString('es-MX')}</div></div>
       </div>
