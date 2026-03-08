@@ -99,6 +99,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setExchangeRate(1);
       setConditions('');
       setNotes('');
+      setRelationType('');
+      setRelatedUuid('');
 
       // Auto-select: first try direct preselectedOrder object, then search DB orders
       if (preselectedOrder) {
