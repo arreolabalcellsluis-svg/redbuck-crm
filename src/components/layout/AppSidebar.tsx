@@ -26,6 +26,7 @@ const navItems = [
   { label: 'Pedidos', icon: ShoppingCart, path: '/pedidos' },
   { label: 'Hist. Pedidos', icon: ClipboardList, path: '/historial-pedidos' },
   { label: 'Cobranza', icon: CreditCard, path: '/cobranza' },
+  { label: 'Cuentas x Pagar', icon: Wallet, path: '/cuentas-pagar' },
   { label: 'Compras', icon: Truck, path: '/compras' },
   { label: 'Hist. Compras', icon: ClipboardList, path: '/historial-compras' },
   { label: 'Importaciones', icon: Globe, path: '/importaciones' },

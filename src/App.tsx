@@ -35,6 +35,7 @@ import PurchaseHistoryPage from "./pages/PurchaseHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import OperatingExpensesPage from "./pages/OperatingExpensesPage";
 import AssetsPage from "./pages/AssetsPage";
+import AccountsPayablePage from "./pages/AccountsPayablePage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -109,6 +110,7 @@ function ProtectedRoutes() {
             <Route path="/cotizaciones" element={<QuotationsPage />} />
             <Route path="/pedidos" element={<OrdersPage />} />
             <Route path="/cobranza" element={<ReceivablesPage />} />
+            <Route path="/cuentas-pagar" element={<AccountsPayablePage />} />
             <Route path="/compras" element={<PurchasesPage />} />
             <Route path="/historial-compras" element={<PurchaseHistoryPage />} />
             <Route path="/historial-pedidos" element={<OrderHistoryPage />} />

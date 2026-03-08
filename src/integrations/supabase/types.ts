@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_payable: {
+        Row: {
+          balance: number
+          created_at: string
+          currency: string
+          description: string
+          due_date: string
+          id: string
+          import_order_id: string | null
+          invoice_date: string
+          invoice_number: string
+          notes: string | null
+          paid: number
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          purchase_order_id: string | null
+          status: Database["public"]["Enums"]["payable_status"]
+          supplier_name: string
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          description?: string
+          due_date?: string
+          id?: string
+          import_order_id?: string | null
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          paid?: number
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          purchase_order_id?: string | null
+          status?: Database["public"]["Enums"]["payable_status"]
+          supplier_name: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          description?: string
+          due_date?: string
+          id?: string
+          import_order_id?: string | null
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          paid?: number
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          purchase_order_id?: string | null
+          status?: Database["public"]["Enums"]["payable_status"]
+          supplier_name?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           categoria: Database["public"]["Enums"]["asset_category"]
@@ -503,6 +566,20 @@ export type Database = {
         | "entregado"
         | "cancelado"
       order_type: "directo" | "anticipo" | "apartado" | "entrega_futura"
+      payable_status:
+        | "pendiente"
+        | "por_vencer"
+        | "vencida"
+        | "pago_parcial"
+        | "liquidada"
+        | "cancelada"
+      payment_method:
+        | "transferencia"
+        | "cheque"
+        | "efectivo"
+        | "tarjeta"
+        | "compensacion"
+        | "otro"
       product_category:
         | "elevadores"
         | "balanceadoras"
@@ -729,6 +806,22 @@ export const Constants = {
         "cancelado",
       ],
       order_type: ["directo", "anticipo", "apartado", "entrega_futura"],
+      payable_status: [
+        "pendiente",
+        "por_vencer",
+        "vencida",
+        "pago_parcial",
+        "liquidada",
+        "cancelada",
+      ],
+      payment_method: [
+        "transferencia",
+        "cheque",
+        "efectivo",
+        "tarjeta",
+        "compensacion",
+        "otro",
+      ],
       product_category: [
         "elevadores",
         "balanceadoras",
