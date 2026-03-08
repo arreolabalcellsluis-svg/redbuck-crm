@@ -209,6 +209,13 @@ export default function CFODashboardPage() {
       if (slowData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slowData), 'Inv. Lento');
       if (marginData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(marginData), 'Bajo Margen');
       if (clientData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientData), 'Clientes Riesgo');
+      // Forecast sheet
+      const forecastData = activeForecast.months.map(m => ({
+        Mes: m.month, Ventas: m.ventas, 'Ut. Bruta': m.utilidadBruta, EBITDA: m.ebitda,
+        'Ut. Neta': m.utilidadNeta, 'Flujo Neto': m.flujoNeto, 'Saldo Caja': m.saldoCaja,
+        'Inv. Necesario': m.inventarioNecesario, 'Cap. Trabajo': m.capitalTrabajo,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(forecastData), `Predicción ${SCENARIOS[forecastScenario].label}`);
       XLSX.writeFile(wb, `Dashboard_Financiero_${new Date().toISOString().split('T')[0]}.xlsx`);
     });
   };
