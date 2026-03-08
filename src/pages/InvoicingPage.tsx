@@ -782,6 +782,47 @@ function InvoicesTab() {
     }
   };
 
+  const handlePreviewInvoicePdf = (inv: Invoice) => {
+    const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+    const custFiscal = inv.customer_id ? customerFiscalMap.get(inv.customer_id) : null;
+    const payFormEntry = SAT_PAYMENT_FORMS.find(f => f.code === inv.payment_form);
+    const payMethodEntry = SAT_PAYMENT_METHODS.find(m => m.code === inv.payment_method);
+
+    const pdfData: InvoicePdfData = {
+      issuerName: fiscalSettings?.issuer_name ?? 'EMPRESA',
+      issuerRfc: fiscalSettings?.issuer_rfc ?? 'XAXX010101000',
+      issuerTaxRegime: fiscalSettings?.issuer_tax_regime ?? '601',
+      issuerTradeName: fiscalSettings?.issuer_trade_name ?? undefined,
+      issuerZipCode: fiscalSettings?.expedition_zip_code ?? '00000',
+      customerName: custFiscal?.legal_name ?? cust?.name ?? '—',
+      customerRfc: custFiscal?.rfc ?? cust?.rfc ?? 'XAXX010101000',
+      customerTaxRegime: custFiscal?.tax_regime ?? '601',
+      customerZipCode: custFiscal?.fiscal_zip_code ?? '00000',
+      cfdiUse: custFiscal?.cfdi_use_default ?? 'G03',
+      cfdiUseLabel: SAT_CFDI_USES.find(u => u.code === (custFiscal?.cfdi_use_default ?? 'G03'))?.label,
+      series: inv.series,
+      folio: inv.folio,
+      invoiceType: inv.invoice_type,
+      invoiceTypeLabel: inv.invoice_type === 'I' ? 'Ingreso' : inv.invoice_type === 'E' ? 'Egreso' : inv.invoice_type,
+      paymentForm: inv.payment_form,
+      paymentFormLabel: payFormEntry?.label ?? inv.payment_form,
+      paymentMethod: inv.payment_method,
+      paymentMethodLabel: payMethodEntry?.label ?? inv.payment_method,
+      currency: inv.currency,
+      exchangeRate: inv.exchange_rate,
+      uuid: inv.uuid ?? undefined,
+      issuedAt: inv.issued_at ?? inv.created_at,
+      conditions: inv.conditions ?? undefined,
+      notes: inv.notes ?? undefined,
+      items: [{ description: 'Ver detalle para conceptos', satProductKey: '—', satUnitKey: '—', qty: 1, unitPrice: inv.subtotal, discount: 0, subtotal: inv.subtotal, taxAmount: inv.tax_amount, total: inv.total }],
+      subtotal: inv.subtotal,
+      taxTotal: inv.tax_amount,
+      total: inv.total,
+      isDemo: !inv.uuid,
+    };
+    openInvoicePdf(pdfData);
+  };
+
   const handleDownloadZip = async () => {
     if (filtered.length === 0) return;
     toast.info('Generando ZIP con las facturas...');
