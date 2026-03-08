@@ -79,7 +79,6 @@ function IssuerConfigTab() {
   const saveMutation = useSaveFiscalSettings();
   const [form, setForm] = useState<Partial<FiscalSettings>>({});
   const [initialized, setInitialized] = useState(false);
-  const [testingPac, setTestingPac] = useState(false);
 
   if (!initialized && settings) {
     setForm(settings);
