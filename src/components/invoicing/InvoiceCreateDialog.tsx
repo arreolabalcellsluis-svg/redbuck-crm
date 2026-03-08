@@ -335,13 +335,29 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
               </div>
             )}
 
-            {/* Document type */}
-            <div className="space-y-1.5">
-              <Label>Tipo de documento</Label>
-              <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
-                {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
-              </select>
+            {/* Document type + Relation */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Tipo de documento</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
+                  {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo de relación</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={relationType} onChange={e => setRelationType(e.target.value)}>
+                  {RELATION_TYPES.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
+                </select>
+              </div>
             </div>
+
+            {relationType && (
+              <div className="space-y-1.5">
+                <Label>UUID del CFDI relacionado</Label>
+                <Input value={relatedUuid} onChange={e => setRelatedUuid(e.target.value.trim())} placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" />
+                <p className="text-[10px] text-muted-foreground">UUID (folio fiscal) del documento relacionado</p>
+              </div>
+            )}
 
             {/* CFDI Fields */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
