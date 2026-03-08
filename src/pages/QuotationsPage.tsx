@@ -19,7 +19,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, quotations, addQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, quotations, addQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showPreview, setShowPreview] = useState<Quotation | null>(null);

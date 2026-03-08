@@ -37,7 +37,7 @@ const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
 ];
 
 export default function OrdersPage() {
-  const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
