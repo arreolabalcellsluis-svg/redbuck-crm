@@ -40,7 +40,30 @@ export default function OrdersPage() {
   const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
-  const [invoiceOrderFolio, setInvoiceOrderFolio] = useState<string | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+
+  // Convert local Order to DBOrder format for InvoiceCreateDialog
+  const invoiceDBOrder: DBOrder | undefined = invoiceOrder ? {
+    id: invoiceOrder.id,
+    folio: invoiceOrder.folio,
+    customer_id: invoiceOrder.customerId || null,
+    customer_name: invoiceOrder.customerName,
+    vendor_name: invoiceOrder.vendorName,
+    items: invoiceOrder.items.map(it => ({ productId: '', name: it.productName, qty: it.qty, unitPrice: it.unitPrice })),
+    total: invoiceOrder.total,
+    advance: invoiceOrder.advance,
+    balance: invoiceOrder.balance,
+    status: invoiceOrder.status,
+    order_type: invoiceOrder.orderType || 'directo',
+    warehouse: invoiceOrder.warehouse,
+    promise_date: invoiceOrder.promiseDate || null,
+    quotation_folio: invoiceOrder.quotationFolio || null,
+    scheduled_delivery_date: invoiceOrder.scheduledDeliveryDate || null,
+    delivery_notes: invoiceOrder.deliveryNotes || null,
+    reserve_deadline: invoiceOrder.reserveDeadline || null,
+    created_at: invoiceOrder.createdAt,
+    updated_at: invoiceOrder.createdAt,
+  } : undefined;
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
