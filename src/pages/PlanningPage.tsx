@@ -1,8 +1,8 @@
 import { useState, useMemo, Fragment } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import {
-  analyzeProducts, getPlanningSummary, simulateGrowth, simulateImport,
-  type ProductAnalysis, type ImportSimulation,
+  analyzeProducts, getPlanningSummary, simulateGrowth,
+  type ProductAnalysis,
 } from '@/lib/planningEngine';
 import { demoProducts } from '@/data/demo-data';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
@@ -10,7 +10,7 @@ import MetricCard from '@/components/shared/MetricCard';
 import {
   AlertTriangle, TrendingUp, Package, DollarSign, Truck, BarChart3,
   ShieldAlert, Zap, Star, ArrowUpDown, Crown, Skull, Clock, Target,
-  Calculator, Warehouse, ShoppingCart, Filter, ChevronDown, ChevronUp,
+  Calculator, Warehouse, ShoppingCart, Filter, ChevronDown, ChevronUp, Copy,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -59,35 +59,89 @@ export default function PlanningPage() {
   const [purchasePriority, setPurchasePriority] = useState('');
   const [categoryDialog, setCategoryDialog] = useState<keyof typeof CAT_CONFIG | null>(null);
 
-  // Simulation state — multi-product order
-  interface SimLine { productId: string; qty: number; freight: number; customs: number; }
-  const [simLines, setSimLines] = useState<SimLine[]>([{ productId: demoProducts[0]?.id ?? '', qty: 10, freight: 50000, customs: 35000 }]);
+  // Simulation state — multi-product import costing
+  interface SimLine {
+    productId: string;
+    costoUnitario: number;
+    qty: number;
+    fleteLocal: number;
+    igiPct: number;
+    cbm: number;
+    margenPct: number;
+  }
+  const defaultLine = (): SimLine => {
+    const p = demoProducts.find(pr => pr.active) ?? demoProducts[0];
+    return { productId: p?.id ?? '', costoUnitario: p?.cost ?? 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
+  };
+  const [simLines, setSimLines] = useState<SimLine[]>([defaultLine()]);
+  // Shared shipment costs
+  const [costoAduana, setCostoAduana] = useState(35000);
+  const [costoFleteMaritimo, setCostoFleteMaritimo] = useState(50000);
+  const [ivaPct] = useState(16);
+
   const [growthFactor, setGrowthFactor] = useState(2);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
 
-  // Simulate each line
-  const simResults = useMemo(() =>
-    simLines.map(line => ({
-      line,
-      sim: simulateImport(line.productId, line.qty, line.freight, line.customs, analyses),
-    })).filter(r => r.sim !== null) as { line: SimLine; sim: NonNullable<ReturnType<typeof simulateImport>> }[],
-    [simLines, analyses]
-  );
+  // Import costing calculations
+  const simCalc = useMemo(() => {
+    const lines = simLines.map(line => {
+      const product = demoProducts.find(p => p.id === line.productId);
+      const valorTotal = (line.costoUnitario || 0) * (line.qty || 0);
+      const volumenTotal = (line.cbm || 0) * (line.qty || 0);
+      const igiMonto = valorTotal * ((line.igiPct || 0) / 100);
+      return { ...line, product, valorTotal, volumenTotal, igiMonto };
+    });
+
+    const valorEmbarque = lines.reduce((s, l) => s + l.valorTotal, 0) || 1; // avoid /0
+    const volumenEmbarque = lines.reduce((s, l) => s + l.volumenTotal, 0) || 1;
+    const baseImponible = lines.reduce((s, l) => s + l.valorTotal + l.igiMonto, 0);
+    const ivaTotal = baseImponible * (ivaPct / 100);
+
+    return lines.map(l => {
+      const propValor = l.valorTotal / valorEmbarque;
+      const propVolumen = l.volumenTotal / volumenEmbarque;
+      const factor = propValor * 0.5 + propVolumen * 0.5;
+
+      const aduanaAsignada = factor * costoAduana;
+      const fleteMarAsignado = factor * costoFleteMaritimo;
+      const ivaAsignado = factor * ivaTotal;
+
+      const costoTotalImportado = l.valorTotal + (l.fleteLocal || 0) + l.igiMonto + aduanaAsignada + fleteMarAsignado + ivaAsignado;
+      const costoUnitarioFinal = l.qty > 0 ? costoTotalImportado / l.qty : 0;
+      const precioVenta = costoUnitarioFinal * (1 + (l.margenPct || 0) / 100);
+      const utilidadUnit = precioVenta - costoUnitarioFinal;
+      const utilidadTotal = utilidadUnit * (l.qty || 0);
+
+      return {
+        ...l,
+        aduanaAsignada,
+        fleteMarAsignado,
+        ivaAsignado,
+        costoTotalImportado,
+        costoUnitarioFinal,
+        precioVenta,
+        utilidadUnit,
+        utilidadTotal,
+      };
+    });
+  }, [simLines, costoAduana, costoFleteMaritimo, ivaPct]);
 
   const simTotals = useMemo(() => ({
-    totalInvestment: simResults.reduce((s, r) => s + r.sim.totalInvestment, 0),
-    estimatedRevenue: simResults.reduce((s, r) => s + r.sim.estimatedRevenue, 0),
-    estimatedProfit: simResults.reduce((s, r) => s + r.sim.estimatedProfit, 0),
-    totalQty: simResults.reduce((s, r) => s + r.sim.qty, 0),
-  }), [simResults]);
+    totalQty: simCalc.reduce((s, r) => s + (r.qty || 0), 0),
+    totalValor: simCalc.reduce((s, r) => s + r.valorTotal, 0),
+    totalCostoImportado: simCalc.reduce((s, r) => s + r.costoTotalImportado, 0),
+    totalUtilidadTotal: simCalc.reduce((s, r) => s + r.utilidadTotal, 0),
+    totalVenta: simCalc.reduce((s, r) => s + r.precioVenta * (r.qty || 0), 0),
+  }), [simCalc]);
 
   const updateSimLine = (index: number, field: keyof SimLine, value: string | number) => {
     setSimLines(prev => prev.map((l, i) => i === index ? { ...l, [field]: value } : l));
   };
-  const addSimLine = () => setSimLines(prev => [...prev, { productId: demoProducts[0]?.id ?? '', qty: 5, freight: 0, customs: 0 }]);
+  const addSimLine = () => setSimLines(prev => [...prev, defaultLine()]);
+  const duplicateSimLine = (index: number) => setSimLines(prev => [...prev, { ...prev[index] }]);
   const removeSimLine = (index: number) => setSimLines(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
 
   // Access control
@@ -581,6 +635,34 @@ export default function PlanningPage() {
       {/* ═══════════════════════ SIMULADOR ═══════════════════════ */}
       {tab === 'simulador' && (
         <div className="space-y-6">
+          {/* Costos generales del embarque */}
+          <div className="bg-card rounded-xl border p-5">
+            <h3 className="font-display font-semibold flex items-center gap-2 mb-4">
+              <Truck size={18} className="text-primary" />
+              Costos generales del embarque
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo total aduana (MXN)</label>
+                <input type="number" min={0} value={costoAduana}
+                  onChange={e => setCostoAduana(+e.target.value || 0)}
+                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo total flete marítimo (MXN)</label>
+                <input type="number" min={0} value={costoFleteMaritimo}
+                  onChange={e => setCostoFleteMaritimo(+e.target.value || 0)}
+                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">IVA importación (%)</label>
+                <input type="number" value={ivaPct} disabled
+                  className="w-full px-3 py-2 rounded-lg border bg-muted text-sm cursor-not-allowed" />
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla de productos */}
           <div className="bg-card rounded-xl border p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display font-semibold flex items-center gap-2">
@@ -593,36 +675,41 @@ export default function PlanningPage() {
                 </Button>
                 <Button
                   variant="default" size="sm" className="text-xs"
-                  disabled={simResults.length === 0}
+                  disabled={simCalc.length === 0}
                   onClick={() => {
-                    const data = simResults.map(r => ({
-                      Producto: r.sim.productName,
-                      Cantidad: r.sim.qty,
-                      'Costo unitario': r.sim.unitCost,
-                      'Costo producto': r.sim.totalCost,
-                      Flete: r.sim.freight,
-                      Aduana: r.sim.customs,
-                      'Inversión total': r.sim.totalInvestment,
-                      'Venta estimada': r.sim.estimatedRevenue,
-                      'Utilidad proyectada': r.sim.estimatedProfit,
-                      'Cobertura (meses)': r.sim.monthsCoverage,
-                      'Stock actual': analyses.find(a => a.product.id === r.line.productId)?.totalStock ?? 0,
-                      'Nuevo stock': r.sim.newStock,
+                    const data = simCalc.map(r => ({
+                      SKU: r.product?.sku ?? '',
+                      Producto: r.product?.name ?? '',
+                      'Costo unitario': r.costoUnitario,
+                      Cantidad: r.qty,
+                      'CBM unit.': r.cbm,
+                      'Valor total producto': r.valorTotal,
+                      'IGI %': r.igiPct,
+                      'IGI monto': r.igiMonto,
+                      'Flete local': r.fleteLocal,
+                      'Aduana asignada': Math.round(r.aduanaAsignada),
+                      'Flete marítimo asig.': Math.round(r.fleteMarAsignado),
+                      'IVA asignado': Math.round(r.ivaAsignado),
+                      'Costo total importado': Math.round(r.costoTotalImportado),
+                      'Costo unit. bodega': Math.round(r.costoUnitarioFinal),
+                      'Margen %': r.margenPct,
+                      'Precio venta sug.': Math.round(r.precioVenta),
+                      'Utilidad unitaria': Math.round(r.utilidadUnit),
+                      'Utilidad total': Math.round(r.utilidadTotal),
                     }));
-                    // Totals row
                     data.push({
-                      Producto: 'TOTAL',
-                      Cantidad: simTotals.totalQty,
-                      'Costo unitario': 0,
-                      'Costo producto': simResults.reduce((s, r) => s + r.sim.totalCost, 0),
-                      Flete: simResults.reduce((s, r) => s + r.sim.freight, 0),
-                      Aduana: simResults.reduce((s, r) => s + r.sim.customs, 0),
-                      'Inversión total': simTotals.totalInvestment,
-                      'Venta estimada': simTotals.estimatedRevenue,
-                      'Utilidad proyectada': simTotals.estimatedProfit,
-                      'Cobertura (meses)': 0,
-                      'Stock actual': 0,
-                      'Nuevo stock': 0,
+                      SKU: '', Producto: 'TOTAL ORDEN',
+                      'Costo unitario': 0, Cantidad: simTotals.totalQty,
+                      'CBM unit.': 0, 'Valor total producto': simTotals.totalValor,
+                      'IGI %': 0, 'IGI monto': 0, 'Flete local': 0,
+                      'Aduana asignada': costoAduana,
+                      'Flete marítimo asig.': costoFleteMaritimo,
+                      'IVA asignado': 0,
+                      'Costo total importado': Math.round(simTotals.totalCostoImportado),
+                      'Costo unit. bodega': 0, 'Margen %': 0,
+                      'Precio venta sug.': Math.round(simTotals.totalVenta),
+                      'Utilidad unitaria': 0,
+                      'Utilidad total': Math.round(simTotals.totalUtilidadTotal),
                     });
                     exportToExcel(data, `Simulacion_importacion_${new Date().toISOString().split('T')[0]}`);
                   }}
@@ -632,79 +719,118 @@ export default function PlanningPage() {
               </div>
             </div>
 
-            {/* Lines table */}
             <div className="overflow-x-auto">
-              <table className="data-table">
+              <table className="data-table text-[11px]">
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Flete (MXN)</th>
-                    <th>Aduana (MXN)</th>
-                    <th>Inversión</th>
-                    <th>Venta est.</th>
-                    <th>Utilidad</th>
-                    <th>Cobertura</th>
+                    <th>SKU / Producto</th>
+                    <th>Costo unit.</th>
+                    <th>Cant.</th>
+                    <th>CBM</th>
+                    <th>IGI %</th>
+                    <th>Flete local</th>
+                    <th>Margen %</th>
+                    <th className="bg-muted/30">Valor total</th>
+                    <th className="bg-muted/30">Aduana asig.</th>
+                    <th className="bg-muted/30">Flete mar. asig.</th>
+                    <th className="bg-muted/30">IVA asig.</th>
+                    <th className="bg-primary/10 font-bold">Costo importado</th>
+                    <th className="bg-primary/10 font-bold">C.U. bodega</th>
+                    <th className="bg-success/10">P. venta sug.</th>
+                    <th className="bg-success/10">Util. unit.</th>
+                    <th className="bg-success/10">Util. total</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {simLines.map((line, i) => {
-                    const result = simResults.find(r => r.line === line);
+                    const calc = simCalc[i];
+                    const product = demoProducts.find(p => p.id === line.productId);
                     return (
                       <tr key={i}>
-                        <td className="text-xs text-muted-foreground">{i + 1}</td>
+                        <td className="text-muted-foreground">{i + 1}</td>
                         <td>
                           <select
                             value={line.productId}
-                            onChange={e => updateSimLine(i, 'productId', e.target.value)}
-                            className="px-2 py-1.5 rounded-lg border bg-background text-xs w-full min-w-[160px]"
+                            onChange={e => {
+                              const p = demoProducts.find(pr => pr.id === e.target.value);
+                              updateSimLine(i, 'productId', e.target.value);
+                              if (p) updateSimLine(i, 'costoUnitario', p.cost);
+                            }}
+                            className="px-1.5 py-1 rounded border bg-background text-[11px] w-full min-w-[140px]"
                           >
                             {demoProducts.filter(p => p.active).map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
+                              <option key={p.id} value={p.id}>{p.sku} – {p.name}</option>
                             ))}
                           </select>
                         </td>
                         <td>
+                          <input type="number" min={0} value={line.costoUnitario}
+                            onChange={e => updateSimLine(i, 'costoUnitario', +e.target.value)}
+                            className="w-20 px-1.5 py-1 rounded border bg-background text-[11px] text-right" />
+                        </td>
+                        <td>
                           <input type="number" min={1} value={line.qty}
                             onChange={e => updateSimLine(i, 'qty', +e.target.value)}
-                            className="w-20 px-2 py-1.5 rounded-lg border bg-background text-xs text-center" />
+                            className="w-16 px-1.5 py-1 rounded border bg-background text-[11px] text-center" />
                         </td>
                         <td>
-                          <input type="number" min={0} value={line.freight}
-                            onChange={e => updateSimLine(i, 'freight', +e.target.value)}
-                            className="w-24 px-2 py-1.5 rounded-lg border bg-background text-xs text-right" />
+                          <input type="number" min={0} step={0.01} value={line.cbm}
+                            onChange={e => updateSimLine(i, 'cbm', +e.target.value)}
+                            className="w-16 px-1.5 py-1 rounded border bg-background text-[11px] text-right" />
                         </td>
                         <td>
-                          <input type="number" min={0} value={line.customs}
-                            onChange={e => updateSimLine(i, 'customs', +e.target.value)}
-                            className="w-24 px-2 py-1.5 rounded-lg border bg-background text-xs text-right" />
+                          <input type="number" min={0} max={100} value={line.igiPct}
+                            onChange={e => updateSimLine(i, 'igiPct', +e.target.value)}
+                            className="w-14 px-1.5 py-1 rounded border bg-background text-[11px] text-right" />
                         </td>
-                        <td className="text-xs font-semibold text-primary">{result ? fmt(result.sim.totalInvestment) : '—'}</td>
-                        <td className="text-xs font-semibold text-success">{result ? fmt(result.sim.estimatedRevenue) : '—'}</td>
-                        <td className={`text-xs font-bold ${result && result.sim.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>
-                          {result ? fmt(result.sim.estimatedProfit) : '—'}
-                        </td>
-                        <td className="text-xs text-center">{result ? `${result.sim.monthsCoverage}m` : '—'}</td>
                         <td>
-                          <button onClick={() => removeSimLine(i)} className="text-muted-foreground hover:text-destructive text-xs px-1" title="Eliminar">✕</button>
+                          <input type="number" min={0} value={line.fleteLocal}
+                            onChange={e => updateSimLine(i, 'fleteLocal', +e.target.value)}
+                            className="w-20 px-1.5 py-1 rounded border bg-background text-[11px] text-right" />
+                        </td>
+                        <td>
+                          <input type="number" min={0} max={200} value={line.margenPct}
+                            onChange={e => updateSimLine(i, 'margenPct', +e.target.value)}
+                            className="w-14 px-1.5 py-1 rounded border bg-background text-[11px] text-right" />
+                        </td>
+                        {/* Calculated columns */}
+                        <td className="bg-muted/20 text-right font-medium">{fmt(calc?.valorTotal ?? 0)}</td>
+                        <td className="bg-muted/20 text-right">{fmt(Math.round(calc?.aduanaAsignada ?? 0))}</td>
+                        <td className="bg-muted/20 text-right">{fmt(Math.round(calc?.fleteMarAsignado ?? 0))}</td>
+                        <td className="bg-muted/20 text-right">{fmt(Math.round(calc?.ivaAsignado ?? 0))}</td>
+                        <td className="bg-primary/5 text-right font-bold text-primary">{fmt(Math.round(calc?.costoTotalImportado ?? 0))}</td>
+                        <td className="bg-primary/5 text-right font-bold">{fmt(Math.round(calc?.costoUnitarioFinal ?? 0))}</td>
+                        <td className="bg-success/5 text-right font-semibold text-success">{fmt(Math.round(calc?.precioVenta ?? 0))}</td>
+                        <td className="bg-success/5 text-right">{fmt(Math.round(calc?.utilidadUnit ?? 0))}</td>
+                        <td className="bg-success/5 text-right font-bold text-success">{fmt(Math.round(calc?.utilidadTotal ?? 0))}</td>
+                        <td className="flex gap-0.5">
+                          <button onClick={() => duplicateSimLine(i)} className="text-muted-foreground hover:text-primary text-[10px] p-0.5" title="Duplicar">
+                            <Copy size={12} />
+                          </button>
+                          <button onClick={() => removeSimLine(i)} className="text-muted-foreground hover:text-destructive text-[10px] p-0.5" title="Eliminar">✕</button>
                         </td>
                       </tr>
                     );
                   })}
-                  {/* Totals row */}
-                  {simResults.length > 0 && (
+                  {/* Totals */}
+                  {simCalc.length > 0 && (
                     <tr className="bg-muted/50 font-bold border-t-2 border-primary/30">
                       <td></td>
                       <td className="text-xs">TOTAL ORDEN</td>
-                      <td className="text-xs text-center">{simTotals.totalQty} uds</td>
-                      <td className="text-xs text-right">{fmt(simResults.reduce((s, r) => s + r.sim.freight, 0))}</td>
-                      <td className="text-xs text-right">{fmt(simResults.reduce((s, r) => s + r.sim.customs, 0))}</td>
-                      <td className="text-xs text-primary">{fmt(simTotals.totalInvestment)}</td>
-                      <td className="text-xs text-success">{fmt(simTotals.estimatedRevenue)}</td>
-                      <td className={`text-xs ${simTotals.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>{fmt(simTotals.estimatedProfit)}</td>
                       <td></td>
+                      <td className="text-center">{simTotals.totalQty}</td>
+                      <td colSpan={4}></td>
+                      <td className="bg-muted/30 text-right">{fmt(simTotals.totalValor)}</td>
+                      <td className="bg-muted/30 text-right">{fmt(costoAduana)}</td>
+                      <td className="bg-muted/30 text-right">{fmt(costoFleteMaritimo)}</td>
+                      <td className="bg-muted/30"></td>
+                      <td className="bg-primary/5 text-right text-primary">{fmt(Math.round(simTotals.totalCostoImportado))}</td>
+                      <td></td>
+                      <td className="bg-success/5 text-right text-success">{fmt(Math.round(simTotals.totalVenta))}</td>
+                      <td></td>
+                      <td className="bg-success/5 text-right text-success">{fmt(Math.round(simTotals.totalUtilidadTotal))}</td>
                       <td></td>
                     </tr>
                   )}
@@ -714,25 +840,25 @@ export default function PlanningPage() {
           </div>
 
           {/* Summary cards */}
-          {simResults.length > 0 && (
+          {simCalc.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card rounded-xl border p-4 text-center border-l-4 border-l-primary">
-                <div className="text-xs text-muted-foreground">Inversión total</div>
-                <div className="text-xl font-bold text-primary">{fmt(simTotals.totalInvestment)}</div>
-                <div className="text-[10px] text-muted-foreground">{simResults.length} productos</div>
+                <div className="text-xs text-muted-foreground">Costo total importado</div>
+                <div className="text-xl font-bold text-primary">{fmt(Math.round(simTotals.totalCostoImportado))}</div>
+                <div className="text-[10px] text-muted-foreground">{simCalc.length} productos</div>
               </div>
               <div className="bg-card rounded-xl border p-4 text-center border-l-4 border-l-success">
                 <div className="text-xs text-muted-foreground">Venta estimada</div>
-                <div className="text-xl font-bold text-success">{fmt(simTotals.estimatedRevenue)}</div>
+                <div className="text-xl font-bold text-success">{fmt(Math.round(simTotals.totalVenta))}</div>
               </div>
               <div className="bg-card rounded-xl border p-4 text-center border-l-4 border-l-warning">
                 <div className="text-xs text-muted-foreground">Utilidad proyectada</div>
-                <div className={`text-xl font-bold ${simTotals.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>{fmt(simTotals.estimatedProfit)}</div>
+                <div className={`text-xl font-bold ${simTotals.totalUtilidadTotal > 0 ? 'text-success' : 'text-destructive'}`}>{fmt(Math.round(simTotals.totalUtilidadTotal))}</div>
               </div>
               <div className="bg-card rounded-xl border p-4 text-center">
                 <div className="text-xs text-muted-foreground">Margen promedio</div>
                 <div className="text-xl font-bold">
-                  {simTotals.estimatedRevenue > 0 ? `${Math.round((simTotals.estimatedProfit / simTotals.estimatedRevenue) * 100)}%` : '—'}
+                  {simTotals.totalVenta > 0 ? `${Math.round((simTotals.totalUtilidadTotal / simTotals.totalVenta) * 100)}%` : '—'}
                 </div>
               </div>
             </div>
