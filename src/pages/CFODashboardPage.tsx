@@ -7,6 +7,10 @@ import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
   calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
 } from '@/lib/cfoDashboardEngine';
+import {
+  calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
+  detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
+} from '@/lib/leakDetectorEngine';
 import MetricCard from '@/components/shared/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
