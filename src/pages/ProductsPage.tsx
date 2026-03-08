@@ -244,6 +244,23 @@ export default function ProductsPage() {
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Días de entrega</label>
         <input type="number" value={form.deliveryDays} onChange={e => setForm(p => ({ ...p, deliveryDays: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
       </div>
+
+      {/* SAT Keys */}
+      <div className="md:col-span-2 pt-2 border-t mt-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Datos fiscales SAT</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Clave SAT Producto</label>
+            <input value={form.satProductKey || ''} onChange={e => setForm(p => ({ ...p, satProductKey: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="24101500" />
+            <p className="text-[10px] text-muted-foreground mt-0.5">Ej: 24101500 — Elevadores</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Clave SAT Unidad</label>
+            <input value={form.satUnitKey || ''} onChange={e => setForm(p => ({ ...p, satUnitKey: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="H87" />
+            <p className="text-[10px] text-muted-foreground mt-0.5">Ej: H87 — Pieza, E48 — Servicio</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
