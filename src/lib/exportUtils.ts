@@ -194,3 +194,77 @@ export async function exportQuotationsZip(
 
   return { count: filtered.length };
 }
+
+// ─── QUOTATION EXCEL EXPORT (standalone, no ZIP) ─────────────────────────────
+
+export function exportQuotationsExcel(
+  quotations: Quotation[],
+  filters: ZipExportFilters
+): { count: number } {
+  let filtered = quotations;
+  if (filters.dateFrom) filtered = filtered.filter(q => q.createdAt >= filters.dateFrom);
+  if (filters.dateTo) filtered = filtered.filter(q => q.createdAt <= filters.dateTo);
+  if (filters.vendorId) filtered = filtered.filter(q => q.vendorId === filters.vendorId);
+  if (filters.status) filtered = filtered.filter(q => q.status === filters.status);
+
+  if (filtered.length === 0) {
+    throw new Error('No hay cotizaciones que coincidan con los filtros seleccionados.');
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Resumen
+  const summaryData = filtered.map(q => ({
+    'Folio': q.folio,
+    'Cliente': q.customerName,
+    'Teléfono': q.customerPhone || '',
+    'Vendedor': q.vendorName,
+    'Productos': q.items.map(i => `${i.productName} x${i.qty}`).join(', '),
+    'Subtotal': q.subtotal,
+    'IVA': q.tax,
+    'Total': q.total,
+    'Estatus': q.status,
+    'Fecha': q.createdAt,
+    'Vigencia': q.validUntil,
+  }));
+  const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+  summaryWs['!cols'] = [
+    { wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 22 }, { wch: 50 },
+    { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+  ];
+  XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen');
+
+  // Sheet 2: Detalle de productos
+  const detailRows: Record<string, unknown>[] = [];
+  filtered.forEach(q => {
+    q.items.forEach(item => {
+      const lineTotal = item.qty * item.unitPrice * (1 - (item.discount || 0) / 100);
+      detailRows.push({
+        'Folio': q.folio,
+        'Fecha': q.createdAt,
+        'Cliente': q.customerName,
+        'Vendedor': q.vendorName,
+        'SKU': item.sku || '',
+        'Producto': item.productName,
+        'Cantidad': item.qty,
+        'P. Unitario': item.unitPrice,
+        'Descuento %': item.discount || 0,
+        'Subtotal Línea': lineTotal,
+        'Estatus': q.status,
+      });
+    });
+  });
+  const detailWs = XLSX.utils.json_to_sheet(detailRows);
+  detailWs['!cols'] = [
+    { wch: 14 }, { wch: 12 }, { wch: 28 }, { wch: 20 }, { wch: 16 },
+    { wch: 36 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
+  ];
+  XLSX.utils.book_append_sheet(wb, detailWs, 'Detalle Productos');
+
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const name = `Cotizaciones_${filters.dateFrom || 'inicio'}_a_${filters.dateTo || 'fin'}.xlsx`;
+  saveAs(blob, name);
+
+  return { count: filtered.length };
+}
