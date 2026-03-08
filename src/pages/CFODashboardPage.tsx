@@ -11,6 +11,7 @@ import {
   calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
   detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
 } from '@/lib/leakDetectorEngine';
+import { calcScenarioComparison, SCENARIOS, type ScenarioType } from '@/lib/forecastEngine';
 import MetricCard from '@/components/shared/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
