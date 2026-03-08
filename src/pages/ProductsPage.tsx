@@ -13,13 +13,14 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
-const emptyProduct = (): Omit<Product, 'id'> & { image?: string } => ({
+const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string } => ({
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
   listPrice: 0, minPrice: 0, cost: 0, currency: 'MXN', deliveryDays: 5,
   supplier: '', warranty: '1 año', active: true, stock: {}, inTransit: 0, image: '',
+  satProductKey: '', satUnitKey: '',
 });
 
-type ProductForm = Omit<Product, 'id'> & { image?: string };
+type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string };
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
@@ -243,6 +244,23 @@ export default function ProductsPage() {
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Días de entrega</label>
         <input type="number" value={form.deliveryDays} onChange={e => setForm(p => ({ ...p, deliveryDays: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
       </div>
+
+      {/* SAT Keys */}
+      <div className="md:col-span-2 pt-2 border-t mt-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Datos fiscales SAT</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Clave SAT Producto</label>
+            <input value={form.satProductKey || ''} onChange={e => setForm(p => ({ ...p, satProductKey: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="24101500" />
+            <p className="text-[10px] text-muted-foreground mt-0.5">Ej: 24101500 — Elevadores</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Clave SAT Unidad</label>
+            <input value={form.satUnitKey || ''} onChange={e => setForm(p => ({ ...p, satUnitKey: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="H87" />
+            <p className="text-[10px] text-muted-foreground mt-0.5">Ej: H87 — Pieza, E48 — Servicio</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -281,6 +299,11 @@ export default function ProductsPage() {
               <div className="p-5">
                 <h3 className="font-display font-semibold text-sm">{p.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{p.sku} · {p.brand} {p.model}</p>
+                {!(p as any).satProductKey && !(p as any).satUnitKey && (
+                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
+                    ⚠ Sin claves SAT
+                  </span>
+                )}
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">
                   <div>
