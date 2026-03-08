@@ -213,10 +213,30 @@ export default function PaymentsTab() {
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Badge className={`${compSt.color} text-xs`}>{compSt.label}</Badge>
-                        {p.complement_status === 'pendiente' && (
-                          <Button size="sm" variant="outline" className="h-6 text-xs gap-1" disabled title="Disponible en Fase 2">
-                            <FileText size={12} /> Generar
+                        {p.complement_status === 'pendiente' && inv?.uuid && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs gap-1"
+                            disabled={generateComplement.isPending}
+                            onClick={() => generateComplement.mutate(p.id)}
+                          >
+                            {generateComplement.isPending ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                            Generar
                           </Button>
+                        )}
+                        {p.complement_status === 'pendiente' && !inv?.uuid && (
+                          <span className="text-xs text-muted-foreground">Sin UUID</span>
+                        )}
+                        {p.complement_status === 'generado' && (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" title="Descargar XML" onClick={() => downloadComplementFile.mutate({ payment_id: p.id, file_type: 'xml' })}>
+                              <FileCode size={12} />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" title="Descargar PDF" onClick={() => downloadComplementFile.mutate({ payment_id: p.id, file_type: 'pdf' })}>
+                              <Download size={12} />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
