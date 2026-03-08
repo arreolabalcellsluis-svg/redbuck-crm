@@ -3,6 +3,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import {
   analyzeProducts, getPlanningSummary, simulateGrowth, simulateImport,
   type ProductAnalysis, type ImportSimulation,
+} from '@/lib/planningEngine';
 import { demoProducts } from '@/data/demo-data';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import MetricCard from '@/components/shared/MetricCard';
