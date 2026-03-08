@@ -143,6 +143,9 @@ export default function SalesForecastPage() {
             <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
             <SelectContent>{[2025, 2026, 2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
           </Select>
+          <Button variant="outline" size="sm" onClick={() => setDlOpen(true)}>
+            <Download size={14} className="mr-1" /> Excel
+          </Button>
         </div>
       </div>
 
