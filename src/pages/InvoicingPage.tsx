@@ -627,6 +627,7 @@ function InvoicesTab() {
   const { data: customers } = useCustomers();
   const { data: fiscalSettings } = useFiscalSettings();
   const { data: allCustomerFiscal } = useAllCustomerFiscalData();
+  const stampMutation = useStampInvoice();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
