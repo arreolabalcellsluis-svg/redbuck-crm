@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   analyzeProducts, getPlanningSummary, simulateGrowth, simulateImport,
@@ -12,6 +12,7 @@ import {
   Calculator, Warehouse, ShoppingCart, Filter, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -54,6 +55,7 @@ export default function PlanningPage() {
   const [purchaseSearch, setPurchaseSearch] = useState('');
   const [purchaseCat, setPurchaseCat] = useState('');
   const [purchasePriority, setPurchasePriority] = useState('');
+  const [categoryDialog, setCategoryDialog] = useState<keyof typeof CAT_CONFIG | null>(null);
 
   // Simulation state
   const [simProductId, setSimProductId] = useState(demoProducts[0]?.id ?? '');
@@ -232,11 +234,53 @@ export default function PlanningPage() {
 
           {/* Quick summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard title="Prod. Estrella" value={summary.estrellas} icon={Star} variant="warning" />
-            <MetricCard title="Prod. Rotación" value={summary.rotacion} icon={Zap} variant="primary" />
-            <MetricCard title="Prod. Premium" value={summary.premium} icon={Crown} variant="success" />
-            <MetricCard title="Prod. Problemáticos" value={summary.problematicos} icon={Skull} variant="danger" />
+            <MetricCard title="Prod. Estrella" value={summary.estrellas} icon={Star} variant="warning" onClick={() => setCategoryDialog('estrella')} />
+            <MetricCard title="Prod. Rotación" value={summary.rotacion} icon={Zap} variant="primary" onClick={() => setCategoryDialog('rotacion')} />
+            <MetricCard title="Prod. Premium" value={summary.premium} icon={Crown} variant="success" onClick={() => setCategoryDialog('premium')} />
+            <MetricCard title="Prod. Problemáticos" value={summary.problematicos} icon={Skull} variant="danger" onClick={() => setCategoryDialog('problematico')} />
           </div>
+
+          {/* Category detail dialog */}
+          <Dialog open={!!categoryDialog} onOpenChange={(open) => !open && setCategoryDialog(null)}>
+            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+              {categoryDialog && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className={`flex items-center gap-2 ${CAT_CONFIG[categoryDialog].color}`}>
+                      {CAT_CONFIG[categoryDialog].label}
+                    </DialogTitle>
+                    <p className="text-xs text-muted-foreground">{CAT_CONFIG[categoryDialog].desc}</p>
+                  </DialogHeader>
+                  <div className="mt-2">
+                    {analyses.filter(a => a.category === categoryDialog).length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">No hay productos en esta categoría</p>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-xs text-muted-foreground">
+                            <th className="text-left py-2">SKU</th>
+                            <th className="text-left py-2">Producto</th>
+                            <th className="text-right py-2">Margen</th>
+                            <th className="text-right py-2">Vta/mes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analyses.filter(a => a.category === categoryDialog).map(a => (
+                            <tr key={a.product.id} className="border-b border-border/50 hover:bg-muted/50">
+                              <td className="py-2 font-mono text-xs">{a.product.sku}</td>
+                              <td className="py-2 font-medium">{a.product.name}</td>
+                              <td className={`py-2 text-right font-bold ${a.margin >= 40 ? 'text-success' : a.margin >= 30 ? 'text-primary' : 'text-destructive'}`}>{a.margin}%</td>
+                              <td className="py-2 text-right">{fmtNum(a.monthlySales)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
