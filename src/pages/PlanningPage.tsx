@@ -17,6 +17,8 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -54,6 +56,7 @@ const CAT_CONFIG = {
 export default function PlanningPage() {
   const { currentRole } = useAppContext();
   const [tab, setTab] = useState<TabKey>('dashboard');
+  const [planningDate, setPlanningDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortField, setSortField] = useState<string>('');
   const [sortAsc, setSortAsc] = useState(true);
   const [purchaseSearch, setPurchaseSearch] = useState('');
@@ -461,7 +464,11 @@ export default function PlanningPage() {
           <h1 className="page-title">Planeación de Inventario y Compras</h1>
           <p className="page-subtitle">Análisis inteligente para decisiones de compra — "Qué comprar, cuándo comprar y cuánto comprar"</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Fecha planeación:</Label>
+            <Input type="date" value={planningDate} onChange={e => setPlanningDate(e.target.value)} className="w-40 h-8 text-sm" />
+          </div>
           <Button variant="outline" size="sm" onClick={handleExportAllExcel}>
             <FileSpreadsheet size={14} className="mr-1" /> Excel Completo
           </Button>

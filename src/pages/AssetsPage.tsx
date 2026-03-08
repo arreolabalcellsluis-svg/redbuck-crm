@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Building2, Car, Monitor, Code, Package, MoreHorizontal, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Car, Monitor, Code, Package, MoreHorizontal, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +60,55 @@ export default function AssetsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Asset, 'id'>>(emptyForm);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+
+  // Excel download
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const dlFilteredCount = useMemo(() => {
+    if (!dlDateFrom && !dlDateTo) return assets.length;
+    return assets.filter(a => {
+      if (dlDateFrom && a.fechaCompra < dlDateFrom) return false;
+      if (dlDateTo && a.fechaCompra > dlDateTo) return false;
+      return true;
+    }).length;
+  }, [assets, dlDateFrom, dlDateTo]);
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const filteredAssets = assets.filter(a => {
+      if (dlDateFrom && a.fechaCompra < dlDateFrom) return false;
+      if (dlDateTo && a.fechaCompra > dlDateTo) return false;
+      return true;
+    });
+    const wb = XLSX.utils.book_new();
+    const data = filteredAssets.map(a => {
+      const dep = calcDepreciation(a);
+      return {
+        Nombre: a.nombre, Categoría: CATEGORY_LABELS[a.categoria], Tipo: TYPE_LABELS[a.tipo],
+        Descripción: a.descripcion, 'Fecha compra': a.fechaCompra,
+        'Costo adquisición': a.costoAdquisicion, 'Vida útil (meses)': a.vidaUtilMeses,
+        'Valor rescate': a.valorRescate, 'Cargo mensual': dep.cargoMensual,
+        'Dep. acumulada': dep.depAcumulada, 'Valor en libros': dep.valorLibros,
+        Estatus: a.estatus === 'activo' ? 'Activo' : 'Dado de baja',
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Activos');
+    const resumen = [
+      { Indicador: 'Periodo', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Todos' },
+      { Indicador: 'Total activos', Valor: filteredAssets.length },
+      { Indicador: 'Costo total', Valor: filteredAssets.reduce((s, a) => s + a.costoAdquisicion, 0) },
+      { Indicador: 'Valor en libros', Valor: filteredAssets.filter(a => a.estatus === 'activo').reduce((s, a) => s + calcDepreciation(a).valorLibros, 0) },
+      { Indicador: 'Cargo mensual total', Valor: filteredAssets.filter(a => a.estatus === 'activo').reduce((s, a) => s + calcDepreciation(a).cargoMensual, 0) },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      `activos-depreciacion_${dlDateFrom || 'inicio'}_${dlDateTo || 'fin'}.xlsx`);
+    setDlOpen(false);
+  };
 
   const filtered = useMemo(() => {
     let list = assets;
@@ -123,7 +172,10 @@ export default function AssetsPage() {
             {!isDbConnected && <span className="ml-2 text-xs text-warning">● Datos demo — registra tu primer activo para activar</span>}
           </p>
         </div>
-        <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Agregar Activo</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setDlOpen(true)}><Download size={14} className="mr-1" /> Excel</Button>
+          <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Agregar Activo</Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -257,6 +309,21 @@ export default function AssetsPage() {
               {(addAssetMutation.isPending || updateAssetMutation.isPending) && <Loader2 size={16} className="mr-2 animate-spin" />}
               {editingId ? 'Guardar cambios' : 'Registrar activo'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Dialog */}
+      <Dialog open={dlOpen} onOpenChange={setDlOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Descargar Activos Excel</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Filtrar por fecha de compra. <strong>{dlFilteredCount}</strong> activos encontrados.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Desde</Label><Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} /></div>
+              <div><Label>Hasta</Label><Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} /></div>
+            </div>
+            <Button onClick={handleExcelDownload} className="w-full"><Download size={14} className="mr-2" />Descargar Excel ({dlFilteredCount})</Button>
           </div>
         </DialogContent>
       </Dialog>

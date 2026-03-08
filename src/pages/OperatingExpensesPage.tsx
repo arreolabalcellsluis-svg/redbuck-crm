@@ -2,8 +2,12 @@ import { useState, useMemo } from 'react';
 import {
   DollarSign, TrendingUp, TrendingDown, PlusCircle, Trash2, BarChart3,
   PieChart as PieChartIcon, Target, ArrowUpRight, ArrowDownRight, Banknote,
-  Layers, Calculator, FileText, Copy, Loader2,
+  Layers, Calculator, FileText, Copy, Loader2, Download,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -52,6 +56,49 @@ export default function OperatingExpensesPage() {
 
   // Filter
   const [filterCat, setFilterCat] = useState<string>('all');
+
+  // Excel download
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const dlFilteredCount = useMemo(() => {
+    if (!dlDateFrom && !dlDateTo) return expenses.length;
+    return expenses.filter(e => {
+      if (dlDateFrom && e.fecha < dlDateFrom) return false;
+      if (dlDateTo && e.fecha > dlDateTo) return false;
+      return true;
+    }).length;
+  }, [expenses, dlDateFrom, dlDateTo]);
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const filtered = expenses.filter(e => {
+      if (dlDateFrom && e.fecha < dlDateFrom) return false;
+      if (dlDateTo && e.fecha > dlDateTo) return false;
+      return true;
+    });
+    const wb = XLSX.utils.book_new();
+    const data = filtered.map(e => ({
+      Fecha: e.fecha, Categoría: EXPENSE_CATEGORIES[e.categoria]?.label ?? e.categoria,
+      Subcategoría: e.subcategoria, Descripción: e.descripcion, Monto: e.monto,
+      Tipo: TYPE_LABELS[e.tipo], Área: AREA_LABELS[e.area as ExpenseArea], Notas: e.notas || '',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Gastos Operativos');
+    const resumen = [
+      { Indicador: 'Periodo', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Todos' },
+      { Indicador: 'Total gastos', Valor: filtered.reduce((s, e) => s + e.monto, 0) },
+      { Indicador: 'Registros', Valor: filtered.length },
+      { Indicador: 'Gastos fijos', Valor: filtered.filter(e => e.tipo === 'fijo').reduce((s, e) => s + e.monto, 0) },
+      { Indicador: 'Gastos variables', Valor: filtered.filter(e => e.tipo === 'variable').reduce((s, e) => s + e.monto, 0) },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      `gastos-operativos_${dlDateFrom || 'inicio'}_${dlDateTo || 'fin'}.xlsx`);
+    setDlOpen(false);
+  };
 
   const summary = useMemo(() => calculateExpenseSummary(expenses), [expenses]);
   const financial = useMemo(() => calculateFinancialMetrics(expenses), [expenses]);
@@ -112,6 +159,7 @@ export default function OperatingExpensesPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Gastos Operativos</h1>
         <p className="text-sm text-muted-foreground">
@@ -123,6 +171,10 @@ export default function OperatingExpensesPage() {
             <span className="ml-2 text-xs text-warning">● Mostrando datos demo — registra tu primer gasto para activar</span>
           )}
         </p>
+      </div>
+      <Button variant="outline" size="sm" onClick={() => setDlOpen(true)}>
+        <Download size={14} className="mr-1" /> Descargar Excel
+      </Button>
       </div>
 
       {/* Tabs */}
@@ -474,6 +526,19 @@ export default function OperatingExpensesPage() {
           </div>
         </div>
       )}
+      <Dialog open={dlOpen} onOpenChange={setDlOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Descargar Gastos Operativos</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Selecciona el rango de fechas. <strong>{dlFilteredCount}</strong> registros encontrados.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Desde</Label><Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} /></div>
+              <div><Label>Hasta</Label><Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} /></div>
+            </div>
+            <Button onClick={handleExcelDownload} className="w-full"><Download size={14} className="mr-2" />Descargar Excel ({dlFilteredCount})</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

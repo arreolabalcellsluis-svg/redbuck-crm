@@ -13,8 +13,11 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import {
   TrendingUp, Target, Users, AlertTriangle, BarChart3, Eye,
-  DollarSign, FileText, ArrowUpDown, ShieldCheck, Zap,
+  DollarSign, FileText, ArrowUpDown, ShieldCheck, Zap, Download,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
@@ -69,6 +72,51 @@ export default function SalesForecastPage() {
 
   const selectedForecast = selectedVendor ? forecasts.find(f => f.vendorId === selectedVendor) : null;
 
+  // Excel download state
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const wb = XLSX.utils.book_new();
+
+    const forecastData = sortedForecasts.map(f => ({
+      Vendedor: f.vendorName, Vendido: f.salesActual, 'Pipeline total': f.pipelineTotal,
+      'Pipeline ponderado': f.pipelineWeighted, Pronóstico: f.forecastTotal, Meta: f.goalSales,
+      'Cumplimiento %': f.projectedCompletion, Gap: f.gap, 'Tasa cierre %': Number(f.closeRateHistoric.toFixed(1)),
+      'Cotizaciones abiertas': f.openQuotations.length, Confianza: f.confidenceScore,
+      'Nivel confianza': f.confidence, '¿Cumple meta?': f.willMeetGoal ? 'Sí' : 'No',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(forecastData), 'Pronósticos');
+
+    const teamData = [
+      { Indicador: 'Periodo', Valor: `${MONTHS[month - 1]} ${year}` },
+      { Indicador: 'Rango', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Mes completo' },
+      { Indicador: 'Total vendido', Valor: team.totalSalesActual },
+      { Indicador: 'Pipeline ponderado', Valor: team.totalPipelineWeighted },
+      { Indicador: 'Pronóstico total', Valor: team.totalForecast },
+      { Indicador: 'Meta total', Valor: team.totalGoal },
+      { Indicador: 'Cumplimiento proyectado %', Valor: team.projectedCompletion },
+      { Indicador: 'Confianza promedio', Valor: team.avgConfidenceScore },
+      { Indicador: 'Exceden meta', Valor: team.vendorsExceeding },
+      { Indicador: 'En riesgo', Valor: team.vendorsAtRisk },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(teamData), 'Resumen Equipo');
+
+    if (team.alerts.length > 0) {
+      const alertData = team.alerts.map(a => ({ Vendedor: a.vendorName, Tipo: a.type, Mensaje: a.message }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alertData), 'Alertas');
+    }
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const dateStr = dlDateFrom && dlDateTo ? `${dlDateFrom}_${dlDateTo}` : `${MONTHS[month-1]}-${year}`;
+    saveAs(blob, `pronostico-ventas_${dateStr}.xlsx`);
+    setDlOpen(false);
+  };
+
   const barData = sortedForecasts.map(f => ({
     name: f.vendorName.split(' ')[0],
     'Vendido': f.salesActual,
@@ -95,6 +143,9 @@ export default function SalesForecastPage() {
             <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
             <SelectContent>{[2025, 2026, 2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
           </Select>
+          <Button variant="outline" size="sm" onClick={() => setDlOpen(true)}>
+            <Download size={14} className="mr-1" /> Excel
+          </Button>
         </div>
       </div>
 
@@ -358,6 +409,20 @@ export default function SalesForecastPage() {
           ))}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={dlOpen} onOpenChange={setDlOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Descargar Pronóstico Excel</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Selecciona el rango de fechas (opcional).</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Desde</Label><Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} /></div>
+              <div><Label>Hasta</Label><Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} /></div>
+            </div>
+            <Button onClick={handleExcelDownload} className="w-full"><Download size={14} className="mr-2" />Descargar Excel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
