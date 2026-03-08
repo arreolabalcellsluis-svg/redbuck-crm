@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Plus, DollarSign, FileText, CreditCard, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { usePayments, useCreatePayment, type Payment } from '@/hooks/usePayments';
+import { usePayments, useCreatePayment, useGenerateComplement, useDownloadComplementFile, type Payment } from '@/hooks/usePayments';
 import { useInvoices, SAT_PAYMENT_FORMS, type Invoice } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
 
