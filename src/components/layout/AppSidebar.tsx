@@ -8,7 +8,7 @@ import {
   ShoppingCart, CreditCard, Truck, Globe, Building2, Settings,
   BadgeDollarSign, BarChart3, Search, Bell, ChevronLeft, ChevronRight,
   Menu, X, Cog, UserCircle, Brain, Crown, BookOpen, Calculator, LogOut, RefreshCw, CalendarDays, Sparkles, MapPin,
-  ClipboardList, Wallet, Target,
+  ClipboardList, Wallet, Target, TrendingUp,
 } from 'lucide-react';
 
 const navItems = [
