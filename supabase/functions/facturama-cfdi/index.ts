@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
       // Download PDF
       let compPdfPath = "";
       try {
-        const pdfRes = await facturama(`/api-lite/cfdis/${compData.Id || compUuid}`, "GET");
+        const pdfRes = await facturama(`/cfdi/pdf/${compData.Id || compUuid}/issued`, "GET");
         if (pdfRes.ok) {
           const pdfBlob = await pdfRes.blob();
           compPdfPath = `pdf/complement_${payment_id}.pdf`;
