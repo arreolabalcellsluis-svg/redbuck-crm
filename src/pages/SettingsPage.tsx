@@ -30,6 +30,7 @@ const ALL_MODULES = [
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'servicio', label: 'Servicio Técnico' },
   { key: 'comisiones', label: 'Comisiones' },
+  { key: 'metas_vendedores', label: 'Metas Vendedores' },
   { key: 'gastos', label: 'Gastos Operativos' },
   { key: 'activos', label: 'Activos / Depreciación' },
   { key: 'planeacion', label: 'Planeación' },
