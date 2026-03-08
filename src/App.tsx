@@ -125,6 +125,7 @@ function ProtectedRoutes() {
             <Route path="/comisiones" element={<CommissionsPage />} />
             <Route path="/metas-vendedores" element={<VendorGoalsPage />} />
             <Route path="/simulador-comisiones" element={<CommissionSimulatorPage />} />
+            <Route path="/pronostico-ventas" element={<SalesForecastPage />} />
             <Route path="/planeacion" element={<PlanningPage />} />
             <Route path="/gastos" element={<OperatingExpensesPage />} />
             <Route path="/activos" element={<AssetsPage />} />
