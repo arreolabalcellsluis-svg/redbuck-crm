@@ -73,23 +73,158 @@ export default function FinancialSimulatorPage() {
   };
 
   const handleExportPdf = () => {
-    exportToPdf({
-      title: 'Simulador Financiero de Inventario',
-      subtitle: 'REDBUCK EQUIPMENT',
-      filename: 'simulador-financiero',
-      summary: [
+    const w = window.open('', '_blank');
+    if (!w) return;
+
+    const kpiRow = (items: { label: string; value: string }[]) => `
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        ${items.map(i => `<div style="background:#f5f5f5;padding:10px 16px;border-radius:8px;text-align:center;min-width:110px;flex:1;">
+          <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">${i.label}</div>
+          <div style="font-size:15px;font-weight:700;margin-top:3px;">${i.value}</div>
+        </div>`).join('')}
+      </div>`;
+
+    const table = (headers: string[], rows: string[][]) => `
+      <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+
+    const section = (title: string, content: string) => `
+      <div style="margin-bottom:24px;">
+        <h2 style="font-size:13px;font-weight:700;border-bottom:2px solid #c41e2a;padding-bottom:4px;margin-bottom:10px;">${title}</h2>
+        ${content}
+      </div>`;
+
+    // Bar representation helper for charts
+    const barChart = (items: { label: string; value: number; pct: number }[], color: string) => `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${items.map(i => `<div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:120px;font-size:10px;text-align:right;">${i.label}</span>
+          <div style="flex:1;background:#eee;border-radius:4px;height:16px;position:relative;">
+            <div style="width:${Math.min(i.pct, 100)}%;background:${color};height:100%;border-radius:4px;"></div>
+          </div>
+          <span style="width:90px;font-size:10px;font-weight:600;">${fmt(i.value)} (${i.pct.toFixed(1)}%)</span>
+        </div>`).join('')}
+      </div>`;
+
+    const maxCatVal = Math.max(...fin.capitalByCategory.map(c => c.value), 1);
+    const maxWhVal = Math.max(...fin.capitalByWarehouse.map(w => w.value), 1);
+
+    const healthTotal = fin.healthyInventoryValue + fin.slowInventoryValue;
+    const healthItems = [
+      { label: 'Saludable', value: fin.healthyInventoryValue, pct: healthTotal > 0 ? (fin.healthyInventoryValue / healthTotal) * 100 : 0 },
+      { label: 'Lento (>180d)', value: fin.slowInventoryValue - fin.deadInventoryValue, pct: healthTotal > 0 ? ((fin.slowInventoryValue - fin.deadInventoryValue) / healthTotal) * 100 : 0 },
+      { label: 'Muerto (>365d)', value: fin.deadInventoryValue, pct: healthTotal > 0 ? (fin.deadInventoryValue / healthTotal) * 100 : 0 },
+    ].filter(i => i.value > 0);
+
+    w.document.write(`<!DOCTYPE html><html><head><title>Simulador Financiero</title><style>
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:25px;color:#1a1a1a;font-size:10px;}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;border-bottom:3px solid #c41e2a;padding-bottom:10px;}
+      .brand{font-size:18px;font-weight:800;color:#c41e2a;letter-spacing:1px;}
+      .brand-sub{font-size:8px;color:#666;letter-spacing:2px;}
+      table{width:100%;border-collapse:collapse;margin-top:6px;margin-bottom:12px;}
+      th{background:#f0f0f0;font-weight:600;text-align:left;padding:5px 6px;font-size:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #ddd;}
+      td{padding:4px 6px;border-bottom:1px solid #eee;font-size:9px;}
+      tr:nth-child(even){background:#fafafa;}
+      .footer{margin-top:20px;padding-top:8px;border-top:1px solid #ddd;font-size:8px;color:#999;display:flex;justify-content:space-between;}
+      @media print{body{padding:12px;} @page{size:landscape;margin:10mm;}}
+    </style></head><body>
+      <div class="header">
+        <div><div class="brand">REDBUCK EQUIPMENT</div><div class="brand-sub">ERP · SIMULADOR FINANCIERO DE INVENTARIO</div></div>
+        <div style="text-align:right;"><div style="font-size:14px;font-weight:700;">Simulador Financiero de Inventario</div>
+        <div style="font-size:9px;color:#666;">Generado: ${new Date().toLocaleString('es-MX')}</div></div>
+      </div>
+
+      ${section('1. Indicadores principales', kpiRow([
         { label: 'Capital en inventario', value: fmt(fin.totalInventoryValue) },
         { label: 'Capital detenido', value: fmt(fin.slowInventoryValue) },
+        { label: 'Rotación anual', value: `${fin.inventoryRotation.toFixed(1)}x` },
         { label: 'ROI inventario', value: fmtPct(fin.roi) },
-        { label: 'Rotación', value: `${fin.inventoryRotation.toFixed(1)}x` },
+        { label: 'Inv. necesario', value: fmt(fin.requiredInventoryForCurrentSales) },
+      ]) + kpiRow([
         { label: 'Días inventario', value: `${fin.daysOfInventory}` },
-      ],
-      headers: ['SKU', 'Producto', 'Stock', 'Valor', 'Rotación', 'ROI %', 'Margen %'],
-      rows: fin.topCapitalProducts.map(p => [
-        p.sku, p.name, p.stock, fmt(p.value),
-        p.rotation.toFixed(1), p.roi.toFixed(0), `${p.margin}%`,
-      ]),
-    });
+        { label: 'Utilidad anual', value: fmt(fin.annualProfit) },
+        { label: 'Ingresos anuales', value: fmt(fin.annualRevenue) },
+        { label: fin.inventoryDifference > 0 ? 'Excedente' : 'Faltante', value: fmt(Math.abs(fin.inventoryDifference)) },
+      ]))}
+
+      ${section('2. Capital por categoría', barChart(
+        fin.capitalByCategory.map(c => ({ label: c.category, value: c.value, pct: c.pct })),
+        '#c41e2a'
+      ) + table(['Categoría', 'Unidades', 'Valor', '% del total'],
+        fin.capitalByCategory.map(c => [c.category, String(c.units), fmt(c.value), fmtPct(c.pct)])
+      ))}
+
+      ${section('3. Capital por bodega', barChart(
+        fin.capitalByWarehouse.map(w => ({ label: w.warehouse, value: w.value, pct: w.pct })),
+        '#2563eb'
+      ) + table(['Bodega', 'Unidades', 'Valor', '% del total'],
+        fin.capitalByWarehouse.map(w => [w.warehouse, String(w.units), fmt(w.value), fmtPct(w.pct)])
+      ))}
+
+      ${section('4. Salud del inventario', barChart(
+        healthItems.map(h => ({ label: h.label, value: h.value, pct: h.pct })),
+        '#16a34a'
+      ) + kpiRow([
+        { label: 'Inv. saludable', value: fmt(fin.healthyInventoryValue) },
+        { label: 'Inv. lento (>180d)', value: fmt(fin.slowInventoryValue) },
+        { label: 'Inv. muerto (>365d)', value: fmt(fin.deadInventoryValue) },
+        { label: '% lento', value: fmtPct(fin.slowInventoryPct) },
+        { label: '% muerto', value: fmtPct(fin.deadInventoryPct) },
+      ]))}
+
+      ${section('5. Capital invertido — Top productos', table(
+        ['SKU', 'Producto', 'Stock', 'Costo ud.', 'Valor inv.', 'Venta/mes', 'Días stock', 'Margen'],
+        fin.topCapitalProducts.map(p => [p.sku, p.name, String(p.stock), fmt(p.cost), fmt(p.value), p.monthlySales.toFixed(1), p.daysOfStock > 900 ? '>1 año' : `${p.daysOfStock}d`, `${p.margin}%`])
+      ))}
+
+      ${section('6. Inventario lento (cobertura >90 días)', kpiRow([
+        { label: 'Capital detenido (>180d)', value: fmt(fin.slowInventoryValue) },
+        { label: 'Inv. muerto (>365d)', value: fmt(fin.deadInventoryValue) },
+        { label: 'Productos lentos', value: String(fin.slowInventory.length) },
+        { label: '% del capital total', value: fmtPct(fin.slowInventoryPct) },
+      ]) + table(
+        ['SKU', 'Producto', 'Categoría', 'Stock', 'Valor', 'Cobertura', 'Venta/mes', '% total'],
+        fin.slowInventory.map(s => [s.sku, s.name, s.category, String(s.stock), fmt(s.value), s.coverageDays > 900 ? '>1 año' : `${s.coverageDays}d (${s.coverageMonths.toFixed(1)}m)`, s.monthlySales.toFixed(2), fmtPct(s.pctOfTotal)])
+      ))}
+
+      ${section('7. Rotación por categoría', table(
+        ['Categoría', 'COGS anual', 'Inv. promedio', 'Rotación', 'Días inventario'],
+        fin.rotationByCategory.map(r => [r.category, fmt(r.annualCOGS), fmt(r.avgInventory), `${r.rotation.toFixed(2)}x`, `${r.daysOfInventory}d`])
+      ))}
+
+      ${section('8. ROI por producto — Mayor retorno', table(
+        ['#', 'Producto', 'Valor inv.', 'Utilidad anual', 'ROI'],
+        fin.topROIProducts.map((p, i) => [String(i + 1), p.name, fmt(p.value), fmt(p.annualProfit), fmtPct(p.roi)])
+      ))}
+
+      ${section('8b. ROI por producto — Menor retorno', table(
+        ['#', 'Producto', 'Valor inv.', 'Utilidad anual', 'ROI'],
+        fin.worstROIProducts.map((p, i) => [String(i + 1), p.name, fmt(p.value), fmt(p.annualProfit), fmtPct(p.roi)])
+      ))}
+
+      ${section('9. Simulación de crecimiento', table(
+        ['Escenario', 'Ventas actuales', 'Ventas objetivo', 'Inv. actual', 'Inv. requerido', 'Capital adicional', 'Utilidad est.', 'Impacto flujo'],
+        fin.growthScenarios.map(g => [g.label, fmt(g.currentRevenue), fmt(g.targetRevenue), fmt(g.currentInventory), fmt(g.requiredInventory), fmt(g.additionalCapital), fmt(g.estimatedProfit), fmt(g.cashFlowImpact)])
+      ) + (() => {
+        const dup = fin.growthScenarios.find(g => g.factor === 2);
+        return dup ? kpiRow([
+          { label: 'Para duplicar ventas', value: '' },
+          { label: 'Ventas actuales', value: fmt(dup.currentRevenue) },
+          { label: 'Ventas objetivo (2x)', value: fmt(dup.targetRevenue) },
+          { label: 'Inversión adicional', value: fmt(dup.additionalCapital) },
+          { label: 'Utilidad estimada', value: fmt(dup.estimatedProfit) },
+        ]) : '';
+      })() + kpiRow([
+        { label: 'Compras recomendadas', value: fmt(fin.purchasePlanValue) },
+        { label: 'Inventario actual', value: fmt(fin.totalInventoryValue) },
+        { label: 'Inventario post-compra', value: fmt(fin.totalInventoryValue + fin.purchasePlanValue) },
+      ]))}
+
+      <div class="footer"><span>REDBUCK EQUIPMENT — Reporte confidencial</span><span>${new Date().toLocaleString('es-MX')}</span></div>
+      <script>setTimeout(()=>{window.print();},600);</script>
+    </body></html>`);
+    w.document.close();
   };
 
   // Chart data for capital distribution
