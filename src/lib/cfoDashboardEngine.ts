@@ -330,3 +330,35 @@ export function calcStrategicKPIs(
     capitalEnInventario: balance.inventario,
   };
 }
+
+// ─── Financial Radar Calculator ─────────────────────────────────
+export function calcFinancialRadar(
+  balance: BalanceSheet,
+  income: IncomeStatement,
+): FinancialRadar {
+  const items = [
+    { label: 'Bancos', value: balance.bancos, color: 'hsl(142,71%,45%)' },
+    { label: 'Cuentas por cobrar', value: balance.cuentasPorCobrar, color: 'hsl(210,100%,52%)' },
+    { label: 'Inventario', value: balance.inventario, color: 'hsl(38,92%,50%)' },
+    { label: 'Cuentas por pagar', value: -balance.cuentasPorPagar, color: 'hsl(0,78%,45%)' },
+    { label: 'Créditos bancarios', value: -balance.creditosBancarios, color: 'hsl(280,65%,55%)' },
+    { label: 'Utilidad neta', value: income.utilidadNeta, color: 'hsl(var(--primary))' },
+  ];
+
+  const totalAbs = items.reduce((s, i) => s + Math.abs(i.value), 0);
+  const distribution = items.map(i => ({
+    ...i,
+    pct: totalAbs > 0 ? (i.value / totalAbs) * 100 : 0,
+  }));
+
+  return {
+    bancos: balance.bancos,
+    cuentasPorCobrar: balance.cuentasPorCobrar,
+    inventario: balance.inventario,
+    cuentasPorPagar: balance.cuentasPorPagar,
+    creditosBancarios: balance.creditosBancarios,
+    utilidadNeta: income.utilidadNeta,
+    capitalDeTrabajo: balance.capitalDeTrabajo,
+    distribution,
+  };
+}
