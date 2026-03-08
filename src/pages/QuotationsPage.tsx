@@ -8,7 +8,7 @@ import { exportQuotationsZip, exportQuotationsExcel } from '@/lib/exportUtils';
 import { addAuditLog } from '@/lib/auditLog';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil } from 'lucide-react';
+import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil, CalendarIcon, X } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
