@@ -27,6 +27,8 @@ const IVA_RATE = 0.16;
 export default function QuotationsPage() {
   const { currentRole, exchangeRate, quotations, addQuotation, updateQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [showCreate, setShowCreate] = useState(false);
   const [showPreview, setShowPreview] = useState<Quotation | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState<Quotation | null>(null);
