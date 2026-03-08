@@ -53,12 +53,19 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
 
+  // Auto-generate next folio number
+  const nextFolio = useMemo(() => {
+    const count = (existingInvoices ?? []).length;
+    return String(count + 1).padStart(3, '0');
+  }, [existingInvoices]);
+
   // Reset on open
   useEffect(() => {
     if (open) {
       setSearch('');
-      setSeries(fiscal?.default_series || 'A');
-      setFolio('');
+      const defaultSeries = fiscal?.default_series || 'A';
+      setSeries(defaultSeries);
+      setFolio(nextFolio);
       setPaymentForm('99');
       setPaymentMethod('PUE');
       setCurrency('MXN');
@@ -81,7 +88,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setStep('select');
       setSelectedOrder(null);
     }
-  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders]);
+  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders, nextFolio]);
 
   // Filter and sort orders (newest first)
   const eligibleOrders = useMemo(() => {
