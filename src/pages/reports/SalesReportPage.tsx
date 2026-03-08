@@ -170,12 +170,12 @@ export default function SalesReportPage() {
       {/* Summary */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         <div className="bg-card rounded-xl border p-4 text-center">
-          <div className="text-xs text-muted-foreground">Registros</div>
-          <div className="text-xl font-bold">{filtered.length}</div>
+          <div className="text-xs text-muted-foreground">Cotizaciones</div>
+          <div className="text-xl font-bold">{totalCotizaciones}</div>
         </div>
         <div className="bg-card rounded-xl border p-4 text-center">
-          <div className="text-xs text-muted-foreground">Unidades</div>
-          <div className="text-xl font-bold">{totals.cantidad}</div>
+          <div className="text-xs text-muted-foreground">Pedidos</div>
+          <div className="text-xl font-bold">{totalPedidos}</div>
         </div>
         <div className="bg-card rounded-xl border p-4 text-center">
           <div className="text-xs text-muted-foreground">Subtotal</div>
