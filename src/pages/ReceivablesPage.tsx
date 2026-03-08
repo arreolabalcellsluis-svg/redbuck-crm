@@ -1,240 +1,208 @@
-import { useAppContext } from '@/contexts/AppContext';
-import { demoCustomers } from '@/data/demo-data';
-import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
+import { useMemo, useState } from 'react';
+import { useInvoices, type Invoice } from '@/hooks/useInvoicing';
+import { usePayments, type Payment } from '@/hooks/usePayments';
+import { useCustomers } from '@/hooks/useCustomers';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { CreditCard, AlertTriangle, CheckCircle, Clock, FileSpreadsheet, History, Download } from 'lucide-react';
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { addAuditLog } from '@/lib/auditLog';
 
-const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
+
+interface ReceivableRow {
+  invoiceId: string;
+  customerId: string | null;
+  customerName: string;
+  folio: string;
+  total: number;
+  paid: number;
+  balance: number;
+  dueDate: string;
+  daysOverdue: number;
+  status: 'al_corriente' | 'vencido' | 'liquidado';
+}
 
 export default function ReceivablesPage() {
-  const { currentRole, receivables, orders, payments, getTotalPaid, getOrderPayments } = useAppContext();
-  const isVendedor = currentRole === 'vendedor';
-  const vendorId = DEMO_VENDEDOR_ID;
+  const { data: invoices, isLoading: loadingInv } = useInvoices();
+  const { data: payments, isLoading: loadingPay } = usePayments();
+  const { data: customers } = useCustomers();
 
-  // Filter receivables for vendedor - only show their clients
-  const myCustomerIds = isVendedor
-    ? new Set(demoCustomers.filter(c => c.vendorId === vendorId).map(c => c.id))
-    : null;
-  const visibleReceivables = myCustomerIds
-    ? receivables.filter(r => myCustomerIds.has(r.customerId))
-    : receivables;
+  const customerMap = useMemo(() => new Map((customers ?? []).map(c => [c.id, c])), [customers]);
 
-  const totalBalance = visibleReceivables.reduce((s, a) => s + a.balance, 0);
-  const overdue = visibleReceivables.filter(a => a.status === 'vencido');
-  const overdueAmount = overdue.reduce((s, a) => s + a.balance, 0);
+  // Calculate paid per invoice
+  const paidPerInvoice = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of payments ?? []) {
+      map.set(p.invoice_id, (map.get(p.invoice_id) ?? 0) + p.amount);
+    }
+    return map;
+  }, [payments]);
 
-  // Customer account statement
+  // Build receivables from invoices (exclude cancelled, only timbradas or lista_timbrar with balance)
+  const receivables: ReceivableRow[] = useMemo(() => {
+    const today = new Date();
+    return (invoices ?? [])
+      .filter(inv => inv.status !== 'cancelada' && inv.status !== 'borrador')
+      .map(inv => {
+        const paid = paidPerInvoice.get(inv.id) ?? 0;
+        const balance = Math.max(0, inv.total - paid);
+        // Estimate due date: issued_at + 30 days or created_at + 30 days
+        const baseDate = inv.issued_at ? new Date(inv.issued_at) : new Date(inv.created_at);
+        const dueDate = new Date(baseDate);
+        dueDate.setDate(dueDate.getDate() + 30);
+        const dueDateStr = dueDate.toISOString().slice(0, 10);
+        const daysOverdue = balance > 0.01 ? Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86400000)) : 0;
+        const status: ReceivableRow['status'] = balance <= 0.01 ? 'liquidado' : daysOverdue > 0 ? 'vencido' : 'al_corriente';
+        const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+        return {
+          invoiceId: inv.id,
+          customerId: inv.customer_id,
+          customerName: cust?.name ?? 'Sin cliente',
+          folio: `${inv.series}-${inv.folio}`,
+          total: inv.total,
+          paid,
+          balance,
+          dueDate: dueDateStr,
+          daysOverdue,
+          status,
+        };
+      })
+      .filter(r => r.balance > 0.01); // Only show pending
+  }, [invoices, paidPerInvoice, customerMap]);
+
+  const totalBalance = receivables.reduce((s, r) => s + r.balance, 0);
+  const overdue = receivables.filter(r => r.status === 'vencido');
+  const overdueAmount = overdue.reduce((s, r) => s + r.balance, 0);
+
+  // Customer statement
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [historyDateFrom, setHistoryDateFrom] = useState('');
-  const [historyDateTo, setHistoryDateTo] = useState('');
-
-  // Bulk download
   const [showBulkDownload, setShowBulkDownload] = useState(false);
   const [bulkDateFrom, setBulkDateFrom] = useState('');
   const [bulkDateTo, setBulkDateTo] = useState('');
 
-  // Get unique customers from receivables
-  const customerIds = [...new Set(receivables.map(r => r.customerId))];
+  const customerName = selectedCustomerId ? (customerMap.get(selectedCustomerId)?.name ?? '') : '';
 
-  // Customer statement data
-  const customerName = selectedCustomerId ? (demoCustomers.find(c => c.id === selectedCustomerId)?.name || receivables.find(r => r.customerId === selectedCustomerId)?.customerName || '') : '';
-  const customerOrders = selectedCustomerId ? orders.filter(o => o.customerId === selectedCustomerId) : [];
-  const customerReceivables = selectedCustomerId ? receivables.filter(r => r.customerId === selectedCustomerId) : [];
-  const customerPaymentsList = selectedCustomerId ? payments.filter(p => customerOrders.some(o => o.id === p.orderId)) : [];
-  const totalComprado = customerOrders.reduce((s, o) => s + o.total, 0);
-  const totalPagado = customerOrders.reduce((s, o) => s + getTotalPaid(o.id), 0);
+  const customerReceivables = useMemo(() =>
+    receivables.filter(r => r.customerId === selectedCustomerId),
+    [receivables, selectedCustomerId]
+  );
+
+  const customerPayments = useMemo(() =>
+    (payments ?? []).filter(p => p.customer_id === selectedCustomerId),
+    [payments, selectedCustomerId]
+  );
+
+  const customerInvoices = useMemo(() =>
+    (invoices ?? []).filter(i => i.customer_id === selectedCustomerId && i.status !== 'cancelada'),
+    [invoices, selectedCustomerId]
+  );
+
+  const totalComprado = customerInvoices.reduce((s, i) => s + i.total, 0);
+  const totalPagado = customerPayments.reduce((s, p) => s + p.amount, 0);
   const saldoPendiente = totalComprado - totalPagado;
 
-  const filteredCustomerOrders = customerOrders.filter(o => {
-    if (historyDateFrom && o.createdAt < historyDateFrom) return false;
-    if (historyDateTo && o.createdAt > historyDateTo) return false;
-    return true;
-  });
-
-  // Build unified statement rows (orders + payments interleaved chronologically)
-  const buildStatementRows = () => {
+  // Build statement rows
+  const statementRows = useMemo(() => {
+    if (!selectedCustomerId) return [];
     const rows: Array<{
-      date: string; folio: string; type: string; orderTotal: number;
+      date: string; folio: string; type: string; total: number;
       paymentAmount: number; method: string; reference: string;
-      accumulated: number; balance: number; status: string;
+      balance: number; status: string;
     }> = [];
 
-    const runningPaid: Record<string, number> = {};
-    const orderTotals: Record<string, number> = {};
-    const orderFolios: Record<string, string> = {};
-
-    // Initialize with advances
-    filteredCustomerOrders.forEach(o => {
-      orderTotals[o.id] = o.total;
-      orderFolios[o.id] = o.folio;
-      runningPaid[o.id] = o.advance || 0;
-
-      // Add the order row itself
-      const adv = o.advance || 0;
-      const bal = Math.max(0, o.total - adv);
+    // Add invoice rows
+    customerInvoices.forEach(inv => {
+      const paid = paidPerInvoice.get(inv.id) ?? 0;
+      const bal = Math.max(0, inv.total - paid);
       rows.push({
-        date: o.createdAt, folio: o.folio, type: 'Pedido', orderTotal: o.total,
-        paymentAmount: adv, method: adv > 0 ? 'Anticipo' : '—', reference: '—',
-        accumulated: adv, balance: bal,
-        status: bal <= 0 ? 'Liquidado' : adv > 0 ? 'Anticipo recibido' : 'Sin pago',
+        date: (inv.issued_at ?? inv.created_at).slice(0, 10),
+        folio: `${inv.series}-${inv.folio}`,
+        type: 'Factura',
+        total: inv.total,
+        paymentAmount: 0,
+        method: '—',
+        reference: inv.uuid || '—',
+        balance: bal,
+        status: bal <= 0.01 ? 'Liquidada' : 'Pendiente',
       });
     });
 
-    // Add each payment as its own row
-    const relevantPayments = customerPaymentsList
-      .filter(p => {
-        if (!filteredCustomerOrders.some(o => o.id === p.orderId)) return false;
-        if (historyDateFrom && p.date < historyDateFrom) return false;
-        if (historyDateTo && p.date > historyDateTo) return false;
-        return true;
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    relevantPayments.forEach(p => {
-      const oTotal = orderTotals[p.orderId] || 0;
-      runningPaid[p.orderId] = (runningPaid[p.orderId] || 0) + p.amount;
-      const acc = runningPaid[p.orderId];
-      const bal = Math.max(0, oTotal - acc);
+    // Add payment rows
+    customerPayments.forEach(p => {
+      const inv = invoices?.find(i => i.id === p.invoice_id);
       rows.push({
-        date: p.date, folio: orderFolios[p.orderId] || '', type: 'Pago',
-        orderTotal: oTotal, paymentAmount: p.amount, method: p.method,
-        reference: p.reference || '—', accumulated: acc, balance: bal,
-        status: bal <= 0 ? 'Liquidado' : 'Pago parcial',
+        date: p.payment_date,
+        folio: inv ? `${inv.series}-${inv.folio}` : '—',
+        type: 'Pago',
+        total: 0,
+        paymentAmount: p.amount,
+        method: p.payment_form,
+        reference: p.operation_reference || '—',
+        balance: p.remaining_balance,
+        status: p.remaining_balance <= 0.01 ? 'Liquidada' : 'Parcial',
       });
     });
 
     return rows.sort((a, b) => a.date.localeCompare(b.date));
-  };
-
-  const statementRows = selectedCustomerId ? buildStatementRows() : [];
+  }, [selectedCustomerId, customerInvoices, customerPayments, paidPerInvoice, invoices]);
 
   const handleDownloadCustomerStatement = () => {
-    if (!selectedCustomerId) return;
-    if (statementRows.length === 0) { toast.error('No hay movimientos para descargar'); return; }
-
+    if (!selectedCustomerId || statementRows.length === 0) { toast.error('No hay movimientos'); return; }
     const excelRows = statementRows.map(r => ({
-      'Fecha': r.date,
-      'Folio': r.folio,
-      'Tipo': r.type,
-      'Total Pedido': r.orderTotal,
-      'Monto Pago': r.paymentAmount,
-      'Método': r.method,
-      'Referencia': r.reference,
-      'Acumulado Pagado': r.accumulated,
-      'Saldo Pendiente': r.balance,
-      'Estatus': r.status,
+      Fecha: r.date, Folio: r.folio, Tipo: r.type, 'Total Factura': r.total,
+      'Monto Pago': r.paymentAmount, Método: r.method, Referencia: r.reference,
+      'Saldo Restante': r.balance, Estatus: r.status,
     }));
-
-    const summary = [
-      { Concepto: 'Total comprado', Importe: totalComprado },
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelRows);
+    ws['!cols'] = Object.keys(excelRows[0]).map(() => ({ wch: 18 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Estado de Cuenta');
+    const ws2 = XLSX.utils.json_to_sheet([
+      { Concepto: 'Total facturado', Importe: totalComprado },
       { Concepto: 'Total pagado', Importe: totalPagado },
       { Concepto: 'Saldo pendiente', Importe: Math.max(0, saldoPendiente) },
-    ];
-
-    const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(excelRows);
-    ws1['!cols'] = Object.keys(excelRows[0]).map(() => ({ wch: 18 }));
-    XLSX.utils.book_append_sheet(wb, ws1, 'Estado de Cuenta');
-    const ws2 = XLSX.utils.json_to_sheet(summary);
+    ]);
     XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
     XLSX.writeFile(wb, `Estado_Cuenta_${customerName.replace(/\s+/g, '_')}.xlsx`);
-
-    addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'cobranza', action: 'descargar_estado_cuenta', entityId: selectedCustomerId, comment: `Excel descargado para ${customerName}` });
+    addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'cobranza', action: 'descargar_estado_cuenta', entityId: selectedCustomerId, comment: `Excel para ${customerName}` });
     toast.success('Estado de cuenta descargado');
   };
 
   const handleBulkDownload = () => {
-    if (!bulkDateFrom || !bulkDateTo) {
-      toast.error('Selecciona un rango de fechas');
-      return;
-    }
-    if (bulkDateFrom > bulkDateTo) {
-      toast.error('La fecha inicial no puede ser mayor a la final');
-      return;
-    }
-
-    const allMovements: any[] = [];
-    customerIds.forEach(cId => {
-      const cName = demoCustomers.find(c => c.id === cId)?.name || receivables.find(r => r.customerId === cId)?.customerName || '';
-      const cOrders = orders.filter(o => o.customerId === cId && o.createdAt >= bulkDateFrom && o.createdAt <= bulkDateTo);
-      cOrders.forEach(o => {
-        const paid = getTotalPaid(o.id);
-        allMovements.push({
-          Cliente: cName,
-          Fecha: o.createdAt,
-          Folio: o.folio,
-          'Importe Pedido': o.total,
-          'Pagos Realizados': paid,
-          'Saldo Pendiente': Math.max(0, o.total - paid),
-          Estatus: paid >= o.total ? 'Liquidado' : paid > 0 ? 'Pago parcial' : 'Sin pago',
-        });
+    if (!bulkDateFrom || !bulkDateTo) { toast.error('Selecciona rango de fechas'); return; }
+    const allRows: any[] = [];
+    (invoices ?? []).filter(i => i.status !== 'cancelada' && i.status !== 'borrador').forEach(inv => {
+      const d = (inv.issued_at ?? inv.created_at).slice(0, 10);
+      if (d < bulkDateFrom || d > bulkDateTo) return;
+      const paid = paidPerInvoice.get(inv.id) ?? 0;
+      const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+      allRows.push({
+        Cliente: cust?.name ?? 'Sin cliente', Fecha: d, Folio: `${inv.series}-${inv.folio}`,
+        Total: inv.total, Pagado: paid, Saldo: Math.max(0, inv.total - paid),
+        Estatus: paid >= inv.total ? 'Liquidada' : paid > 0 ? 'Parcial' : 'Pendiente',
       });
     });
-
-    // Also include receivables without matching orders (legacy data)
-    receivables.forEach(r => {
-      if (!allMovements.some(m => m.Folio === r.orderFolio)) {
-        if (r.dueDate >= bulkDateFrom && r.dueDate <= bulkDateTo) {
-          allMovements.push({
-            Cliente: r.customerName,
-            Fecha: r.dueDate,
-            Folio: r.orderFolio,
-            'Importe Pedido': r.total,
-            'Pagos Realizados': r.paid,
-            'Saldo Pendiente': r.balance,
-            Estatus: r.status === 'liquidado' ? 'Liquidado' : r.status === 'vencido' ? 'Vencido' : 'Pendiente',
-          });
-        }
-      }
-    });
-
-    if (allMovements.length === 0) {
-      toast.error('No hay movimientos en el rango seleccionado');
-      return;
-    }
-
-    // Summary per customer
-    const summaryMap: Record<string, { comprado: number; pagado: number; saldo: number }> = {};
-    allMovements.forEach(m => {
-      if (!summaryMap[m.Cliente]) summaryMap[m.Cliente] = { comprado: 0, pagado: 0, saldo: 0 };
-      summaryMap[m.Cliente].comprado += m['Importe Pedido'];
-      summaryMap[m.Cliente].pagado += m['Pagos Realizados'];
-      summaryMap[m.Cliente].saldo += m['Saldo Pendiente'];
-    });
-
-    const summaryRows = Object.entries(summaryMap).map(([cliente, data]) => ({
-      Cliente: cliente,
-      'Total Comprado': data.comprado,
-      'Total Pagado': data.pagado,
-      'Saldo Pendiente': data.saldo,
-    }));
-
+    if (allRows.length === 0) { toast.error('Sin movimientos en el rango'); return; }
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(allMovements);
-    ws1['!cols'] = Object.keys(allMovements[0]).map(() => ({ wch: 20 }));
-    XLSX.utils.book_append_sheet(wb, ws1, 'Movimientos');
-    const ws2 = XLSX.utils.json_to_sheet(summaryRows);
-    ws2['!cols'] = Object.keys(summaryRows[0] || {}).map(() => ({ wch: 22 }));
-    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen por Cliente');
+    const ws = XLSX.utils.json_to_sheet(allRows);
+    ws['!cols'] = Object.keys(allRows[0]).map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Cobranza');
     XLSX.writeFile(wb, `Cobranza_${bulkDateFrom}_a_${bulkDateTo}.xlsx`);
-
-    addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'cobranza', action: 'descargar_cobranza_masiva', entityId: 'all', comment: `Excel masivo ${bulkDateFrom} a ${bulkDateTo}` });
-    toast.success(`Estado de cuenta descargado con ${allMovements.length} movimientos`);
+    toast.success(`Descargado con ${allRows.length} registros`);
     setShowBulkDownload(false);
   };
+
+  if (loadingInv || loadingPay) return <div className="py-12 text-center text-muted-foreground">Cargando cuentas por cobrar...</div>;
 
   return (
     <div>
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Cuentas por Cobrar</h1>
-          <p className="page-subtitle">Control de cobranza y saldos pendientes — haz clic en un cliente para ver su estado de cuenta</p>
+          <p className="page-subtitle">Control de cobranza y saldos pendientes de facturas — clic en cliente para ver estado de cuenta</p>
         </div>
         <button onClick={() => setShowBulkDownload(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
           <Download size={16} /> Descargar Excel general
@@ -245,48 +213,50 @@ export default function ReceivablesPage() {
         <MetricCard title="Saldo total" value={fmt(totalBalance)} icon={CreditCard} variant="primary" />
         <MetricCard title="Cartera vencida" value={fmt(overdueAmount)} icon={AlertTriangle} variant="danger" />
         <MetricCard title="Cuentas vencidas" value={overdue.length} icon={Clock} variant="warning" />
-        <MetricCard title="Al corriente" value={visibleReceivables.filter(a => a.status === 'al_corriente').length} icon={CheckCircle} variant="success" />
+        <MetricCard title="Al corriente" value={receivables.filter(r => r.status === 'al_corriente').length} icon={CheckCircle} variant="success" />
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
         <table className="data-table">
           <thead>
-            <tr><th>Cliente</th><th>Pedido</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Vencimiento</th><th>Días vencido</th><th>Estatus</th></tr>
+            <tr><th>Cliente</th><th>Factura</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Vencimiento</th><th>Días vencido</th><th>Estatus</th></tr>
           </thead>
           <tbody>
-            {visibleReceivables.map(ar => (
-              <tr key={ar.id}>
+            {receivables.length === 0 ? (
+              <tr><td colSpan={8} className="text-center text-muted-foreground py-8">No hay cuentas por cobrar pendientes</td></tr>
+            ) : receivables.map(r => (
+              <tr key={r.invoiceId}>
                 <td>
                   <button
-                    onClick={() => { setSelectedCustomerId(ar.customerId); setHistoryDateFrom(''); setHistoryDateTo(''); }}
+                    onClick={() => r.customerId && setSelectedCustomerId(r.customerId)}
                     className="font-medium text-primary hover:underline cursor-pointer"
                   >
-                    {ar.customerName}
+                    {r.customerName}
                   </button>
                 </td>
-                <td className="font-mono text-xs">{ar.orderFolio}</td>
-                <td>{fmt(ar.total)}</td>
-                <td className="text-success">{fmt(ar.paid)}</td>
-                <td className="font-semibold">{fmt(ar.balance)}</td>
-                <td className="text-xs text-muted-foreground">{ar.dueDate}</td>
-                <td>{ar.daysOverdue > 0 ? <span className="text-destructive font-bold">{ar.daysOverdue}</span> : '—'}</td>
-                <td><StatusBadge status={ar.status} type="receivable" /></td>
+                <td className="font-mono text-xs">{r.folio}</td>
+                <td>{fmt(r.total)}</td>
+                <td className="text-success">{fmt(r.paid)}</td>
+                <td className="font-semibold">{fmt(r.balance)}</td>
+                <td className="text-xs text-muted-foreground">{r.dueDate}</td>
+                <td>{r.daysOverdue > 0 ? <span className="text-destructive font-bold">{r.daysOverdue}</span> : '—'}</td>
+                <td><StatusBadge status={r.status} type="receivable" /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* CUSTOMER ACCOUNT STATEMENT */}
+      {/* Customer Statement Dialog */}
       <Dialog open={!!selectedCustomerId} onOpenChange={() => setSelectedCustomerId(null)}>
         <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><History size={20} /> Estado de cuenta — {customerName}</DialogTitle>
-            <DialogDescription>Histórico completo de pedidos y pagos del cliente</DialogDescription>
+            <DialogDescription>Histórico de facturas y pagos del cliente</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="p-3 rounded-lg bg-muted/50 text-center">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total comprado</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total facturado</div>
               <div className="font-bold text-lg">{fmt(totalComprado)}</div>
             </div>
             <div className="p-3 rounded-lg bg-success/10 text-center">
@@ -298,55 +268,38 @@ export default function ReceivablesPage() {
               <div className="font-bold text-lg text-destructive">{fmt(Math.max(0, saldoPendiente))}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Desde</label>
-              <input type="date" value={historyDateFrom} onChange={e => setHistoryDateFrom(e.target.value)} className="ml-2 px-2 py-1 rounded border bg-background text-xs" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Hasta</label>
-              <input type="date" value={historyDateTo} onChange={e => setHistoryDateTo(e.target.value)} className="ml-2 px-2 py-1 rounded border bg-background text-xs" />
-            </div>
-            <button onClick={handleDownloadCustomerStatement} className="ml-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
+          <div className="flex justify-end mb-3">
+            <button onClick={handleDownloadCustomerStatement} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
               <FileSpreadsheet size={14} /> Descargar Excel
             </button>
           </div>
           <div className="border rounded-lg overflow-x-auto">
-            <table className="data-table w-full min-w-[900px]">
+            <table className="data-table w-full min-w-[800px]">
               <thead>
                 <tr>
-                  <th className="whitespace-nowrap">Fecha</th>
-                  <th className="whitespace-nowrap">Folio</th>
-                  <th className="whitespace-nowrap">Tipo</th>
-                  <th className="whitespace-nowrap">Total pedido</th>
-                  <th className="whitespace-nowrap">Monto pago</th>
-                  <th className="whitespace-nowrap">Método</th>
-                  <th className="whitespace-nowrap">Referencia</th>
-                  <th className="whitespace-nowrap">Acumulado</th>
-                  <th className="whitespace-nowrap">Saldo pendiente</th>
-                  <th className="whitespace-nowrap">Estatus</th>
+                  <th>Fecha</th><th>Folio</th><th>Tipo</th><th>Total Factura</th>
+                  <th>Monto Pago</th><th>Método</th><th>Referencia</th><th>Saldo</th><th>Estatus</th>
                 </tr>
               </thead>
               <tbody>
                 {statementRows.length > 0 ? statementRows.map((r, i) => {
-                  const isOrder = r.type === 'Pedido';
-                  const statusClass = r.status === 'Liquidado' ? 'bg-success/10 text-success' : r.status === 'Sin pago' ? 'bg-muted text-muted-foreground' : 'bg-warning/10 text-warning';
+                  const isInvoice = r.type === 'Factura';
+                  const statusClass = r.status === 'Liquidada' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning';
                   return (
-                    <tr key={i} className={isOrder ? 'bg-muted/30 font-medium' : ''}>
-                      <td className="text-xs whitespace-nowrap">{r.date}</td>
+                    <tr key={i} className={isInvoice ? 'bg-muted/30 font-medium' : ''}>
+                      <td className="text-xs">{r.date}</td>
                       <td className="font-mono text-xs font-semibold">{r.folio}</td>
-                      <td><span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${isOrder ? 'bg-primary/10 text-primary' : 'bg-success/10 text-success'}`}>{r.type}</span></td>
-                      <td className="font-semibold">{fmt(r.orderTotal)}</td>
+                      <td><span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${isInvoice ? 'bg-primary/10 text-primary' : 'bg-success/10 text-success'}`}>{r.type}</span></td>
+                      <td className="font-semibold">{r.total > 0 ? fmt(r.total) : '—'}</td>
                       <td className="text-success font-semibold">{r.paymentAmount > 0 ? fmt(r.paymentAmount) : '—'}</td>
-                      <td className="text-xs capitalize">{r.method}</td>
-                      <td className="text-xs text-muted-foreground">{r.reference}</td>
-                      <td className="text-xs font-medium">{fmt(r.accumulated)}</td>
+                      <td className="text-xs">{r.method}</td>
+                      <td className="text-xs text-muted-foreground max-w-[120px] truncate">{r.reference}</td>
                       <td className={r.balance > 0 ? 'text-destructive font-medium' : 'text-success font-medium'}>{fmt(r.balance)}</td>
-                      <td><span className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${statusClass}`}>{r.status}</span></td>
+                      <td><span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusClass}`}>{r.status}</span></td>
                     </tr>
                   );
                 }) : (
-                  <tr><td colSpan={10} className="text-center text-muted-foreground text-sm py-6">Sin movimientos en el rango seleccionado</td></tr>
+                  <tr><td colSpan={9} className="text-center text-muted-foreground py-6">Sin movimientos</td></tr>
                 )}
               </tbody>
             </table>
@@ -354,31 +307,27 @@ export default function ReceivablesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* BULK DOWNLOAD */}
+      {/* Bulk Download Dialog */}
       <Dialog open={showBulkDownload} onOpenChange={setShowBulkDownload}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar estado de cuenta general</DialogTitle>
-            <DialogDescription>Descarga el estado de cuenta de todos los clientes en un archivo Excel. Selecciona el rango de fechas.</DialogDescription>
+            <DialogDescription>Selecciona el rango de fechas</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicial *</label>
-                <input type="date" value={bulkDateFrom} onChange={e => setBulkDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha final *</label>
-                <input type="date" value={bulkDateTo} onChange={e => setBulkDateTo(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
-              </div>
+          <div className="flex gap-4 my-4">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-muted-foreground">Desde</label>
+              <input type="date" value={bulkDateFrom} onChange={e => setBulkDateFrom(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs font-medium text-muted-foreground">Hasta</label>
+              <input type="date" value={bulkDateTo} onChange={e => setBulkDateTo(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-md border bg-background text-sm" />
             </div>
           </div>
-          <DialogFooter>
-            <button onClick={() => setShowBulkDownload(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
-            <button onClick={handleBulkDownload} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2">
-              <FileSpreadsheet size={14} /> Descargar Excel
-            </button>
-          </DialogFooter>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setShowBulkDownload(false)} className="px-4 py-2 rounded-lg border text-sm">Cancelar</button>
+            <button onClick={handleBulkDownload} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">Descargar</button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
