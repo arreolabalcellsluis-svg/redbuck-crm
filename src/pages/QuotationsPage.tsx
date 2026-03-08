@@ -8,8 +8,14 @@ import { exportQuotationsZip, exportQuotationsExcel } from '@/lib/exportUtils';
 import { addAuditLog } from '@/lib/auditLog';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil } from 'lucide-react';
+import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil, CalendarIcon, X } from 'lucide-react';
 import { useState, useRef } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, AccountReceivable } from '@/types';
@@ -21,6 +27,8 @@ const IVA_RATE = 0.16;
 export default function QuotationsPage() {
   const { currentRole, exchangeRate, quotations, addQuotation, updateQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [showCreate, setShowCreate] = useState(false);
   const [showPreview, setShowPreview] = useState<Quotation | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState<Quotation | null>(null);
@@ -57,10 +65,20 @@ export default function QuotationsPage() {
     ? quotations.filter(q => q.vendorId === vendorId)
     : quotations;
 
-  const filtered = visibleQuotations.filter(q =>
-    q.customerName.toLowerCase().includes(search.toLowerCase()) ||
-    q.folio.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = visibleQuotations.filter(q => {
+    if (search && !q.customerName.toLowerCase().includes(search.toLowerCase()) && !q.folio.toLowerCase().includes(search.toLowerCase())) return false;
+    if (dateFrom) {
+      const d = new Date(q.createdAt);
+      if (d < dateFrom) return false;
+    }
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      const d = new Date(q.createdAt);
+      if (d > end) return false;
+    }
+    return true;
+  });
 
   const vendors = demoUsers.filter(u => u.role === 'vendedor');
 
@@ -554,11 +572,43 @@ export default function QuotationsPage() {
         <MetricCard title="Valor total" value={fmt(quotations.reduce((s, q) => s + q.total, 0))} icon={FileText} />
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por folio o cliente..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateFrom ? format(dateFrom, 'dd/MM/yy') : 'Desde'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateTo ? format(dateTo, 'dd/MM/yy') : 'Hasta'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-xs text-muted-foreground h-8 px-2">
+            <X size={12} /> Limpiar
+          </Button>
+        )}
+
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} cotizaciones</span>
       </div>
 
       <div className="bg-card rounded-xl border overflow-x-auto">
