@@ -280,6 +280,46 @@ export default function ServicePage() {
     resetForm();
   };
 
+  const handleServiceExcel = () => {
+    if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
+    if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
+
+    const data = services.filter(s => s.scheduledDate >= dlDateFrom && s.scheduledDate <= dlDateTo);
+    if (data.length === 0) { toast.error('No hay órdenes en el rango seleccionado'); return; }
+
+    const rows = data.map(s => ({
+      'Folio': s.folio,
+      'Cliente': s.customerName,
+      'Equipo': s.productName,
+      'Técnico': s.technicianName,
+      'Tipo': SERVICE_TYPE_LABELS[s.type] || s.type,
+      'Fecha Programada': s.scheduledDate,
+      'Fecha Realizada': s.completedDate || '',
+      'Estatus': SERVICE_STATUS_LABELS[s.status] || s.status,
+      'Descripción': s.description || '',
+      'Diagnóstico': s.diagnosis || '',
+      'Acciones Realizadas': s.actionsPerformed || '',
+      'Observaciones': s.observations || '',
+      'Fotos': s.images?.length || 0,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Servicio Técnico');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Servicio_Tecnico_${dlDateFrom}_a_${dlDateTo}.xlsx`);
+    toast.success(`Excel generado con ${data.length} órdenes`);
+    setShowDownload(false);
+  };
+
+  const dlFilteredCount = services.filter(s => {
+    if (dlDateFrom && s.scheduledDate < dlDateFrom) return false;
+    if (dlDateTo && s.scheduledDate > dlDateTo) return false;
+    return true;
+  }).length;
+
   return (
     <div>
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -287,9 +327,14 @@ export default function ServicePage() {
           <h1 className="page-title">Servicio Técnico</h1>
           <p className="page-subtitle">Instalaciones, garantías y mantenimiento</p>
         </div>
-        <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus size={16} /> Nueva orden
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowDownload(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">
+            <Download size={16} /> Descargar Excel
+          </button>
+          <button onClick={() => { resetForm(); setOpen(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus size={16} /> Nueva orden
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
