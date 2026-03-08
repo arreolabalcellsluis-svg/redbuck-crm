@@ -594,6 +594,9 @@ export default function ExecutiveDashboardPage() {
         </div>
       </div>
 
+      {/* ═══ SECCIÓN: COMPARATIVO DE VENTAS ═══ */}
+      <SalesComparative />
+
       {/* ═══ SECCIÓN 9: INDICADORES ESTRATÉGICOS ═══ */}
       <div className="bg-card rounded-xl border p-5">
         <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
