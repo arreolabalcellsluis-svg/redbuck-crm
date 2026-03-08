@@ -21,6 +21,9 @@ export default function ImportsPage() {
   const [imports, setImports] = useState<ImportOrder[]>(demoImports);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [showDownload, setShowDownload] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
   const [form, setForm] = useState({
     supplier: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
     purchaseDate: '', estimatedDeparture: '', estimatedArrival: '',
