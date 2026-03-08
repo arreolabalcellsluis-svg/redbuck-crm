@@ -7,7 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Search, AlertTriangle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { FileText, Plus, Search, AlertTriangle, CalendarIcon, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
 import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
@@ -31,6 +36,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const [step, setStep] = useState<'select' | 'configure'>('select');
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   // Invoice fields
   const [series, setSeries] = useState('A');
@@ -75,11 +82,26 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
     }
   }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders]);
 
-  // Filter orders that can be invoiced
-  const eligibleOrders = (orders ?? []).filter(o =>
-    !['cancelado', 'nuevo'].includes(o.status) &&
-    (o.customer_name.toLowerCase().includes(search.toLowerCase()) || o.folio.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Filter and sort orders (newest first)
+  const eligibleOrders = useMemo(() => {
+    return (orders ?? [])
+      .filter(o => {
+        if (['cancelado', 'nuevo'].includes(o.status)) return false;
+        if (search && !o.customer_name.toLowerCase().includes(search.toLowerCase()) && !o.folio.toLowerCase().includes(search.toLowerCase())) return false;
+        if (dateFrom) {
+          const d = new Date(o.created_at);
+          if (d < dateFrom) return false;
+        }
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59, 999);
+          const d = new Date(o.created_at);
+          if (d > end) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [orders, search, dateFrom, dateTo]);
 
   const handleSelectOrder = (order: DBOrder) => {
     setSelectedOrder(order);
@@ -168,14 +190,49 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
 
         {step === 'select' && (
           <div className="space-y-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <Input placeholder="Buscar pedido o cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input placeholder="Buscar pedido o cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+              </div>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateFrom && "text-muted-foreground")}>
+                    <CalendarIcon size={14} />
+                    {dateFrom ? format(dateFrom, 'dd/MM/yy') : 'Desde'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" locale={es} />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateTo && "text-muted-foreground")}>
+                    <CalendarIcon size={14} />
+                    {dateTo ? format(dateTo, 'dd/MM/yy') : 'Hasta'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" locale={es} />
+                </PopoverContent>
+              </Popover>
+
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-xs text-muted-foreground h-8 px-2">
+                  <X size={12} /> Limpiar
+                </Button>
+              )}
+
+              <Badge variant="outline" className="text-xs ml-auto">{eligibleOrders.length} pedidos</Badge>
             </div>
             <div className="max-h-[400px] overflow-y-auto border rounded-lg">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                   <TableRow>
+                    <TableHead>Fecha</TableHead>
                     <TableHead>Folio</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Estatus</TableHead>
@@ -185,11 +242,12 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {eligibleOrders.slice(0, 30).map(o => {
+                  {eligibleOrders.slice(0, 50).map(o => {
                     const cf = o.customer_id ? fiscalMap.get(o.customer_id) : null;
                     const hasFiscal = cf && cf.rfc && cf.legal_name;
                     return (
                       <TableRow key={o.id}>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('es-MX')}</TableCell>
                         <TableCell className="font-mono text-sm">{o.folio}</TableCell>
                         <TableCell>{o.customer_name}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{o.status}</Badge></TableCell>
@@ -208,7 +266,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
                   })}
                   {eligibleOrders.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay pedidos disponibles</TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay pedidos disponibles</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
