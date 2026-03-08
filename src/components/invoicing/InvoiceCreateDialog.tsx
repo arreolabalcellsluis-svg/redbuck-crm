@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
 import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, useStampInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS, SAT_CFDI_USES } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
+import { openInvoicePdf, downloadXml, type InvoicePdfData } from '@/lib/invoicePdfExport';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
