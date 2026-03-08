@@ -52,7 +52,11 @@ export interface BalanceSheet {
   cxpPor30: number;
   cxpPor60: number;
   cxpPor90: number;
-  cxpPor120Plus: number;
+  cxpPor120: number;
+  cxpPor150: number;
+  cxpPor180: number;
+  cxpPor365: number;
+  cxpMas365: number;
   creditosBancarios: number;
   impuestosPorPagar: number;
   totalPasivos: number;
@@ -61,8 +65,22 @@ export interface BalanceSheet {
   utilidadesAcumuladas: number;
   utilidadEjercicio: number;
   totalCapital: number;
+  // Working capital
+  capitalDeTrabajo: number;
   // Verificación
   ecuacionBalanceada: boolean;
+}
+
+export interface FinancialRadar {
+  bancos: number;
+  cuentasPorCobrar: number;
+  inventario: number;
+  cuentasPorPagar: number;
+  creditosBancarios: number;
+  utilidadNeta: number;
+  capitalDeTrabajo: number;
+  // Percentages
+  distribution: { label: string; value: number; pct: number; color: string }[];
 }
 
 export interface CashFlow {
