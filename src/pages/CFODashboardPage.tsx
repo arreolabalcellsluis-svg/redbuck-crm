@@ -1047,3 +1047,8 @@ function DiagnosticItem({ condition, warn, ok }: { condition: boolean; warn: str
     </div>
   );
 }
+
+function SeverityDot({ severity }: { severity: 'critico' | 'alto' | 'medio' }) {
+  const color = severity === 'critico' ? 'bg-destructive' : severity === 'alto' ? 'bg-amber-500' : 'bg-blue-500';
+  return <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />;
+}
