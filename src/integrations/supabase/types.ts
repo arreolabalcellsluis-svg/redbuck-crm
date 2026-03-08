@@ -452,6 +452,7 @@ export type Database = {
           pac_response: Json | null
           payment_form: string
           payment_method: string
+          payment_status: string
           pdf_path: string | null
           sales_person_id: string | null
           series: string
@@ -483,6 +484,7 @@ export type Database = {
           pac_response?: Json | null
           payment_form?: string
           payment_method?: string
+          payment_status?: string
           pdf_path?: string | null
           sales_person_id?: string | null
           series?: string
@@ -514,6 +516,7 @@ export type Database = {
           pac_response?: Json | null
           payment_form?: string
           payment_method?: string
+          payment_status?: string
           pdf_path?: string | null
           sales_person_id?: string | null
           series?: string
@@ -661,6 +664,93 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          bank: string | null
+          complement_pdf_path: string | null
+          complement_status: string
+          complement_uuid: string | null
+          complement_xml_path: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          customer_id: string | null
+          exchange_rate: number
+          id: string
+          invoice_id: string
+          notes: string | null
+          operation_reference: string | null
+          payment_date: string
+          payment_form: string
+          previous_balance: number
+          remaining_balance: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          bank?: string | null
+          complement_pdf_path?: string | null
+          complement_status?: string
+          complement_uuid?: string | null
+          complement_xml_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          exchange_rate?: number
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          operation_reference?: string | null
+          payment_date?: string
+          payment_form?: string
+          previous_balance?: number
+          remaining_balance?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          bank?: string | null
+          complement_pdf_path?: string | null
+          complement_status?: string
+          complement_uuid?: string | null
+          complement_xml_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          exchange_rate?: number
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          operation_reference?: string | null
+          payment_date?: string
+          payment_form?: string
+          previous_balance?: number
+          remaining_balance?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -1050,6 +1140,7 @@ export type Database = {
         | "tarjeta"
         | "compensacion"
         | "otro"
+      payment_status: "pendiente" | "parcial" | "pagada"
       product_category:
         | "elevadores"
         | "balanceadoras"
@@ -1301,6 +1392,7 @@ export const Constants = {
         "compensacion",
         "otro",
       ],
+      payment_status: ["pendiente", "parcial", "pagada"],
       product_category: [
         "elevadores",
         "balanceadoras",
