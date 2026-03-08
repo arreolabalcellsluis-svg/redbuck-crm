@@ -138,10 +138,11 @@ export default function ExecutiveDashboardPage() {
   const lowestRotation = analyses.sort((a, b) => b.daysOfStock - a.daysOfStock)[0];
   const topVendor = vendorData.sort((a, b) => b.closeRate - a.closeRate)[0];
 
-  // Monthly growth data with %
-  const monthlyGrowth = monthlySales.map((m, i) => ({
+  // Monthly growth data with % — filtered by selected months
+  const filteredMonthlySales = monthlySales.slice(-salesMonths);
+  const monthlyGrowth = filteredMonthlySales.map((m, i) => ({
     ...m,
-    growth: i > 0 ? Math.round(((m.sales - monthlySales[i - 1].sales) / monthlySales[i - 1].sales) * 100) : 0,
+    growth: i > 0 ? Math.round(((m.sales - filteredMonthlySales[i - 1].sales) / filteredMonthlySales[i - 1].sales) * 100) : 0,
   }));
 
   // Inventory rotation
