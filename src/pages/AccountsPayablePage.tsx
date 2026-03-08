@@ -152,10 +152,10 @@ export default function AccountsPayablePage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Total por pagar" value={fmt(totalDebt)} icon={<CreditCard size={20} />} />
-        <MetricCard title="Vencidas" value={fmt(overdueAmount)} subtitle={`${overdue.length} facturas`} icon={<AlertTriangle size={20} />} trend="down" />
-        <MetricCard title="Por vencer (7d)" value={fmt(dueSoonAmount)} subtitle={`${dueSoon.length} facturas`} icon={<Clock size={20} />} />
-        <MetricCard title="Liquidadas" value={`${paidTotal}`} icon={<CheckCircle size={20} />} trend="up" />
+        <MetricCard title="Total por pagar" value={fmt(totalDebt)} icon={CreditCard} />
+        <MetricCard title="Vencidas" value={fmt(overdueAmount)} subtitle={`${overdue.length} facturas`} icon={AlertTriangle} />
+        <MetricCard title="Por vencer (7d)" value={fmt(dueSoonAmount)} subtitle={`${dueSoon.length} facturas`} icon={Clock} />
+        <MetricCard title="Liquidadas" value={`${paidTotal}`} icon={CheckCircle} />
       </div>
 
       {/* Filters */}
