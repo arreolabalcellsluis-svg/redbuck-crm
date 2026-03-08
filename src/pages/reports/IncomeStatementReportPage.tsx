@@ -13,8 +13,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
-// Demo assets for depreciation (imported calculation)
-import { default as AssetsPage } from '@/pages/AssetsPage';
+// Demo assets for depreciation calculation
 // We just need the demo data to compute depreciation — reuse the exported helper
 const demoAssets = [
   { id:'a1', nombre:'Camioneta Nissan NP300', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-06-15', costoAdquisicion:420000, vidaUtilMeses:60, valorRescate:120000, estatus:'activo' as const },
