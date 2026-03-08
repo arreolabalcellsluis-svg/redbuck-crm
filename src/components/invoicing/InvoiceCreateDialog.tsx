@@ -59,8 +59,11 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setNotes('');
 
       // Auto-select preselected order
-      if (preselectedOrderId && orders) {
-        const found = orders.find(o => o.id === preselectedOrderId);
+      if ((preselectedOrderId || preselectedOrderFolio) && orders) {
+        const found = orders.find(o =>
+          (preselectedOrderId && o.id === preselectedOrderId) ||
+          (preselectedOrderFolio && o.folio === preselectedOrderFolio)
+        );
         if (found) {
           setSelectedOrder(found);
           setStep('configure');
@@ -70,7 +73,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setStep('select');
       setSelectedOrder(null);
     }
-  }, [open, fiscal, preselectedOrderId, orders]);
+  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders]);
 
   // Filter orders that can be invoiced
   const eligibleOrders = (orders ?? []).filter(o =>
