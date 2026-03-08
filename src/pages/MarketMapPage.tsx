@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   generateMarketData, getGrowthOpportunities, getMarketAnalytics,
@@ -14,24 +14,26 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-// Mexico bounding box for SVG projection
-const MEX_BOUNDS = { minLat: 14.5, maxLat: 33, minLng: -118, maxLng: -86.5 };
-const SVG_W = 800;
-const SVG_H = 480;
-
-function project(lat: number, lng: number): { x: number; y: number } {
-  const x = ((lng - MEX_BOUNDS.minLng) / (MEX_BOUNDS.maxLng - MEX_BOUNDS.minLng)) * SVG_W;
-  const y = ((MEX_BOUNDS.maxLat - lat) / (MEX_BOUNDS.maxLat - MEX_BOUNDS.minLat)) * SVG_H;
-  return { x, y };
-}
-
 function bubbleRadius(data: CityMarketData): number {
   const base = data.customers * 3 + data.closedSales * 5 + data.leads * 2;
   return Math.max(8, Math.min(28, 6 + base * 1.5));
+}
+
+// Component to fly to a selected city
+function FlyToCity({ city }: { city: CityMarketData | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (city) {
+      map.flyTo([city.lat, city.lng], 10, { duration: 1 });
+    }
+  }, [city, map]);
+  return null;
 }
 
 export default function MarketMapPage() {
