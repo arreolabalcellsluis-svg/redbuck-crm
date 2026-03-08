@@ -77,6 +77,15 @@ export default function CFODashboardPage() {
   const excessInv = useMemo(() => detectExcessInventory(), []);
   const payPressure = useMemo(() => detectPaymentPressure(payables), [payables]);
 
+  // Forecast data
+  const [forecastHorizon, setForecastHorizon] = useState(12);
+  const [forecastScenario, setForecastScenario] = useState<ScenarioType>('base');
+  const scenarioData = useMemo(
+    () => calcScenarioComparison(forecastHorizon, income, balance, payables),
+    [forecastHorizon, income, balance, payables],
+  );
+  const activeForecast = scenarioData.forecasts[forecastScenario];
+
   // Radar chart data (normalized to max for spider chart)
   const radarChartData = useMemo(() => {
     const maxVal = Math.max(radar.bancos, radar.cuentasPorCobrar, radar.inventario, radar.cuentasPorPagar, radar.creditosBancarios, Math.abs(radar.utilidadNeta), 1);
