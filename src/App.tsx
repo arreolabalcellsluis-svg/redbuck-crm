@@ -37,6 +37,7 @@ import OperatingExpensesPage from "./pages/OperatingExpensesPage";
 import AssetsPage from "./pages/AssetsPage";
 import AccountsPayablePage from "./pages/AccountsPayablePage";
 import CFODashboardPage from "./pages/CFODashboardPage";
+import VendorGoalsPage from "./pages/VendorGoalsPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
