@@ -39,6 +39,7 @@ import AccountsPayablePage from "./pages/AccountsPayablePage";
 import CFODashboardPage from "./pages/CFODashboardPage";
 import VendorGoalsPage from "./pages/VendorGoalsPage";
 import CommissionSimulatorPage from "./pages/CommissionSimulatorPage";
+import SalesForecastPage from "./pages/SalesForecastPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
