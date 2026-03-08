@@ -83,6 +83,40 @@ export default function SalesReportPage() {
     total: filtered.reduce((s, r) => s + r.total, 0),
   }), [filtered]);
 
+  // Count quotations matching current filters
+  const totalCotizaciones = useMemo(() => {
+    const baseQuotations = isVendedor
+      ? demoQuotations.filter(q => q.vendorName === DEMO_VENDEDOR_NAME)
+      : demoQuotations;
+    return baseQuotations.filter(q => {
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        if (!q.customerName.toLowerCase().includes(s) && !q.folio.toLowerCase().includes(s)) return false;
+      }
+      if (filters.vendedor && !q.vendorName.includes(filters.vendedor)) return false;
+      if (filters.dateFrom && new Date(q.createdAt) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(q.createdAt) > new Date(filters.dateTo)) return false;
+      return true;
+    }).length;
+  }, [filters, isVendedor]);
+
+  // Count orders matching current filters
+  const totalPedidos = useMemo(() => {
+    const baseOrders = isVendedor
+      ? demoOrders.filter(o => o.vendorName === DEMO_VENDEDOR_NAME)
+      : demoOrders;
+    return baseOrders.filter(o => {
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        if (!o.customerName.toLowerCase().includes(s) && !o.folio.toLowerCase().includes(s)) return false;
+      }
+      if (filters.vendedor && !o.vendorName.includes(filters.vendedor)) return false;
+      if (filters.dateFrom && new Date(o.createdAt) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(o.createdAt) > new Date(filters.dateTo)) return false;
+      return true;
+    }).length;
+  }, [filters, isVendedor]);
+
   const hasActiveFilters = !!(filters.search || filters.vendedor || filters.sku || filters.categoria || filters.dateFrom || filters.dateTo);
 
   const vendorOptions = isVendedor ? [] : [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
