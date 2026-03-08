@@ -2,6 +2,7 @@
  * Generate a CFDI-style invoice PDF preview and demo XML
  */
 import { numberToWords } from '@/lib/numberToWords';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
