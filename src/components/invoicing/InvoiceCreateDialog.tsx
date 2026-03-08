@@ -21,7 +21,7 @@ interface Props {
   preselectedOrderFolio?: string;
 }
 
-export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrderId }: Props) {
+export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrderId, preselectedOrderFolio }: Props) {
   const { data: orders } = useOrders();
   const { data: fiscal } = useFiscalSettings();
   const { data: customerFiscal } = useAllCustomerFiscalData();
