@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   FileText, Settings, Shield, Upload, CheckCircle, AlertTriangle, XCircle, Search,
-  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge,
+  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,11 +17,13 @@ import {
   useFiscalSettings, useSaveFiscalSettings, FiscalSettings,
   useCustomerFiscalData, useAllCustomerFiscalData, useSaveCustomerFiscalData,
   useAllProductFiscalData, useSaveProductFiscalData,
-  useInvoices,
+  useInvoices, type Invoice,
   SAT_TAX_REGIMES, SAT_CFDI_USES, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS, TAX_OBJECTS,
 } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
+import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
+import InvoiceDetailDialog from '@/components/invoicing/InvoiceDetailDialog';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
