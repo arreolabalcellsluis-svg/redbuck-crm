@@ -103,6 +103,11 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, search, dateFrom, dateTo]);
 
+  const handleSelectOrder = (order: DBOrder) => {
+    setSelectedOrder(order);
+    setStep('configure');
+  };
+
   const customerFiscalData = selectedOrder?.customer_id ? fiscalMap.get(selectedOrder.customer_id) : null;
   const hasCustomerFiscal = customerFiscalData && customerFiscalData.rfc && customerFiscalData.legal_name && customerFiscalData.fiscal_zip_code && customerFiscalData.tax_regime;
 
