@@ -687,8 +687,8 @@ export default function QuotationsPage() {
       <Dialog open={showZipDialog} onOpenChange={setShowZipDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar cotizaciones en ZIP</DialogTitle>
-            <DialogDescription>Selecciona filtros para la descarga masiva.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar cotizaciones</DialogTitle>
+            <DialogDescription>Selecciona un rango de fechas y filtros opcionales para descargar.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
