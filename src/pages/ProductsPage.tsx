@@ -264,6 +264,14 @@ export default function ProductsPage() {
               <option value="04">04 — Sí objeto de impuesto y no causa de impuestos</option>
             </select>
           </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Familia de Impuestos</label>
+            <select value={form.taxFamily || '16'} onChange={e => setForm(p => ({ ...p, taxFamily: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+              <option value="16">IVA 16%</option>
+              <option value="0">IVA 0%</option>
+              <option value="exento">Exento</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
