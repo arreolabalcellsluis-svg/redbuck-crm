@@ -686,7 +686,7 @@ export default function QuotationsPage() {
 
           <DialogFooter>
             <button onClick={() => { setShowCreate(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleCreateQuotation} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Crear Cotización</button>
+            <button onClick={editingQuotation ? handleSaveEdit : handleCreateQuotation} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">{editingQuotation ? 'Guardar Cambios' : 'Crear Cotización'}</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
