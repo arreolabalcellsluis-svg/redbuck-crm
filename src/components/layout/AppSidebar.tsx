@@ -44,6 +44,7 @@ const navItems = [
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
   { label: 'Reportes Ejecutivos', icon: BookOpen, path: '/reportes-ejecutivos' },
   { label: 'Simulador Financiero', icon: Calculator, path: '/reportes/simulador-financiero' },
+  { label: 'Facturación CFDI', icon: FileText, path: '/facturacion' },
   { label: 'Configuración', icon: Settings, path: '/configuracion' },
 ];
 

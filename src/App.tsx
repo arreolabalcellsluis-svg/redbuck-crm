@@ -40,6 +40,7 @@ import CFODashboardPage from "./pages/CFODashboardPage";
 import VendorGoalsPage from "./pages/VendorGoalsPage";
 import CommissionSimulatorPage from "./pages/CommissionSimulatorPage";
 import SalesForecastPage from "./pages/SalesForecastPage";
+import InvoicingPage from "./pages/InvoicingPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -146,6 +147,7 @@ function ProtectedRoutes() {
             <Route path="/reportes/sobreinventario" element={<OverstockReportPage />} />
             <Route path="/reportes/plan-importaciones" element={<ImportPlanningPage />} />
             <Route path="/reportes/simulador-financiero" element={<FinancialSimulatorPage />} />
+            <Route path="/facturacion" element={<InvoicingPage />} />
             <Route path="/configuracion" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
