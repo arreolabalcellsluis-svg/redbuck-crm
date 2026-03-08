@@ -885,13 +885,14 @@ export default function QuotationsPage() {
 function QuotationPreview({ quotation }: { quotation: Quotation }) {
   const company = demoCompanyInfo;
   const conditions = demoSalesConditions;
+  const logoSrc = getCompanyLogoUrl();
 
   return (
     <div className="bg-white text-[hsl(0,0%,12%)]" id="quotation-pdf">
       <div className="h-2 w-full" style={{ background: 'hsl(var(--primary))' }} />
       <div className="px-8 pt-6 pb-5 flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center font-display font-black text-xl tracking-tight" style={{ background: 'hsl(var(--primary))', color: '#fff' }}>RB</div>
+          <img src={logoSrc} alt="Logo" className="w-14 h-14 rounded-xl object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           <div>
             <div className="font-display font-extrabold text-xl tracking-tight leading-tight">{company.nombreComercial}</div>
             <div className="text-[11px] text-[hsl(0,0%,50%)] mt-0.5">{company.razonSocial}</div>
