@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
