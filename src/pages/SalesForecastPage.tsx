@@ -409,6 +409,20 @@ export default function SalesForecastPage() {
           ))}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={dlOpen} onOpenChange={setDlOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Descargar Pronóstico Excel</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Selecciona el rango de fechas (opcional).</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Desde</Label><Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} /></div>
+              <div><Label>Hasta</Label><Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} /></div>
+            </div>
+            <Button onClick={handleExcelDownload} className="w-full"><Download size={14} className="mr-2" />Descargar Excel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
