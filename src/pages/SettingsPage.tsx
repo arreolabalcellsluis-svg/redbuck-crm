@@ -67,6 +67,7 @@ export default function SettingsPage() {
   // ─── User form ─────────────────────────────────────────
   const emptyUserForm = (): Omit<User, 'id'> => ({
     name: '', email: '', phone: '', whatsapp: '', role: 'vendedor', active: true,
+    address: '', emergencyContactName: '', emergencyContactPhone: '', photoUrl: '', contractUrl: '',
   });
   const [userForm, setUserForm] = useState(emptyUserForm());
 
