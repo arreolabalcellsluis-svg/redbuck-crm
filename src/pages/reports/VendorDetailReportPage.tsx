@@ -88,13 +88,38 @@ export default function VendorDetailReportPage() {
   const hasActiveFilters = !!(filters.search || filters.vendedor || filters.dateFrom || filters.dateTo);
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      Fecha: r.fecha, Folio: r.folio, Cliente: r.cliente, Vendedor: r.vendedor,
-      SKU: r.sku, Producto: r.producto, Cantidad: r.cantidad, Precio: r.precio, Total: r.total, Canal: r.canal,
-    }));
-    const vendorSlug = vendorName.replace(/\s+/g, '_');
     const dateStr = new Date().toISOString().split('T')[0];
-    exportToExcel(data, `Ventas_vendedor_${vendorSlug}_${dateStr}`);
+    exportFullExcel({
+      title: `Detalle Vendedor: ${vendorName}`, filename: `Ventas_vendedor_${vendorName.replace(/\s+/g,'_')}_${dateStr}`,
+      kpis: [
+        { label: 'Ventas totales', value: fmt(summary.totalSales), color: 'primary' },
+        { label: '# Ventas', value: summary.numSales },
+        { label: 'Ticket promedio', value: fmt(summary.ticketProm) },
+        { label: 'Clientes atendidos', value: summary.byClient.length },
+      ],
+      sections: [
+        { title: 'Ventas por cliente', headers: ['Cliente', 'Total', '# Ventas'], rows: summary.byClient.map(c => [c.cliente, fmt(c.total), c.ventas]) },
+        { title: 'Ventas por SKU', headers: ['SKU', 'Producto', 'Unidades', 'Total'], rows: summary.bySku.map(s => [s.sku, s.producto, s.unidades, fmt(s.total)]) },
+        { title: 'Detalle transaccional', headers: ['Fecha', 'Folio', 'Cliente', 'SKU', 'Producto', 'Cant.', 'Precio', 'Total', 'Canal'], rows: filtered.map(r => [r.fecha, r.folio, r.cliente, r.sku, r.producto, r.cantidad, fmt(r.precio), fmt(r.total), r.canal]) },
+      ],
+    });
+  };
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: `Detalle Vendedor: ${vendorName}`, filename: `Ventas_vendedor_${vendorName.replace(/\s+/g,'_')}_${dateStr}`,
+      kpis: [
+        { label: 'Ventas totales', value: fmt(summary.totalSales), color: 'primary' },
+        { label: '# Ventas', value: summary.numSales },
+        { label: 'Ticket promedio', value: fmt(summary.ticketProm) },
+        { label: 'Clientes atendidos', value: summary.byClient.length },
+      ],
+      sections: [
+        { title: 'Ventas por cliente', headers: ['Cliente', 'Total', '# Ventas'], rows: summary.byClient.map(c => [c.cliente, fmt(c.total), c.ventas]) },
+        { title: 'Ventas por SKU', headers: ['SKU', 'Producto', 'Uds', 'Total'], rows: summary.bySku.map(s => [s.sku, s.producto, s.unidades, fmt(s.total)]) },
+        { title: 'Detalle transaccional', headers: ['Fecha', 'Folio', 'Cliente', 'SKU', 'Producto', 'Cant.', 'Precio', 'Total'], rows: filtered.map(r => [r.fecha, r.folio, r.cliente, r.sku, r.producto, r.cantidad, fmt(r.precio), fmt(r.total)]) },
+      ],
+    });
   };
 
   return (
