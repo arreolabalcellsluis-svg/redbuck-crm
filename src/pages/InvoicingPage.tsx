@@ -33,6 +33,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
 import InvoiceDetailDialog from '@/components/invoicing/InvoiceDetailDialog';
+import PaymentsTab from '@/components/invoicing/PaymentsTab';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
