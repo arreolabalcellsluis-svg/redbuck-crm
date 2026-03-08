@@ -233,10 +233,6 @@ export default function ProductsPage() {
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Proveedor</label>
-        <input value={form.supplier} onChange={e => setForm(p => ({ ...p, supplier: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Guangzhou Lift Co." />
-      </div>
-      <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Garantía</label>
         <input value={form.warranty} onChange={e => setForm(p => ({ ...p, warranty: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="2 años" />
       </div>
