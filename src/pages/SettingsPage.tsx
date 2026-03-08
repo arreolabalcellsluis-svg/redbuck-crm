@@ -181,6 +181,82 @@ export default function SettingsPage() {
           </div>
         </>
       )}
+      {/* ─── Dirección ─── */}
+      <div className="md:col-span-2">
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Dirección</label>
+        <input value={userForm.address || ''} onChange={e => setUserForm(p => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Calle, número, colonia, ciudad, estado, CP" />
+      </div>
+
+      {/* ─── Contacto de emergencia ─── */}
+      <div className="md:col-span-2 border-t pt-3 mt-1">
+        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Contacto de emergencia</p>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre contacto emergencia</label>
+        <input value={userForm.emergencyContactName || ''} onChange={e => setUserForm(p => ({ ...p, emergencyContactName: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Nombre completo" />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono emergencia</label>
+        <input value={userForm.emergencyContactPhone || ''} onChange={e => setUserForm(p => ({ ...p, emergencyContactPhone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="10 dígitos" />
+      </div>
+
+      {/* ─── Foto y contrato ─── */}
+      <div className="md:col-span-2 border-t pt-3 mt-1">
+        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Documentos</p>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Foto del usuario</label>
+        <div className="flex items-center gap-3">
+          {userForm.photoUrl ? (
+            <img src={userForm.photoUrl} alt="Foto" className="w-16 h-16 rounded-lg object-cover border" />
+          ) : (
+            <div className="w-16 h-16 rounded-lg border border-dashed flex items-center justify-center bg-muted/30">
+              <Image size={20} className="text-muted-foreground" />
+            </div>
+          )}
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-card text-xs font-medium hover:bg-muted/50 transition-colors">
+            <Upload size={14} />
+            {userForm.photoUrl ? 'Cambiar foto' : 'Subir foto'}
+            <input type="file" accept="image/*" className="hidden" onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const url = URL.createObjectURL(file);
+                setUserForm(p => ({ ...p, photoUrl: url }));
+              }
+            }} />
+          </label>
+          {userForm.photoUrl && (
+            <button onClick={() => setUserForm(p => ({ ...p, photoUrl: '' }))} className="text-xs text-destructive hover:underline">Quitar</button>
+          )}
+        </div>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Contrato (PDF)</label>
+        <div className="flex items-center gap-3">
+          {userForm.contractUrl ? (
+            <a href={userForm.contractUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+              <FileText size={14} /> Ver contrato
+            </a>
+          ) : (
+            <span className="text-xs text-muted-foreground">Sin contrato</span>
+          )}
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-card text-xs font-medium hover:bg-muted/50 transition-colors">
+            <FileUp size={14} />
+            {userForm.contractUrl ? 'Cambiar PDF' : 'Subir PDF'}
+            <input type="file" accept=".pdf" className="hidden" onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const url = URL.createObjectURL(file);
+                setUserForm(p => ({ ...p, contractUrl: url }));
+              }
+            }} />
+          </label>
+          {userForm.contractUrl && (
+            <button onClick={() => setUserForm(p => ({ ...p, contractUrl: '' }))} className="text-xs text-destructive hover:underline">Quitar</button>
+          )}
+        </div>
+      </div>
+
       <div className="md:col-span-2 flex items-center gap-2">
         <input type="checkbox" checked={userForm.active} onChange={e => setUserForm(p => ({ ...p, active: e.target.checked }))} id="user-active" className="rounded" />
         <label htmlFor="user-active" className="text-sm">Usuario activo</label>
