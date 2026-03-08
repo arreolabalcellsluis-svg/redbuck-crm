@@ -11,6 +11,7 @@ import {
   calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
   detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
 } from '@/lib/leakDetectorEngine';
+import { calcScenarioComparison, SCENARIOS, type ScenarioType } from '@/lib/forecastEngine';
 import MetricCard from '@/components/shared/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,8 +20,9 @@ import {
   DollarSign, TrendingUp, Package, CreditCard, Building2,
   Wallet, BarChart3, Download, AlertTriangle,
   CheckCircle, RefreshCw, Banknote, Layers, Activity, Target, Radar,
-  ShieldAlert, Eye,
+  ShieldAlert, Eye, Sparkles,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell,
@@ -74,6 +76,15 @@ export default function CFODashboardPage() {
   const capClients = useMemo(() => detectCapitalConsumingClients(), []);
   const excessInv = useMemo(() => detectExcessInventory(), []);
   const payPressure = useMemo(() => detectPaymentPressure(payables), [payables]);
+
+  // Forecast data
+  const [forecastHorizon, setForecastHorizon] = useState(12);
+  const [forecastScenario, setForecastScenario] = useState<ScenarioType>('base');
+  const scenarioData = useMemo(
+    () => calcScenarioComparison(forecastHorizon, income, balance, payables),
+    [forecastHorizon, income, balance, payables],
+  );
+  const activeForecast = scenarioData.forecasts[forecastScenario];
 
   // Radar chart data (normalized to max for spider chart)
   const radarChartData = useMemo(() => {
@@ -198,6 +209,13 @@ export default function CFODashboardPage() {
       if (slowData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slowData), 'Inv. Lento');
       if (marginData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(marginData), 'Bajo Margen');
       if (clientData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientData), 'Clientes Riesgo');
+      // Forecast sheet
+      const forecastData = activeForecast.months.map(m => ({
+        Mes: m.month, Ventas: m.ventas, 'Ut. Bruta': m.utilidadBruta, EBITDA: m.ebitda,
+        'Ut. Neta': m.utilidadNeta, 'Flujo Neto': m.flujoNeto, 'Saldo Caja': m.saldoCaja,
+        'Inv. Necesario': m.inventarioNecesario, 'Cap. Trabajo': m.capitalTrabajo,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(forecastData), `Predicción ${SCENARIOS[forecastScenario].label}`);
       XLSX.writeFile(wb, `Dashboard_Financiero_${new Date().toISOString().split('T')[0]}.xlsx`);
     });
   };
@@ -250,13 +268,13 @@ export default function CFODashboardPage() {
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
       <Tabs defaultValue="radar" className="space-y-4">
-        <TabsList className="grid grid-cols-7 w-full max-w-5xl">
+        <TabsList className="grid grid-cols-4 md:grid-cols-8 w-full max-w-5xl">
           <TabsTrigger value="radar">Radar</TabsTrigger>
           <TabsTrigger value="income">Resultados</TabsTrigger>
           <TabsTrigger value="balance">Balance</TabsTrigger>
           <TabsTrigger value="cashflow">Flujo</TabsTrigger>
           <TabsTrigger value="kpis">KPIs</TabsTrigger>
-          <TabsTrigger value="moneymap">Mapa Dinero</TabsTrigger>
+          <TabsTrigger value="moneymap">Mapa</TabsTrigger>
           <TabsTrigger value="leaks" className="gap-1">
             <ShieldAlert size={14} /> Fugas
             {leakSummary.alertas.length > 0 && (
@@ -264,6 +282,9 @@ export default function CFODashboardPage() {
                 {leakSummary.alertas.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="forecast" className="gap-1">
+            <Sparkles size={14} /> Predicción
           </TabsTrigger>
         </TabsList>
 
@@ -951,6 +972,144 @@ export default function CFODashboardPage() {
                     <div className="text-[10px] text-muted-foreground">{item.cantidadFacturas} factura(s)</div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─── FORECAST TAB ─────────────────────────────────────── */}
+        <TabsContent value="forecast">
+          {/* Controls */}
+          <div className="flex flex-wrap items-center gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Horizonte:</span>
+              <Select value={String(forecastHorizon)} onValueChange={v => setForecastHorizon(Number(v))}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3 meses</SelectItem>
+                  <SelectItem value="6">6 meses</SelectItem>
+                  <SelectItem value="12">12 meses</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Escenario:</span>
+              {(['conservador', 'base', 'agresivo'] as ScenarioType[]).map(s => (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={forecastScenario === s ? 'default' : 'outline'}
+                  onClick={() => setForecastScenario(s)}
+                  className="text-xs"
+                >
+                  {SCENARIOS[s].label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Summary KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <MetricCard title={`Ventas ${forecastHorizon}m`} value={fmt(activeForecast.ventasTotal)} icon={DollarSign} />
+            <MetricCard title="Ut. Bruta Proy." value={fmt(activeForecast.utilidadBrutaTotal)} icon={TrendingUp} />
+            <MetricCard title="EBITDA Proy." value={fmt(activeForecast.ebitdaTotal)} icon={BarChart3} />
+            <MetricCard title="Ut. Neta Proy." value={fmt(activeForecast.utilidadNetaTotal)} icon={Banknote} variant={activeForecast.utilidadNetaTotal < 0 ? 'danger' : 'success'} />
+            <MetricCard title="Flujo Neto" value={fmt(activeForecast.flujoNetoTotal)} icon={Activity} variant={activeForecast.flujoNetoTotal < 0 ? 'danger' : 'success'} />
+            <MetricCard title="Cap. Trabajo Final" value={fmt(activeForecast.capitalTrabajoFinal)} icon={Layers} variant={activeForecast.capitalTrabajoFinal < 0 ? 'danger' : 'info'} />
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6 mb-6">
+            {/* Sales + Profit projection chart */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-lg font-bold mb-4">Ventas y Utilidad Proyectadas</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={activeForecast.months}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis tickFormatter={v => `$${(v / 1000000).toFixed(1)}M`} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Legend />
+                  <Bar dataKey="ventas" name="Ventas" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="utilidadNeta" name="Ut. Neta" fill="hsl(142,71%,45%)" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Cash flow projection */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-lg font-bold mb-4">Flujo de Efectivo Proyectado</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={activeForecast.months}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis tickFormatter={v => `$${(v / 1000000).toFixed(1)}M`} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Legend />
+                  <Line type="monotone" dataKey="saldoCaja" name="Saldo Caja" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="flujoNeto" name="Flujo Neto" stroke="hsl(142,71%,45%)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="capitalTrabajo" name="Cap. Trabajo" stroke="hsl(38,92%,50%)" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Scenario comparison */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-lg font-bold mb-4">Comparativo de Escenarios ({forecastHorizon} meses)</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={scenarioData.comparison} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tickFormatter={v => `$${(v / 1000000).toFixed(1)}M`} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="label" type="category" tick={{ fontSize: 11 }} width={90} />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Legend />
+                  <Bar dataKey="conservador" name="Conservador" fill={SCENARIOS.conservador.color} radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="base" name="Base" fill={SCENARIOS.base.color} radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="agresivo" name="Agresivo" fill={SCENARIOS.agresivo.color} radius={[0, 2, 2, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Forecast alerts */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <AlertTriangle size={18} /> Alertas Futuras ({SCENARIOS[forecastScenario].label})
+              </h3>
+              {activeForecast.alertas.length === 0 ? (
+                <div className="flex items-center gap-2 p-4 bg-green-500/5 rounded-lg">
+                  <CheckCircle size={18} className="text-green-600" />
+                  <span className="text-sm">No se detectan riesgos financieros en el horizonte proyectado</span>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {activeForecast.alertas.map((a, i) => (
+                    <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${
+                      a.severity === 'critico' ? 'bg-destructive/10' : a.severity === 'alto' ? 'bg-amber-500/10' : 'bg-muted/50'
+                    }`}>
+                      <span className="text-lg mt-0.5">{a.severity === 'critico' ? '🔴' : a.severity === 'alto' ? '🟡' : '🟠'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm">{a.titulo}</div>
+                        <div className="text-xs text-muted-foreground">{a.descripcion}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-bold text-sm">{fmt(a.monto)}</div>
+                        <div className="text-[10px] text-muted-foreground">{a.mes}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Inventory projection summary */}
+              <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Inventario Promedio Requerido</div>
+                <div className="text-lg font-bold">{fmt(activeForecast.inventarioCapitalRequerido)}</div>
+                <div className="text-xs text-muted-foreground">
+                  {activeForecast.inventarioCapitalRequerido > balance.inventario
+                    ? `⚠️ Se necesita ${fmt(activeForecast.inventarioCapitalRequerido - balance.inventario)} adicional`
+                    : '✅ Inventario actual es suficiente'}
+                </div>
               </div>
             </div>
           </div>
