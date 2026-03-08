@@ -192,61 +192,51 @@ export default function MarketMapPage() {
                 </div>
               ))}
             </div>
-            <div className="relative w-full" style={{ paddingBottom: `${(SVG_H / SVG_W) * 100}%` }}>
-              <svg
-                viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-                className="absolute inset-0 w-full h-full"
-                style={{ background: 'hsl(var(--muted) / 0.3)' }}
+            <div className="relative w-full rounded-lg overflow-hidden" style={{ height: '480px' }}>
+              <MapContainer
+                center={[23.6345, -102.5528]}
+                zoom={5}
+                scrollWheelZoom={true}
+                style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
               >
-                {/* Simple Mexico outline hint */}
-                <rect x={0} y={0} width={SVG_W} height={SVG_H} rx={12} fill="none" stroke="hsl(var(--border))" strokeWidth={1} />
-                {/* Grid lines */}
-                {[0.25, 0.5, 0.75].map(f => (
-                  <g key={f}>
-                    <line x1={SVG_W * f} y1={0} x2={SVG_W * f} y2={SVG_H} stroke="hsl(var(--border))" strokeWidth={0.5} strokeDasharray="4 4" />
-                    <line x1={0} y1={SVG_H * f} x2={SVG_W} y2={SVG_H * f} stroke="hsl(var(--border))" strokeWidth={0.5} strokeDasharray="4 4" />
-                  </g>
-                ))}
-                {/* City bubbles */}
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <FlyToCity city={selectedCity} />
                 {filtered.map(d => {
-                  const { x, y } = project(d.lat, d.lng);
                   const r = bubbleRadius(d);
                   const isSelected = selectedCity?.city === d.city;
                   return (
-                    <g key={d.city} className="cursor-pointer" onClick={() => setSelectedCity(d)}>
-                      <circle
-                        cx={x} cy={y} r={r}
-                        fill={PENETRATION_DOT_COLORS[d.penetration]}
-                        opacity={isSelected ? 0.95 : 0.7}
-                        stroke={isSelected ? 'hsl(var(--foreground))' : 'white'}
-                        strokeWidth={isSelected ? 2.5 : 1}
-                      />
-                      <text
-                        x={x} y={y + r + 12}
-                        textAnchor="middle"
-                        fontSize={10}
-                        fill="hsl(var(--foreground))"
-                        className="pointer-events-none select-none"
-                        fontWeight={isSelected ? 700 : 400}
-                      >
-                        {d.city}
-                      </text>
-                      {d.customers > 0 && (
-                        <text
-                          x={x} y={y + 4}
-                          textAnchor="middle"
-                          fontSize={r > 14 ? 11 : 8}
-                          fill="white"
-                          fontWeight="bold"
-                          className="pointer-events-none select-none"
-                        >
-                          {d.customers}
-                        </text>
-                      )}
-                    </g>
+                    <CircleMarker
+                      key={d.city}
+                      center={[d.lat, d.lng]}
+                      radius={r}
+                      pathOptions={{
+                        fillColor: PENETRATION_DOT_COLORS[d.penetration],
+                        fillOpacity: isSelected ? 0.95 : 0.7,
+                        color: isSelected ? '#000' : '#fff',
+                        weight: isSelected ? 3 : 1,
+                      }}
+                      eventHandlers={{ click: () => setSelectedCity(d) }}
+                    >
+                      <Popup>
+                        <div className="text-xs space-y-1 min-w-[140px]">
+                          <div className="font-bold text-sm">{d.city}</div>
+                          <div className="text-muted-foreground">{d.state}</div>
+                          <div>👥 {d.customers} clientes · 📄 {d.quotations} cot.</div>
+                          <div>🛒 {d.closedSales} ventas</div>
+                          {d.totalSalesValue > 0 && <div className="font-semibold">{fmt(d.totalSalesValue)}</div>}
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PENETRATION_DOT_COLORS[d.penetration] }} />
+                            {PENETRATION_LABELS[d.penetration]}
+                          </div>
+                        </div>
+                      </Popup>
+                    </CircleMarker>
                   );
                 })}
-              </svg>
+              </MapContainer>
             </div>
           </div>
 
