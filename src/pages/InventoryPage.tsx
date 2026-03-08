@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { demoProducts as initialProducts, demoWarehouses } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
-import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, CalendarIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
