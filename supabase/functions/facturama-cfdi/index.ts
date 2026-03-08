@@ -156,9 +156,12 @@ Deno.serve(async (req) => {
         Items: cfdiItems,
       };
 
-      // Call Facturama API to stamp
-      const stampRes = await facturama("/3/cfdis", "POST", cfdiPayload);
+      // Call Facturama API to stamp (API Web uses /2/cfdis)
+      console.log("Stamping CFDI payload:", JSON.stringify(cfdiPayload));
+      const stampRes = await facturama("/2/cfdis", "POST", cfdiPayload);
       const stampData = await safeJson(stampRes);
+
+      console.log("Facturama stamp response status:", stampRes.status, "data:", JSON.stringify(stampData));
 
       if (!stampRes.ok) {
         // Update invoice with error
@@ -166,11 +169,11 @@ Deno.serve(async (req) => {
           .from("invoices")
           .update({
             status: "error_timbrado",
-            pac_response: stampData,
+            pac_response: stampData || { status: stampRes.status },
             updated_at: new Date().toISOString(),
           })
           .eq("id", invoice_id);
-        throw new Error(`Error de timbrado: ${JSON.stringify(stampData)}`);
+        throw new Error(`Error de timbrado (HTTP ${stampRes.status}): ${JSON.stringify(stampData)}`);
       }
 
       // Extract UUID and update invoice
