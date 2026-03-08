@@ -78,10 +78,11 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
 
-  // Auto-generate next folio number
+  // Auto-generate next folio number based on highest existing folio
   const nextFolio = useMemo(() => {
-    const count = (existingInvoices ?? []).length;
-    return String(count + 1).padStart(3, '0');
+    const folios = (existingInvoices ?? []).map(inv => parseInt(inv.folio, 10)).filter(n => !isNaN(n));
+    const maxFolio = folios.length > 0 ? Math.max(...folios) : 0;
+    return String(maxFolio + 1).padStart(3, '0');
   }, [existingInvoices]);
 
   // Reset on open
