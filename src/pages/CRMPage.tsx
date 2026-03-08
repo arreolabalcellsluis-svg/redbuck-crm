@@ -379,7 +379,7 @@ export default function CRMPage() {
           </div>
 
           <DialogFooter>
-            <button onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={() => { setShowCreate(false); setForm(emptyCustomer()); setFiscal(emptyFiscal()); setShowFiscal(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
               Registrar Cliente
             </button>
