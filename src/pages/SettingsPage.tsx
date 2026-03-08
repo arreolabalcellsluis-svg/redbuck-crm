@@ -10,20 +10,32 @@ import { toast } from 'sonner';
 const ALL_MODULES = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'ejecutivo', label: 'Dashboard Ejecutivo' },
+  { key: 'financiero', label: 'Dashboard Financiero' },
   { key: 'crm', label: 'CRM' },
+  { key: 'reabasto', label: 'Reabasto' },
+  { key: 'agenda', label: 'Agenda Comercial' },
+  { key: 'asistente', label: 'Asistente Diario' },
+  { key: 'mapa_mercado', label: 'Mapa de Mercado' },
   { key: 'productos', label: 'Productos' },
   { key: 'refacciones', label: 'Refacciones' },
   { key: 'inventario', label: 'Inventario' },
   { key: 'cotizaciones', label: 'Cotizaciones' },
   { key: 'pedidos', label: 'Pedidos' },
+  { key: 'historial_pedidos', label: 'Historial Pedidos' },
   { key: 'cobranza', label: 'Cobranza' },
+  { key: 'cuentas_pagar', label: 'Cuentas por Pagar' },
   { key: 'compras', label: 'Compras' },
+  { key: 'historial_compras', label: 'Historial Compras' },
   { key: 'importaciones', label: 'Importaciones' },
   { key: 'proveedores', label: 'Proveedores' },
-  { key: 'servicio', label: 'Servicio' },
+  { key: 'servicio', label: 'Servicio Técnico' },
   { key: 'comisiones', label: 'Comisiones' },
+  { key: 'gastos', label: 'Gastos Operativos' },
+  { key: 'activos', label: 'Activos / Depreciación' },
   { key: 'planeacion', label: 'Planeación' },
   { key: 'reportes', label: 'Reportes' },
+  { key: 'reportes_ejecutivos', label: 'Reportes Ejecutivos' },
+  { key: 'simulador', label: 'Simulador Financiero' },
   { key: 'configuracion', label: 'Configuración' },
 ] as const;
 
@@ -32,12 +44,31 @@ type ModuleKey = typeof ALL_MODULES[number]['key'];
 // Default permissions per role
 const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   director: ALL_MODULES.map(m => m.key),
-  gerencia_comercial: ['dashboard', 'crm', 'productos', 'cotizaciones', 'pedidos', 'cobranza', 'comisiones', 'reportes'],
-  vendedor: ['dashboard', 'crm', 'productos', 'cotizaciones', 'pedidos'],
-  administracion: ['dashboard', 'cobranza', 'pedidos', 'planeacion', 'reportes'],
-  compras: ['dashboard', 'compras', 'importaciones', 'proveedores', 'inventario', 'planeacion'],
-  almacen: ['dashboard', 'inventario', 'productos', 'refacciones'],
-  tecnico: ['dashboard', 'servicio', 'refacciones', 'inventario'],
+  gerencia_comercial: [
+    'dashboard', 'ejecutivo', 'crm', 'reabasto', 'agenda', 'asistente', 'mapa_mercado',
+    'productos', 'refacciones', 'inventario', 'cotizaciones', 'pedidos', 'historial_pedidos',
+    'cobranza', 'comisiones', 'reportes', 'reportes_ejecutivos',
+  ],
+  vendedor: [
+    'dashboard', 'crm', 'agenda', 'asistente', 'mapa_mercado',
+    'productos', 'refacciones', 'inventario', 'cotizaciones', 'cobranza', 'comisiones',
+  ],
+  administracion: [
+    'dashboard', 'ejecutivo', 'financiero', 'cobranza', 'cuentas_pagar',
+    'pedidos', 'historial_pedidos', 'gastos', 'activos',
+    'planeacion', 'reportes', 'reportes_ejecutivos', 'simulador', 'configuracion',
+  ],
+  compras: [
+    'dashboard', 'compras', 'historial_compras', 'importaciones', 'proveedores',
+    'inventario', 'productos', 'planeacion', 'reabasto',
+  ],
+  almacen: [
+    'dashboard', 'inventario', 'productos', 'refacciones',
+    'pedidos', 'historial_pedidos',
+  ],
+  tecnico: [
+    'dashboard', 'servicio', 'refacciones', 'inventario', 'productos',
+  ],
 };
 
 export default function SettingsPage() {
