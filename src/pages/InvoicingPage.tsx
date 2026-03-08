@@ -173,9 +173,9 @@ function IssuerConfigTab() {
             <Input type="password" value={form.pac_token_encrypted ?? ''} onChange={e => set('pac_token_encrypted', e.target.value)} placeholder="••••••••" />
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleTestPac} disabled={testingPac} variant="outline" className="gap-1.5">
-              <RefreshCw size={14} className={testingPac ? 'animate-spin' : ''} />
-              {testingPac ? 'Probando...' : 'Probar conexión'}
+            <Button onClick={handleTestPac} disabled={testPacMutation.isPending} variant="outline" className="gap-1.5">
+              <RefreshCw size={14} className={testPacMutation.isPending ? 'animate-spin' : ''} />
+              {testPacMutation.isPending ? 'Probando...' : 'Probar conexión'}
             </Button>
           </div>
         </CardContent>
