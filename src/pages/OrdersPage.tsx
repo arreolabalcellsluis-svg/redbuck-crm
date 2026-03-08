@@ -2,7 +2,7 @@ import { demoCustomers, demoProducts, demoUsers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package } from 'lucide-react';
+import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
+import { useNavigate } from 'react-router-dom';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 const vendors = demoUsers.filter(u => u.role === 'vendedor');
@@ -38,6 +39,7 @@ export default function OrdersPage() {
   const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
@@ -307,6 +309,9 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-1">
                       <button onClick={() => setPaymentOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-success" title="Registrar pago"><DollarSign size={14} /></button>
                       {isAdmin && <button onClick={() => { setEditFolioOrder(o); setNewFolio(o.folio); }} className="p-1.5 rounded-md hover:bg-muted" title="Editar folio"><Edit2 size={14} /></button>}
+                      {!['cancelado', 'nuevo'].includes(o.status) && (
+                        <button onClick={() => navigate('/facturacion', { state: { invoiceOrderId: o.id, invoiceOrderFolio: o.folio } })} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
