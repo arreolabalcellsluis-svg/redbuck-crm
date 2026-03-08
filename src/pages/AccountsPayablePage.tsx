@@ -197,14 +197,19 @@ export default function AccountsPayablePage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Cuentas por Pagar</h1>
           <p className="page-subtitle">Control de facturas de proveedores y vencimientos</p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="gap-2">
-          <Plus size={16} /> Nueva Factura
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowDownload(true)} className="gap-2">
+            <Download size={16} /> Descargar Excel
+          </Button>
+          <Button onClick={() => setShowAdd(true)} className="gap-2">
+            <Plus size={16} /> Nueva Factura
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
