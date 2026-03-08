@@ -147,6 +147,7 @@ function ProtectedRoutes() {
             <Route path="/reportes/sobreinventario" element={<OverstockReportPage />} />
             <Route path="/reportes/plan-importaciones" element={<ImportPlanningPage />} />
             <Route path="/reportes/simulador-financiero" element={<FinancialSimulatorPage />} />
+            <Route path="/facturacion" element={<InvoicingPage />} />
             <Route path="/configuracion" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
