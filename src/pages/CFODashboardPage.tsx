@@ -254,16 +254,91 @@ export default function CFODashboardPage() {
         </Button>
       </div>
 
-      {/* ─── Top KPIs ──────────────────────────────────────────── */}
+      {/* ─── Top KPIs — Executive style ──────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-        <MetricCard title="Ventas" value={fmt(income.ventas)} icon={DollarSign} />
-        <MetricCard title="Utilidad Bruta" value={fmt(income.utilidadBruta)} subtitle={fmtPct(income.margenBruto)} icon={TrendingUp} />
-        <MetricCard title="EBITDA" value={fmt(income.ebitda)} subtitle={fmtPct(income.margenEbitda)} icon={BarChart3} />
-        <MetricCard title="Utilidad Neta" value={fmt(income.utilidadNeta)} subtitle={fmtPct(income.margenNeto)} icon={Banknote} />
-        <MetricCard title="Bancos" value={fmt(balance.bancos)} icon={Building2} />
-        <MetricCard title="Inventario" value={fmt(balance.inventario)} icon={Package} />
-        <MetricCard title="CxC" value={fmt(balance.cuentasPorCobrar)} icon={CreditCard} />
-        <MetricCard title="CxP" value={fmt(balance.cuentasPorPagar)} icon={Wallet} />
+        {/* Ventas */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <DollarSign size={14} /> Ventas
+          </div>
+          <div className="text-xl font-bold">{fmt(income.ventas)}</div>
+          <div className="flex items-center justify-between mt-2">
+            <div className="w-full bg-muted rounded-full h-2">
+              <div className="h-2 rounded-full bg-primary transition-all" style={{ width: '100%' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Utilidad Bruta */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <TrendingUp size={14} /> Utilidad Bruta
+          </div>
+          <div className="text-xl font-bold text-success">{fmt(income.utilidadBruta)}</div>
+          <div className="space-y-0.5 mt-2 text-[10px]">
+            <div className="flex justify-between"><span className="text-muted-foreground">Margen:</span> <span className="font-semibold">{fmtPct(income.margenBruto)}</span></div>
+          </div>
+        </div>
+
+        {/* EBITDA */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <BarChart3 size={14} /> EBITDA
+          </div>
+          <div className="text-xl font-bold">{fmt(income.ebitda)}</div>
+          <div className="space-y-0.5 mt-2 text-[10px]">
+            <div className="flex justify-between"><span className="text-muted-foreground">Margen:</span> <span className="font-semibold">{fmtPct(income.margenEbitda)}</span></div>
+          </div>
+        </div>
+
+        {/* Utilidad Neta */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: `4px solid hsl(var(--${income.utilidadNeta >= 0 ? 'success' : 'destructive'}))` }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <Banknote size={14} /> Utilidad Neta
+          </div>
+          <div className={`text-xl font-bold ${income.utilidadNeta >= 0 ? 'text-success' : 'text-destructive'}`}>{fmt(income.utilidadNeta)}</div>
+          <div className="space-y-0.5 mt-2 text-[10px]">
+            <div className="flex justify-between"><span className="text-muted-foreground">Margen:</span> <span className="font-semibold">{fmtPct(income.margenNeto)}</span></div>
+          </div>
+        </div>
+
+        {/* Bancos */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <Building2 size={14} /> Bancos
+          </div>
+          <div className="text-xl font-bold">{fmt(balance.bancos)}</div>
+        </div>
+
+        {/* Inventario */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <Package size={14} /> Inventario
+          </div>
+          <div className="text-xl font-bold">{fmt(balance.inventario)}</div>
+        </div>
+
+        {/* CxC */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <CreditCard size={14} /> CxC
+          </div>
+          <div className="text-xl font-bold">{fmt(balance.cuentasPorCobrar)}</div>
+          <div className="space-y-0.5 mt-2 text-[10px]">
+            <div className="flex justify-between"><span className="text-muted-foreground">Días:</span> <span className="font-semibold">{fmtDays(kpis.diasCxC)}</span></div>
+          </div>
+        </div>
+
+        {/* CxP */}
+        <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--destructive))' }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <Wallet size={14} /> CxP
+          </div>
+          <div className="text-xl font-bold text-destructive">{fmt(balance.cuentasPorPagar)}</div>
+          <div className="space-y-0.5 mt-2 text-[10px]">
+            <div className="flex justify-between"><span className="text-muted-foreground">Días:</span> <span className="font-semibold">{fmtDays(kpis.diasCxP)}</span></div>
+          </div>
+        </div>
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
