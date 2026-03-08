@@ -31,6 +31,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const { data: fiscal } = useFiscalSettings();
   const { data: customerFiscal } = useAllCustomerFiscalData();
   const { data: productFiscal } = useAllProductFiscalData();
+  const { data: existingInvoices } = useInvoices();
   const createMutation = useCreateInvoice();
 
   const [step, setStep] = useState<'select' | 'configure'>('select');
