@@ -116,6 +116,7 @@ function ProtectedRoutes() {
             <Route path="/servicio" element={<ServicePage />} />
             <Route path="/comisiones" element={<CommissionsPage />} />
             <Route path="/planeacion" element={<PlanningPage />} />
+            <Route path="/gastos" element={<OperatingExpensesPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
             <Route path="/reportes-ejecutivos" element={<ExecutiveReportsPage />} />
             <Route path="/reportes/ventas" element={<SalesReportPage />} />
