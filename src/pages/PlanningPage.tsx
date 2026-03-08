@@ -1045,13 +1045,13 @@ export default function PlanningPage() {
                 type="range"
                 min={0}
                 max={3.5}
-                step={0.5}
+                step={0.1}
                 value={growthFactor}
-                onChange={e => setGrowthFactor(+e.target.value)}
+                onChange={e => setGrowthFactor(Math.round(+e.target.value * 10) / 10)}
                 className="w-full max-w-md"
               />
               <div className="flex justify-between text-xs text-muted-foreground max-w-md">
-                <span>0x</span><span>1x</span><span>2x</span><span>3x</span><span>3.5x</span>
+                <span>0x</span><span>0.5x</span><span>1x</span><span>1.5x</span><span>2x</span><span>2.5x</span><span>3x</span><span>3.5x</span>
               </div>
             </div>
 
