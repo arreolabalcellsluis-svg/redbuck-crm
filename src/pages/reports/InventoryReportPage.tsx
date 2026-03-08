@@ -55,20 +55,43 @@ export default function InventoryReportPage() {
   const hasActiveFilters = !!(filters.search || filters.bodega || filters.categoria);
 
   const handleExport = () => {
-    const data = filtered.map(r => {
-      const base: Record<string, any> = {
-        SKU: r.sku, Producto: r.producto, Categoría: CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria,
-        Modelo: r.modelo,
-        ...Object.fromEntries(demoWarehouses.map(w => [w.name, (r as any)[`stock_${w.id}`]])),
-        'Stock Total': r.stockTotal, 'En Tránsito': r.enTransito,
-      };
-      if (!isVendedor) {
-        base['Costo'] = r.costo;
-        base['Valor Total'] = r.valorTotal;
-      }
-      return base;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const whNames = demoWarehouses.map(w => w.name);
+    const headers = ['SKU', 'Producto', 'Categoría', 'Modelo', ...whNames, 'Total', 'Tránsito', ...(isVendedor ? [] : ['Costo', 'Valor'])];
+    const rows = filtered.map(r => [
+      r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, r.modelo,
+      ...demoWarehouses.map(w => (r as any)[`stock_${w.id}`]),
+      r.stockTotal, r.enTransito,
+      ...(isVendedor ? [] : [fmt(r.costo), fmt(r.valorTotal)]),
+    ]);
+    exportFullExcel({
+      title: 'Reporte de Inventario', subtitle: dateStr, filename: `Inventario_${dateStr}`,
+      kpis: [
+        { label: 'Productos', value: filtered.length },
+        { label: 'Unidades totales', value: totalUnits },
+        ...(!isVendedor ? [{ label: 'Valor total', value: fmt(totalValue), color: 'primary' as const }] : []),
+      ],
+      sections: [{ title: 'Inventario detallado', headers, rows }],
     });
-    exportToExcel(data, `Inventario_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const headers = ['SKU', 'Producto', 'Cat.', 'Total', 'Tránsito', ...(isVendedor ? [] : ['Costo', 'Valor'])];
+    const rows = filtered.map(r => [
+      r.sku, r.producto, (CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria).split(' ')[0],
+      r.stockTotal, r.enTransito,
+      ...(isVendedor ? [] : [fmt(r.costo), fmt(r.valorTotal)]),
+    ]);
+    exportFullPdf({
+      title: 'Reporte de Inventario', subtitle: dateStr, filename: `Inventario_${dateStr}`,
+      kpis: [
+        { label: 'Productos', value: filtered.length },
+        { label: 'Unidades totales', value: totalUnits },
+        ...(!isVendedor ? [{ label: 'Valor total', value: fmt(totalValue), color: 'primary' as const }] : []),
+      ],
+      sections: [{ title: 'Inventario detallado', headers, rows, totalsRow: ['TOTAL', '', '', totalUnits, '', ...(isVendedor ? [] : ['', fmt(totalValue)])] }],
+    });
   };
 
   return (
