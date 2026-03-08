@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { CreditCard, AlertTriangle, Clock, CheckCircle, Plus, DollarSign, Trash2, Search, FileText } from 'lucide-react';
+import { CreditCard, AlertTriangle, Clock, CheckCircle, Plus, DollarSign, Trash2, Search, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const fmt = (n: number, cur = 'MXN') =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(n);
