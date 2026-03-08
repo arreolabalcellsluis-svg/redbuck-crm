@@ -2,6 +2,7 @@
  * Generate a CFDI-style invoice PDF preview and demo XML
  */
 import { numberToWords } from '@/lib/numberToWords';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
@@ -56,10 +57,16 @@ export interface InvoicePdfData {
 export function generateInvoicePdfHtml(data: InvoicePdfData): string {
   const totalWords = numberToWords(data.total);
   const dateStr = data.issuedAt ? new Date(data.issuedAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX');
+  const logoUrl = getCompanyLogoUrl();
   const demoWatermark = data.isDemo ? `
     <div style="position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:120px;font-weight:900;color:rgba(200,0,0,0.07);z-index:0;pointer-events:none;white-space:nowrap;">
       SIN VALIDEZ FISCAL
     </div>` : '';
+
+  const logoWatermark = `
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:0;pointer-events:none;opacity:0.04;">
+      <img src="${logoUrl}" alt="" style="width:420px;height:420px;object-fit:contain;" onerror="this.style.display='none'" />
+    </div>`;
 
   const uuid = data.uuid || (data.isDemo ? 'DEMO0000-0000-0000-0000-000000000000' : '—');
 
@@ -128,12 +135,16 @@ export function generateInvoicePdfHtml(data: InvoicePdfData): string {
 </head>
 <body>
   ${demoWatermark}
+  ${logoWatermark}
   <div class="invoice-container">
     <!-- Header -->
     <div class="inv-header">
-      <div>
-        <div class="inv-brand">${data.issuerTradeName || data.issuerName}</div>
-        <div class="inv-brand-sub">${data.issuerName}</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="${logoUrl}" alt="Logo" style="height:40px;max-width:130px;object-fit:contain;" onerror="this.style.display='none'" />
+        <div>
+          <div class="inv-brand">${data.issuerTradeName || data.issuerName}</div>
+          <div class="inv-brand-sub">${data.issuerName}</div>
+        </div>
       </div>
       <div class="inv-doc-type">
         <h2>${data.invoiceTypeLabel}</h2>
