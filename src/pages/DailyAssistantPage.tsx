@@ -31,6 +31,7 @@ const PRIORITY_LABELS: Record<RecommendationPriority, string> = {
 
 export default function DailyAssistantPage() {
   const { currentRole } = useAppContext();
+  const navigate = useNavigate();
   const [recs, setRecs] = useState<DailyRecommendation[]>(() => generateDailyRecommendations());
   const [search, setSearch] = useState('');
   const [filterPriority, setFilterPriority] = useState<RecommendationPriority | 'todas'>('todas');
