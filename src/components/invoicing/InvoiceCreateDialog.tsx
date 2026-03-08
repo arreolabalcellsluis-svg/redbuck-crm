@@ -7,7 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Search, AlertTriangle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { FileText, Plus, Search, AlertTriangle, CalendarIcon, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
 import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
