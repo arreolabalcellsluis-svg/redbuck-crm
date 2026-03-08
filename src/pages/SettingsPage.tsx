@@ -57,7 +57,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   ],
   administracion: [
     'dashboard', 'ejecutivo', 'financiero', 'cobranza', 'cuentas_pagar',
-    'pedidos', 'historial_pedidos', 'gastos', 'activos',
+    'pedidos', 'historial_pedidos', 'comisiones', 'simulador_comisiones', 'gastos', 'activos',
     'planeacion', 'reportes', 'reportes_ejecutivos', 'simulador', 'configuracion',
   ],
   compras: [
