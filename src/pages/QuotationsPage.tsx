@@ -348,12 +348,14 @@ export default function QuotationsPage() {
   <!-- HEADER -->
   <div style="padding:24px 32px 20px;display:flex;justify-content:space-between;align-items:flex-start;">
     <div style="display:flex;align-items:center;gap:16px;">
-      <div style="width:56px;height:56px;border-radius:12px;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;letter-spacing:-0.5px;flex-shrink:0;">RB</div>
+    <div style="display:flex;align-items:flex-start;gap:16px;">
+      <img src="${getCompanyLogoUrl()}" alt="Logo" style="height:56px;max-width:140px;object-fit:contain;border-radius:8px;" onerror="this.style.display='none'" />
       <div>
         <div style="font-weight:800;font-size:20px;letter-spacing:-0.5px;line-height:1.2;">${company.nombreComercial}</div>
         <div style="font-size:11px;color:hsl(0,0%,50%);margin-top:2px;">${company.razonSocial}</div>
         <div style="font-size:11px;color:hsl(0,0%,50%);line-height:1.5;margin-top:4px;">${company.direccion}<br/>Tel: ${company.telefono} · ${company.correo}<br/>RFC: ${company.rfc}</div>
       </div>
+    </div>
     </div>
     <div style="text-align:right;flex-shrink:0;">
       <div style="display:inline-block;padding:8px 16px;border-radius:8px;background:rgba(220,38,38,0.08);color:#dc2626;font-weight:900;font-size:24px;letter-spacing:-0.5px;">${q.folio}</div>
