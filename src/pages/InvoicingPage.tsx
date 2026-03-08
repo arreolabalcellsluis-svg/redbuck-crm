@@ -963,6 +963,7 @@ function InvoicesTab() {
                     <TableCell><Badge className={`${st.color} text-xs`}>{st.label}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" title="Vista previa PDF" onClick={() => handlePreviewInvoicePdf(inv)}><FileText size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSinglePdf(inv)}><Download size={14} /></Button>
                       </div>
