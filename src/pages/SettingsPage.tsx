@@ -48,7 +48,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   gerencia_comercial: [
     'dashboard', 'ejecutivo', 'crm', 'reabasto', 'agenda', 'asistente', 'mapa_mercado',
     'productos', 'refacciones', 'inventario', 'cotizaciones', 'pedidos', 'historial_pedidos',
-    'cobranza', 'comisiones', 'reportes', 'reportes_ejecutivos',
+    'cobranza', 'comisiones', 'metas_vendedores', 'reportes', 'reportes_ejecutivos',
   ],
   vendedor: [
     'dashboard', 'crm', 'agenda', 'asistente', 'mapa_mercado',
