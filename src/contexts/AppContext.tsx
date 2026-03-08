@@ -24,6 +24,7 @@ interface AppContextType {
   // Quotation state
   quotations: Quotation[];
   addQuotation: (q: Quotation) => void;
+  updateQuotation: (q: Quotation) => void;
   updateQuotationStatus: (id: string, status: QuotationStatus) => void;
   // Series
   vendorSeries: VendorSeriesMap;
@@ -93,6 +94,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateQuotation = useCallback((q: Quotation) => {
+    setQuotations(prev => prev.map(existing => existing.id === q.id ? q : existing));
+  }, []);
+
   const updateQuotationStatus = useCallback((id: string, status: QuotationStatus) => {
     setQuotations(prev => prev.map(q => q.id === id ? { ...q, status } : q));
   }, []);
@@ -144,7 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{
       currentRole, setCurrentRole,
       sidebarOpen, setSidebarOpen,
-      quotations, addQuotation, updateQuotationStatus,
+      quotations, addQuotation, updateQuotation, updateQuotationStatus,
       vendorSeries, getNextFolio, consumeFolio,
       orders, setOrders,
       receivables, setReceivables,

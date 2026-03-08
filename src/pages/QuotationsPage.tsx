@@ -8,7 +8,7 @@ import { exportQuotationsZip, exportQuotationsExcel } from '@/lib/exportUtils';
 import { addAuditLog } from '@/lib/auditLog';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard } from 'lucide-react';
+import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, exchangeRate, quotations, addQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, quotations, addQuotation, updateQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showPreview, setShowPreview] = useState<Quotation | null>(null);
@@ -145,6 +145,58 @@ export default function QuotationsPage() {
     setSelectedVendorId(isVendedor ? vendorId : '');
     setItems([]);
     setValidDays(15);
+    setEditingQuotation(null);
+  };
+
+  // --- Edit quotation ---
+  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
+
+  const openEditQuotation = (q: Quotation) => {
+    setEditingQuotation(q);
+    setSelectedCustomerId(q.customerId);
+    setSelectedVendorId(q.vendorId || '');
+    setItems([...q.items]);
+    setValidDays(Math.max(1, Math.round((new Date(q.validUntil).getTime() - new Date(q.createdAt).getTime()) / (1000 * 60 * 60 * 24))));
+    setShowCreate(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingQuotation) return;
+    if (!selectedCustomerId) { toast.error('Selecciona un cliente'); return; }
+    if (items.length === 0) { toast.error('Agrega al menos un producto'); return; }
+
+    const subtotal = calcSubtotal();
+    const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
+    const total = Math.round((subtotal + tax) * 100) / 100;
+    const vendor = demoUsers.find(u => u.id === selectedVendorId);
+    const customer = demoCustomers.find(c => c.id === selectedCustomerId);
+
+    const today = new Date();
+    const validDate = new Date(today);
+    validDate.setDate(validDate.getDate() + validDays);
+    const fmtDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const updated: Quotation = {
+      ...editingQuotation,
+      customerId: selectedCustomerId,
+      customerName: customer?.name || '',
+      customerPhone: customer?.phone,
+      customerWhatsapp: customer?.whatsapp || customer?.phone,
+      vendorId: selectedVendorId,
+      vendorName: vendor?.name || '',
+      vendorPhone: vendor?.phone,
+      vendorEmail: vendor?.email,
+      items: [...items],
+      subtotal: Math.round(subtotal * 100) / 100,
+      tax,
+      total,
+      validUntil: fmtDate(validDate),
+    };
+
+    updateQuotation(updated);
+    toast.success(`Cotización ${editingQuotation.folio} actualizada`);
+    setShowCreate(false);
+    resetForm();
   };
 
   // --- Quotation status change ---
@@ -489,7 +541,7 @@ export default function QuotationsPage() {
           <button onClick={() => setShowZipDialog(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">
             <Download size={16} /> Descargar Excel
           </button>
-          <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+          <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
             <Plus size={16} /> Nueva cotización
           </button>
         </div>
@@ -534,6 +586,7 @@ export default function QuotationsPage() {
                       <button onClick={() => openConversion(q)} className="p-1.5 rounded-md hover:bg-primary/10 text-primary" title="Generar pedido"><ShoppingCart size={14} /></button>
                     )}
                     <button onClick={() => setShowPreview(q)} className="p-1.5 rounded-md hover:bg-muted" title="Vista previa"><Eye size={14} /></button>
+                    <button onClick={() => openEditQuotation(q)} className="p-1.5 rounded-md hover:bg-muted text-amber-600" title="Editar cotización"><Pencil size={14} /></button>
                     <button onClick={() => { setWhatsappMsg(demoWhatsAppTemplate.message); setShowWhatsApp(q); }} className="p-1.5 rounded-md hover:bg-muted text-success" title="Enviar por WhatsApp"><MessageCircle size={14} /></button>
                     <button onClick={() => handleDownloadPdf(q)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Descargar PDF"><Download size={14} /></button>
                   </div>
@@ -548,9 +601,9 @@ export default function QuotationsPage() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nueva Cotización</DialogTitle>
+            <DialogTitle>{editingQuotation ? `Editar Cotización ${editingQuotation.folio}` : 'Nueva Cotización'}</DialogTitle>
             <DialogDescription>
-              Selecciona un prospecto/cliente y agrega productos.
+              {editingQuotation ? 'Modifica los datos de la cotización.' : 'Selecciona un prospecto/cliente y agrega productos.'}
               {nextFolioPreview && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-primary bg-primary/10">Próximo folio: {nextFolioPreview}</span>}
             </DialogDescription>
           </DialogHeader>
@@ -633,7 +686,7 @@ export default function QuotationsPage() {
 
           <DialogFooter>
             <button onClick={() => { setShowCreate(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleCreateQuotation} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Crear Cotización</button>
+            <button onClick={editingQuotation ? handleSaveEdit : handleCreateQuotation} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">{editingQuotation ? 'Guardar Cambios' : 'Crear Cotización'}</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
