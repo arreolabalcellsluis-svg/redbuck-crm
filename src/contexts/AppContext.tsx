@@ -24,6 +24,7 @@ interface AppContextType {
   // Quotation state
   quotations: Quotation[];
   addQuotation: (q: Quotation) => void;
+  updateQuotation: (q: Quotation) => void;
   updateQuotationStatus: (id: string, status: QuotationStatus) => void;
   // Series
   vendorSeries: VendorSeriesMap;
