@@ -63,12 +63,13 @@ export default function InvoicingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
           <TabsTrigger value="config" className="gap-1.5"><Settings size={14} /> Emisor</TabsTrigger>
           <TabsTrigger value="csd" className="gap-1.5"><Shield size={14} /> CSD</TabsTrigger>
           <TabsTrigger value="customers" className="gap-1.5"><Users size={14} /> Clientes</TabsTrigger>
           <TabsTrigger value="products" className="gap-1.5"><Package size={14} /> Productos</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-1.5"><FileBadge size={14} /> Facturas</TabsTrigger>
+          <TabsTrigger value="drafts" className="gap-1.5"><Archive size={14} /> Borrador-Fact</TabsTrigger>
         </TabsList>
 
         <TabsContent value="config"><IssuerConfigTab /></TabsContent>
@@ -76,6 +77,7 @@ export default function InvoicingPage() {
         <TabsContent value="customers"><CustomerFiscalTab /></TabsContent>
         <TabsContent value="products"><ProductFiscalTab /></TabsContent>
         <TabsContent value="invoices"><InvoicesTab /></TabsContent>
+        <TabsContent value="drafts"><DraftsTab /></TabsContent>
       </Tabs>
     </div>
   );
