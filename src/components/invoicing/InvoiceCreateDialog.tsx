@@ -82,16 +82,26 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
     }
   }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders]);
 
-  // Filter orders that can be invoiced
-  const eligibleOrders = (orders ?? []).filter(o =>
-    !['cancelado', 'nuevo'].includes(o.status) &&
-    (o.customer_name.toLowerCase().includes(search.toLowerCase()) || o.folio.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  const handleSelectOrder = (order: DBOrder) => {
-    setSelectedOrder(order);
-    setStep('configure');
-  };
+  // Filter and sort orders (newest first)
+  const eligibleOrders = useMemo(() => {
+    return (orders ?? [])
+      .filter(o => {
+        if (['cancelado', 'nuevo'].includes(o.status)) return false;
+        if (search && !o.customer_name.toLowerCase().includes(search.toLowerCase()) && !o.folio.toLowerCase().includes(search.toLowerCase())) return false;
+        if (dateFrom) {
+          const d = new Date(o.created_at);
+          if (d < dateFrom) return false;
+        }
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59, 999);
+          const d = new Date(o.created_at);
+          if (d > end) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [orders, search, dateFrom, dateTo]);
 
   const customerFiscalData = selectedOrder?.customer_id ? fiscalMap.get(selectedOrder.customer_id) : null;
   const hasCustomerFiscal = customerFiscalData && customerFiscalData.rfc && customerFiscalData.legal_name && customerFiscalData.fiscal_zip_code && customerFiscalData.tax_regime;
