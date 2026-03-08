@@ -52,6 +52,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   // Invoice fields
   const [series, setSeries] = useState('A');
   const [folio, setFolio] = useState('');
+  const [invoiceType, setInvoiceType] = useState<'I' | 'E' | 'P' | 'N' | 'T'>('I');
   const [paymentForm, setPaymentForm] = useState('99');
   const [paymentMethod, setPaymentMethod] = useState('PUE');
   const [currency, setCurrency] = useState('MXN');
