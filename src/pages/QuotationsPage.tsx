@@ -601,9 +601,9 @@ export default function QuotationsPage() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nueva Cotización</DialogTitle>
+            <DialogTitle>{editingQuotation ? `Editar Cotización ${editingQuotation.folio}` : 'Nueva Cotización'}</DialogTitle>
             <DialogDescription>
-              Selecciona un prospecto/cliente y agrega productos.
+              {editingQuotation ? 'Modifica los datos de la cotización.' : 'Selecciona un prospecto/cliente y agrega productos.'}
               {nextFolioPreview && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-primary bg-primary/10">Próximo folio: {nextFolioPreview}</span>}
             </DialogDescription>
           </DialogHeader>
