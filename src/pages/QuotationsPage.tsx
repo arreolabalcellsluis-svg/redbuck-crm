@@ -453,6 +453,25 @@ export default function QuotationsPage() {
     }
   };
 
+  const handleExcelDownload = () => {
+    if (!zipDateFrom || !zipDateTo) { toast.error('Selecciona un rango de fechas'); return; }
+    if (zipDateFrom > zipDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
+    try {
+      const result = exportQuotationsExcel(quotations, { dateFrom: zipDateFrom, dateTo: zipDateTo, vendorId: zipVendorId || undefined, status: zipStatus || undefined });
+      toast.success(`Excel generado con ${result.count} cotizaciones`);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al generar Excel');
+    }
+  };
+
+  const zipFilteredCount = quotations.filter(q => {
+    if (zipDateFrom && q.createdAt < zipDateFrom) return false;
+    if (zipDateTo && q.createdAt > zipDateTo) return false;
+    if (zipVendorId && q.vendorId !== zipVendorId) return false;
+    if (zipStatus && q.status !== zipStatus) return false;
+    return true;
+  }).length;
+
   const subtotalPreview = calcSubtotal();
   const taxPreview = Math.round(subtotalPreview * IVA_RATE * 100) / 100;
   const totalPreview = Math.round((subtotalPreview + taxPreview) * 100) / 100;
