@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { demoAccountsReceivable, demoCustomers } from '@/data/demo-data';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportToPdf } from '@/lib/pdfExport';
