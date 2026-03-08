@@ -42,6 +42,9 @@ export default function CRMPage() {
   const isVendedor = currentRole === 'vendedor';
   const vendorId = DEMO_VENDEDOR_ID;
 
+  const [fiscal, setFiscal] = useState<FiscalData>(emptyFiscal());
+  const [showFiscal, setShowFiscal] = useState(false);
+
   const allCustomers = isVendedor
     ? customers.filter(c => c.vendorId === vendorId)
     : customers;
