@@ -64,6 +64,60 @@ export default function CommissionsPage() {
     ? vendorResults.filter(r => r.userName.startsWith(DEMO_VENDEDOR_NAME.split(' ')[0]))
     : vendorResults;
 
+  // Excel download state
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const wb = XLSX.utils.book_new();
+
+    // Vendor results
+    const vendorData = visibleVendorResults.map(r => {
+      const base = r.bonuses.find(b => b.label === 'Comisión base')?.amount ?? 0;
+      const margin = r.bonuses.find(b => b.label === 'Bono margen')?.amount ?? 0;
+      const goal = r.bonuses.find(b => b.label === 'Bono meta')?.amount ?? 0;
+      const clients = r.bonuses.find(b => b.label === 'Bono clientes nuevos')?.amount ?? 0;
+      const cob = r.bonuses.find(b => b.label === 'Bono cobranza')?.amount ?? 0;
+      return {
+        Vendedor: r.userName, 'Comisión base': base, 'Bono margen': margin,
+        'Bono meta': goal, 'Bono clientes': clients, 'Bono cobranza': cob,
+        Bruto: r.grossTotal, Castigos: r.penaltyTotal, Neto: r.netTotal,
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vendorData), 'Vendedores');
+
+    // Roles summary
+    const rolesData = [
+      { Rol: gerenteResult.roleName, Persona: gerenteResult.userName, Bruto: gerenteResult.grossTotal, Castigos: gerenteResult.penaltyTotal, Neto: gerenteResult.netTotal },
+      { Rol: cobranzaResult.roleName, Persona: cobranzaResult.userName, Bruto: cobranzaResult.grossTotal, Castigos: cobranzaResult.penaltyTotal, Neto: cobranzaResult.netTotal },
+      { Rol: adminResult.roleName, Persona: adminResult.userName, Bruto: adminResult.grossTotal, Castigos: adminResult.penaltyTotal, Neto: adminResult.netTotal },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rolesData), 'Roles');
+
+    // Summary
+    const summaryData = [
+      { Indicador: 'Periodo', Valor: `${MONTHS[month - 1]} ${year}` },
+      { Indicador: 'Rango fechas', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Mes completo' },
+      { Indicador: 'Total Vendedores', Valor: summary.totalVendorCommissions },
+      { Indicador: 'Total Gerente', Valor: summary.totalGerenteBonus },
+      { Indicador: 'Total Cobranza', Valor: summary.totalCobranzaBonus },
+      { Indicador: 'Total Admin', Valor: summary.totalAdminBonus },
+      { Indicador: 'GRAN TOTAL', Valor: summary.grandTotal },
+      { Indicador: 'Ventas totales', Valor: summary.totalSales },
+      { Indicador: 'Incentivos/Ventas %', Valor: summary.commissionToSalesRatio.toFixed(2) + '%' },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), 'Resumen');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const dateStr = dlDateFrom && dlDateTo ? `${dlDateFrom}_${dlDateTo}` : `${MONTHS[month-1]}-${year}`;
+    saveAs(blob, `comisiones_${dateStr}.xlsx`);
+    setDlOpen(false);
+  };
+
   const pieData = [
     { name: 'Vendedores', value: summary.totalVendorCommissions, fill: 'hsl(var(--primary))' },
     { name: 'Gerente', value: summary.totalGerenteBonus, fill: 'hsl(var(--chart-2))' },
