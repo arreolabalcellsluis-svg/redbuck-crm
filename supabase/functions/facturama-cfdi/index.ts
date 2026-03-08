@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       // Download XML
       let xmlPath = "";
       try {
-        const xmlRes = await facturama(`/api-lite/cfdis/${stampData.Id || uuid}`, "GET");
+        const xmlRes = await facturama(`/cfdi/xml/${stampData.Id || uuid}/issued`, "GET");
         if (xmlRes.ok) {
           const xmlContent = await xmlRes.text();
           xmlPath = `xml/${invoice_id}.xml`;
