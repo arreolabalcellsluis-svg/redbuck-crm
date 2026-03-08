@@ -110,6 +110,7 @@ function ProtectedRoutes() {
             <Route path="/cotizaciones" element={<QuotationsPage />} />
             <Route path="/pedidos" element={<OrdersPage />} />
             <Route path="/cobranza" element={<ReceivablesPage />} />
+            <Route path="/cuentas-pagar" element={<AccountsPayablePage />} />
             <Route path="/compras" element={<PurchasesPage />} />
             <Route path="/historial-compras" element={<PurchaseHistoryPage />} />
             <Route path="/historial-pedidos" element={<OrderHistoryPage />} />
