@@ -51,6 +51,7 @@ export default function AppSidebar() {
   const { currentRole, setCurrentRole, sidebarOpen, setSidebarOpen } = useAppContext();
   const { user, userRole, signOut } = useAuth();
   const location = useLocation();
+  const { logoUrl } = useCompanyLogo();
 
   return (
     <>
