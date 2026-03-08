@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Users, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { exportToPdf } from '@/lib/pdfExport';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { demoOrders, demoProducts, demoQuotations, salesByVendor, demoUsers, dashboardMetrics } from '@/data/demo-data';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
