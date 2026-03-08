@@ -128,30 +128,240 @@ export default function IncomeStatementReportPage() {
   const periodLabel = `${format(dateFrom, 'dd MMM yyyy', { locale: es })} — ${format(dateTo, 'dd MMM yyyy', { locale: es })}`;
 
   const handleExportExcel = () => {
-    const rows = data.map(d => ({
-      Mes: d.mes, Ventas: d.ventas, COGS: d.cogs, 'Utilidad bruta': d.utilidadBruta,
-      'Gastos ventas': d.gVentas, 'Gastos G&A': d.gAdmin, EBITDA: d.ebitda,
-      'Dep/Amort': d.depAmort, EBIT: d.ebit, Intereses: d.intereses,
-      'Util antes imp': d.utilidadAntesImpuestos, Impuestos: d.impuestos,
-      'Utilidad neta': d.utilidadNeta, 'Margen neto %': d.margenNeto.toFixed(1),
-    }));
-    exportToExcel(rows, `Estado_resultados_${new Date().toISOString().split('T')[0]}`);
+    import('xlsx').then(XLSX => {
+      const wb = XLSX.utils.book_new();
+
+      // Hoja 1: Estado de resultados completo (mensual)
+      const fullRows = data.map(d => ({
+        Mes: d.mes,
+        Ventas: d.ventas,
+        'Costo de ventas': d.cogs,
+        'Utilidad bruta': d.utilidadBruta,
+        'Margen bruto %': d.margenBruto.toFixed(1),
+        'Gastos de ventas': d.gVentas,
+        'Gastos G&A': d.gAdmin,
+        EBITDA: d.ebitda,
+        'Margen EBITDA %': d.margenEbitda.toFixed(1),
+        'Dep/Amort': d.depAmort,
+        'EBIT (Ut. operativa)': d.ebit,
+        'Margen operativo %': d.margenOperativo.toFixed(1),
+        Intereses: d.intereses,
+        'Util antes impuestos': d.utilidadAntesImpuestos,
+        'Impuestos (30%)': d.impuestos,
+        'Utilidad neta': d.utilidadNeta,
+        'Margen neto %': d.margenNeto.toFixed(1),
+      }));
+      // Add totals row
+      fullRows.push({
+        Mes: 'TOTAL',
+        Ventas: totals.ventas,
+        'Costo de ventas': totals.cogs,
+        'Utilidad bruta': totals.utilidadBruta,
+        'Margen bruto %': totals.margenBruto.toFixed(1),
+        'Gastos de ventas': totals.gVentas,
+        'Gastos G&A': totals.gAdmin,
+        EBITDA: totals.ebitda,
+        'Margen EBITDA %': totals.margenEbitda.toFixed(1),
+        'Dep/Amort': totals.depAmort,
+        'EBIT (Ut. operativa)': totals.ebit,
+        'Margen operativo %': totals.margenOperativo.toFixed(1),
+        Intereses: totals.intereses,
+        'Util antes impuestos': totals.utilidadAntesImpuestos,
+        'Impuestos (30%)': totals.impuestos,
+        'Utilidad neta': totals.utilidadNeta,
+        'Margen neto %': totals.margenNeto.toFixed(1),
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fullRows), 'Estado de Resultados');
+
+      // Hoja 2: KPIs resumen
+      const kpiRows = [
+        { Indicador: 'Periodo', Valor: periodLabel },
+        { Indicador: 'Meses analizados', Valor: data.length },
+        { Indicador: 'Ventas totales', Valor: totals.ventas },
+        { Indicador: 'Costo de ventas total', Valor: totals.cogs },
+        { Indicador: 'Utilidad bruta', Valor: totals.utilidadBruta },
+        { Indicador: 'Margen bruto %', Valor: totals.margenBruto.toFixed(1) + '%' },
+        { Indicador: 'EBITDA', Valor: totals.ebitda },
+        { Indicador: 'Margen EBITDA %', Valor: totals.margenEbitda.toFixed(1) + '%' },
+        { Indicador: 'EBIT', Valor: totals.ebit },
+        { Indicador: 'Margen operativo %', Valor: totals.margenOperativo.toFixed(1) + '%' },
+        { Indicador: 'Utilidad neta', Valor: totals.utilidadNeta },
+        { Indicador: 'Margen neto %', Valor: totals.margenNeto.toFixed(1) + '%' },
+        { Indicador: 'Venta promedio mensual', Valor: data.length > 0 ? Math.round(totals.ventas / data.length) : 0 },
+        { Indicador: 'Utilidad neta promedio mensual', Valor: data.length > 0 ? Math.round(totals.utilidadNeta / data.length) : 0 },
+        { Indicador: 'Dep/Amort total', Valor: totals.depAmort },
+        { Indicador: 'Gastos de ventas total', Valor: totals.gVentas },
+        { Indicador: 'Gastos G&A total', Valor: totals.gAdmin },
+        { Indicador: 'Intereses total', Valor: totals.intereses },
+        { Indicador: 'Impuestos total', Valor: totals.impuestos },
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpiRows), 'KPIs Resumen');
+
+      // Hoja 3: Datos de gráfica (tendencia)
+      const chartRows = data.map(d => ({
+        Mes: d.mes,
+        Ventas: d.ventas,
+        EBITDA: d.ebitda,
+        EBIT: d.ebit,
+        'Utilidad neta': d.utilidadNeta,
+        'Margen bruto %': d.margenBruto.toFixed(1),
+        'Margen EBITDA %': d.margenEbitda.toFixed(1),
+        'Margen operativo %': d.margenOperativo.toFixed(1),
+        'Margen neto %': d.margenNeto.toFixed(1),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(chartRows), 'Tendencia Financiera');
+
+      // Hoja 4: Estructura de gastos
+      const expenseRows = [
+        { Concepto: 'Gastos de ventas (mensual)', Monto: gastosVentas, '% de Ventas': safePct(gastosVentas * data.length, totals.ventas).toFixed(1) + '%' },
+        { Concepto: 'Gastos G&A (mensual)', Monto: gastosGeneralesAdmin, '% de Ventas': safePct(gastosGeneralesAdmin * data.length, totals.ventas).toFixed(1) + '%' },
+        { Concepto: 'Gastos financieros (mensual)', Monto: gastosFinancieros, '% de Ventas': safePct(gastosFinancieros * data.length, totals.ventas).toFixed(1) + '%' },
+        { Concepto: 'Dep/Amort (mensual)', Monto: depAmortMensual, '% de Ventas': safePct(depAmortMensual * data.length, totals.ventas).toFixed(1) + '%' },
+        { Concepto: '---', Monto: '', '% de Ventas': '' },
+        { Concepto: 'Total gastos operativos (periodo)', Monto: totals.gVentas + totals.gAdmin, '% de Ventas': safePct(totals.gVentas + totals.gAdmin, totals.ventas).toFixed(1) + '%' },
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows), 'Estructura de Gastos');
+
+      XLSX.writeFile(wb, `Estado_resultados_completo_${new Date().toISOString().split('T')[0]}.xlsx`);
+    });
   };
 
   const handleExportPdf = () => {
-    exportToPdf({
-      title: 'Estado de Resultados',
-      subtitle: `${periodLabel} — REDBUCK EQUIPMENT`,
-      filename: `Estado_resultados_${new Date().toISOString().split('T')[0]}`,
-      headers: ['Mes', 'Ventas', 'COGS', 'U. Bruta', 'EBITDA', 'EBIT', 'U. Neta', 'Margen %'],
-      rows: data.map(d => [d.mes, fmt(d.ventas), fmt(d.cogs), fmt(d.utilidadBruta), fmt(d.ebitda), fmt(d.ebit), fmt(d.utilidadNeta), fmtPct(d.margenNeto)]),
-      summary: [
-        { label: 'Ventas totales', value: fmt(totals.ventas) },
-        { label: 'EBITDA', value: fmt(totals.ebitda) },
-        { label: 'Utilidad neta', value: fmt(totals.utilidadNeta) },
-        { label: 'Margen neto', value: fmtPct(totals.margenNeto) },
-      ],
-    });
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Build KPI cards HTML
+    const kpis = [
+      { label: 'Ventas totales', value: fmt(totals.ventas) },
+      { label: 'Utilidad bruta', value: fmt(totals.utilidadBruta), sub: fmtPct(totals.margenBruto) },
+      { label: 'EBITDA', value: fmt(totals.ebitda), sub: fmtPct(totals.margenEbitda) },
+      { label: 'EBIT', value: fmt(totals.ebit), sub: fmtPct(totals.margenOperativo) },
+      { label: 'Utilidad neta', value: fmt(totals.utilidadNeta), sub: fmtPct(totals.margenNeto) },
+    ];
+    const kpiHtml = `<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">${kpis.map(k => `
+      <div style="background:#f5f5f5;padding:12px 18px;border-radius:8px;text-align:center;min-width:110px;flex:1;border-left:3px solid #c41e2a;">
+        <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px;">${k.label}</div>
+        <div style="font-size:15px;font-weight:700;margin-top:4px;">${k.value}</div>
+        ${k.sub ? `<div style="font-size:10px;color:#888;margin-top:2px;">${k.sub}</div>` : ''}
+      </div>
+    `).join('')}</div>`;
+
+    // Build full income statement table
+    const allLineItems = lineItems;
+    const tableHeaders = ['Concepto', ...data.map(d => d.mes), 'TOTAL'];
+    const tableRows = allLineItems.map(line => {
+      const isMoney = !line.isMargin;
+      const cells = data.map(d => line.isMargin ? fmtPct((d as any)[line.key]) : fmt((d as any)[line.key]));
+      const totalCell = line.isMargin ? fmtPct((totals as any)[line.key]) : fmt((totals as any)[line.key]);
+      const style = `${line.bold ? 'font-weight:700;' : ''}${line.bg ? 'background:#f0f0f0;' : ''}${line.color === 'success' ? 'background:#e8f5e9;color:#2e7d32;' : ''}`;
+      const indentStyle = line.indent ? 'padding-left:20px;color:#666;' : '';
+      return `<tr style="${style}">
+        <td style="${indentStyle}font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;">${line.label}</td>
+        ${cells.map(c => `<td style="font-size:10px;padding:4px 6px;border-bottom:1px solid #eee;text-align:right;">${c}</td>`).join('')}
+        <td style="font-size:10px;padding:4px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">${totalCell}</td>
+      </tr>`;
+    }).join('');
+
+    // Build expense structure summary
+    const expenseHtml = `
+      <div style="margin-top:24px;">
+        <h3 style="font-size:13px;font-weight:700;margin-bottom:10px;border-bottom:1px solid #ddd;padding-bottom:4px;">Estructura de gastos (mensual)</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">Concepto</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">Monto</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">% de Ventas</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;">Gastos de ventas</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(gastosVentas)}</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(safePct(gastosVentas * data.length, totals.ventas))}</td></tr>
+            <tr><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;">Gastos G&A</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(gastosGeneralesAdmin)}</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(safePct(gastosGeneralesAdmin * data.length, totals.ventas))}</td></tr>
+            <tr><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;">Gastos financieros</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(gastosFinancieros)}</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(safePct(gastosFinancieros * data.length, totals.ventas))}</td></tr>
+            <tr><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;">Dep/Amort</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(depAmortMensual)}</td><td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(safePct(depAmortMensual * data.length, totals.ventas))}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Build trend chart as ASCII table for PDF
+    const trendHtml = `
+      <div style="margin-top:24px;">
+        <h3 style="font-size:13px;font-weight:700;margin-bottom:10px;border-bottom:1px solid #ddd;padding-bottom:4px;">Tendencia financiera</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">Mes</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">Ventas</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">EBITDA</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">EBIT</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">Ut. Neta</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">M. Bruto</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">M. EBITDA</th>
+            <th style="text-align:right;font-size:9px;padding:4px 8px;background:#f0f0f0;border-bottom:2px solid #ddd;">M. Neto</th>
+          </tr></thead>
+          <tbody>
+            ${data.map(d => `<tr>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;">${d.mes}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(d.ventas)}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(d.ebitda)}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(d.ebit)}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmt(d.utilidadNeta)}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(d.margenBruto)}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(d.margenEbitda)}</td>
+              <td style="font-size:10px;padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${fmtPct(d.margenNeto)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Estado de Resultados - REDBUCK</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; color: #1a1a1a; font-size: 11px; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 3px solid #c41e2a; padding-bottom: 12px; }
+          .brand { font-size: 18px; font-weight: 800; color: #c41e2a; letter-spacing: 1px; }
+          .brand-sub { font-size: 9px; color: #666; letter-spacing: 2px; }
+          .section-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+          .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 9px; color: #999; display: flex; justify-content: space-between; }
+          @media print { body { padding: 12px; } @page { size: landscape; margin: 10mm; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">REDBUCK EQUIPMENT</div>
+            <div class="brand-sub">ERP · CRM · SISTEMA INTEGRAL</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;">Estado de Resultados</div>
+            <div style="font-size:10px;color:#666;">${periodLabel}</div>
+            <div style="font-size:9px;color:#999;margin-top:2px;">Generado: ${new Date().toLocaleString('es-MX')}</div>
+          </div>
+        </div>
+
+        ${kpiHtml}
+
+        <h3 class="section-title">Estado de resultados detallado</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>${tableHeaders.map(h => `<th style="text-align:${h === 'Concepto' ? 'left' : 'right'};font-size:8px;padding:4px 6px;background:#f0f0f0;border-bottom:2px solid #ddd;text-transform:uppercase;letter-spacing:0.5px;">${h}</th>`).join('')}</tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+
+        ${trendHtml}
+        ${expenseHtml}
+
+        <div class="footer">
+          <span>REDBUCK EQUIPMENT — Reporte financiero confidencial</span>
+          <span>${new Date().toLocaleString('es-MX')}</span>
+        </div>
+        <script>setTimeout(() => { window.print(); }, 500);</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const lineItems: { label: string; key: string; bold?: boolean; bg?: boolean; indent?: boolean; color?: string; isMargin?: boolean }[] = [
