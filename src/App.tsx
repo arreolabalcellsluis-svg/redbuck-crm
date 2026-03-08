@@ -33,6 +33,7 @@ import DailyAssistantPage from "./pages/DailyAssistantPage";
 import MarketMapPage from "./pages/MarketMapPage";
 import PurchaseHistoryPage from "./pages/PurchaseHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import OperatingExpensesPage from "./pages/OperatingExpensesPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
