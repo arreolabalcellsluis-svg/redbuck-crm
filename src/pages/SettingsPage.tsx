@@ -54,6 +54,8 @@ export default function SettingsPage() {
   const [ivaRate, setIvaRate] = useState(16);
   const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
   const [seriesForm, setSeriesForm] = useState({ prefix: '', start: 1000, current: 1000 });
+  const [showAddVendorSeries, setShowAddVendorSeries] = useState(false);
+  const [newVendorForm, setNewVendorForm] = useState({ name: '', prefix: '', start: 1000 });
 
   // ─── Dialogs ───────────────────────────────────────────
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -281,12 +283,75 @@ export default function SettingsPage() {
 
         {/* ═══════════ VENDOR SERIES ═══════════ */}
         <div className="bg-card rounded-xl border p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Hash size={20} className="text-primary" />
-            <h3 className="font-display font-semibold">Series de cotización por vendedor</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Hash size={20} className="text-primary" />
+              <h3 className="font-display font-semibold">Series de cotización por vendedor</h3>
+            </div>
+            {isDirector && (
+              <button
+                onClick={() => { setShowAddVendorSeries(true); setNewVendorForm({ name: '', prefix: '', start: 1000 }); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={14} /> Agregar vendedor
+              </button>
+            )}
           </div>
+
+          {/* Add new vendor series form */}
+          {showAddVendorSeries && (
+            <div className="mb-3 p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5">Nombre</label>
+                  <input value={newVendorForm.name} onChange={e => setNewVendorForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Nombre del vendedor"
+                    className="w-44 px-2 py-1 rounded border bg-background text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5">Prefijo</label>
+                  <input value={newVendorForm.prefix} onChange={e => setNewVendorForm(f => ({ ...f, prefix: e.target.value.toUpperCase() }))}
+                    placeholder="V6"
+                    className="w-20 px-2 py-1 rounded border bg-background text-sm font-mono" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5">Inicio</label>
+                  <input type="number" value={newVendorForm.start} onChange={e => setNewVendorForm(f => ({ ...f, start: +e.target.value }))}
+                    className="w-24 px-2 py-1 rounded border bg-background text-sm font-mono" />
+                </div>
+                <div className="flex items-end gap-1 ml-auto">
+                  <button onClick={() => {
+                    if (!newVendorForm.name.trim()) { toast.error('El nombre es obligatorio'); return; }
+                    if (!newVendorForm.prefix.trim()) { toast.error('El prefijo es obligatorio'); return; }
+                    if (users.some(u => u.seriesPrefix === newVendorForm.prefix && u.role === 'vendedor' && u.active)) {
+                      toast.error('Ya existe un vendedor con ese prefijo'); return;
+                    }
+                    const newUser: User = {
+                      id: `u-${Date.now()}`,
+                      name: newVendorForm.name,
+                      email: '',
+                      role: 'vendedor',
+                      active: true,
+                      seriesPrefix: newVendorForm.prefix,
+                      seriesStart: newVendorForm.start,
+                      seriesCurrent: newVendorForm.start,
+                    };
+                    setUsers(prev => [...prev, newUser]);
+                    setShowAddVendorSeries(false);
+                    toast.success(`Vendedor "${newVendorForm.name}" agregado con serie ${newVendorForm.prefix}`);
+                  }} className="p-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" title="Agregar">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={() => setShowAddVendorSeries(false)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground" title="Cancelar">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            {users.filter(u => u.role === 'vendedor' && u.active).map(u => {
+            {users.filter(u => u.role === 'vendedor' && u.active && u.seriesPrefix).map(u => {
               const current = vendorSeries[u.id] ?? u.seriesCurrent ?? u.seriesStart ?? 1000;
               const isEditing = editingSeriesId === u.id;
               return (
@@ -313,7 +378,7 @@ export default function SettingsPage() {
                           setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, seriesPrefix: seriesForm.prefix, seriesStart: seriesForm.start, seriesCurrent: seriesForm.current } : usr));
                           setEditingSeriesId(null);
                           toast.success(`Serie de ${u.name} actualizada`);
-                        }} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="Guardar">
+                        }} className="p-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" title="Guardar">
                           <Check size={14} />
                         </button>
                         <button onClick={() => setEditingSeriesId(null)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground" title="Cancelar">
@@ -332,12 +397,20 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2">
                         <div className="font-mono text-sm font-semibold text-primary">{u.seriesPrefix}-{current + 1}</div>
                         {isDirector && (
-                          <button onClick={() => {
-                            setEditingSeriesId(u.id);
-                            setSeriesForm({ prefix: u.seriesPrefix || '', start: u.seriesStart || 1000, current: current });
-                          }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Editar serie">
-                            <Pencil size={14} />
-                          </button>
+                          <>
+                            <button onClick={() => {
+                              setEditingSeriesId(u.id);
+                              setSeriesForm({ prefix: u.seriesPrefix || '', start: u.seriesStart || 1000, current: current });
+                            }} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Editar serie">
+                              <Pencil size={14} />
+                            </button>
+                            <button onClick={() => {
+                              setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, seriesPrefix: undefined, seriesStart: undefined, seriesCurrent: undefined } : usr));
+                              toast.success(`Serie de ${u.name} eliminada`);
+                            }} className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Quitar de la lista">
+                              <Trash2 size={14} />
+                            </button>
+                          </>
                         )}
                       </div>
                     </>
@@ -345,6 +418,9 @@ export default function SettingsPage() {
                 </div>
               );
             })}
+            {users.filter(u => u.role === 'vendedor' && u.active && u.seriesPrefix).length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-6">No hay vendedores con series configuradas</div>
+            )}
           </div>
         </div>
 
