@@ -116,7 +116,10 @@ export default function OrdersPage() {
     const updated = [...items];
     if (field === 'productId') {
       const prod = demoProducts.find(p => p.id === value);
-      if (prod) updated[i] = { ...updated[i], productId: value, productName: prod.name, unitPrice: prod.listPrice };
+      if (prod) {
+        const priceInMxn = prod.currency === 'USD' ? Math.round(prod.listPrice * exchangeRate) : prod.listPrice;
+        updated[i] = { ...updated[i], productId: value, productName: prod.name, unitPrice: priceInMxn };
+      }
     } else {
       (updated[i] as any)[field] = value;
     }
