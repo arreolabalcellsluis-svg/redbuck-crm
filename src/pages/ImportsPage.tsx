@@ -349,6 +349,39 @@ export default function ImportsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* DOWNLOAD EXCEL DIALOG */}
+      <Dialog open={showDownload} onOpenChange={setShowDownload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Importaciones</DialogTitle>
+            <DialogDescription>Selecciona el rango de fechas de compra para descargar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicial *</label>
+                <input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha final *</label>
+                <input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              </div>
+            </div>
+            {dlDateFrom && dlDateTo && (
+              <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
+                <span className="font-semibold text-primary">{dlFilteredCount}</span> importación{dlFilteredCount !== 1 ? 'es' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowDownload(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
+            <button onClick={handleImportsExcel} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2">
+              <Download size={16} /> Descargar Excel
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
