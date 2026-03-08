@@ -394,6 +394,39 @@ export default function AccountsPayablePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* DOWNLOAD EXCEL DIALOG */}
+      <Dialog open={showDownload} onOpenChange={setShowDownload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Cuentas por Pagar</DialogTitle>
+            <DialogDescription>Selecciona el rango de fechas de facturación para descargar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs mb-1 block">Fecha inicial *</Label>
+                <Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">Fecha final *</Label>
+                <Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} />
+              </div>
+            </div>
+            {dlDateFrom && dlDateTo && (
+              <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
+                <span className="font-semibold text-primary">{dlFilteredCount}</span> factura{dlFilteredCount !== 1 ? 's' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDownload(false)}>Cancelar</Button>
+            <Button onClick={handleExcelDownload} className="gap-2">
+              <Download size={16} /> Descargar Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
