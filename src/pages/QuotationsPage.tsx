@@ -145,6 +145,58 @@ export default function QuotationsPage() {
     setSelectedVendorId(isVendedor ? vendorId : '');
     setItems([]);
     setValidDays(15);
+    setEditingQuotation(null);
+  };
+
+  // --- Edit quotation ---
+  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
+
+  const openEditQuotation = (q: Quotation) => {
+    setEditingQuotation(q);
+    setSelectedCustomerId(q.customerId);
+    setSelectedVendorId(q.vendorId || '');
+    setItems([...q.items]);
+    setValidDays(Math.max(1, Math.round((new Date(q.validUntil).getTime() - new Date(q.createdAt).getTime()) / (1000 * 60 * 60 * 24))));
+    setShowCreate(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingQuotation) return;
+    if (!selectedCustomerId) { toast.error('Selecciona un cliente'); return; }
+    if (items.length === 0) { toast.error('Agrega al menos un producto'); return; }
+
+    const subtotal = calcSubtotal();
+    const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
+    const total = Math.round((subtotal + tax) * 100) / 100;
+    const vendor = demoUsers.find(u => u.id === selectedVendorId);
+    const customer = demoCustomers.find(c => c.id === selectedCustomerId);
+
+    const today = new Date();
+    const validDate = new Date(today);
+    validDate.setDate(validDate.getDate() + validDays);
+    const fmtDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const updated: Quotation = {
+      ...editingQuotation,
+      customerId: selectedCustomerId,
+      customerName: customer?.name || '',
+      customerPhone: customer?.phone,
+      customerWhatsapp: customer?.whatsapp || customer?.phone,
+      vendorId: selectedVendorId,
+      vendorName: vendor?.name || '',
+      vendorPhone: vendor?.phone,
+      vendorEmail: vendor?.email,
+      items: [...items],
+      subtotal: Math.round(subtotal * 100) / 100,
+      tax,
+      total,
+      validUntil: fmtDate(validDate),
+    };
+
+    updateQuotation(updated);
+    toast.success(`Cotización ${editingQuotation.folio} actualizada`);
+    setShowCreate(false);
+    resetForm();
   };
 
   // --- Quotation status change ---
