@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   FileText, Settings, Shield, Upload, CheckCircle, AlertTriangle, XCircle, Search,
-  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet,
+  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet, Archive,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
