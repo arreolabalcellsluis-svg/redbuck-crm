@@ -17,6 +17,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preselectedOrderId?: string;
 }
 
 export default function InvoiceCreateDialog({ open, onOpenChange }: Props) {
