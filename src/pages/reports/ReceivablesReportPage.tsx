@@ -4,9 +4,9 @@ import { ArrowLeft, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
+import { demoAccountsReceivable, demoCustomers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
-import { exportToPdf } from '@/lib/pdfExport';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
