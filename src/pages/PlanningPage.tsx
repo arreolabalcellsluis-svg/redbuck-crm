@@ -84,12 +84,31 @@ export default function PlanningPage() {
     );
   }
 
-  // Sort helper
+  // Sort helper — default sort by importance per tab when no explicit sort
+  const riskOrder: Record<string, number> = { critico: 0, alerta: 1, ok: 2, excedente: 3 };
+  const catOrder: Record<string, number> = { estrella: 0, rotacion: 1, premium: 2, problematico: 3 };
+
   const sortedAnalyses = [...analyses].sort((a, b) => {
-    if (!sortField) return 0;
-    const valA = (a as any)[sortField] ?? 0;
-    const valB = (b as any)[sortField] ?? 0;
-    return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+    if (sortField) {
+      const valA = (a as any)[sortField] ?? 0;
+      const valB = (b as any)[sortField] ?? 0;
+      return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+    }
+    // Default sort per tab: most important first
+    switch (tab) {
+      case 'demanda':
+        return b.monthlySales - a.monthlySales; // highest demand first
+      case 'reorden':
+        return a.daysOfStock - b.daysOfStock; // lowest coverage first (most urgent)
+      case 'inventario':
+        return b.stockDifference - a.stockDifference; // largest deficit first
+      case 'estrategico':
+        return catOrder[a.category] !== catOrder[b.category]
+          ? catOrder[a.category] - catOrder[b.category]
+          : b.annualRevenue - a.annualRevenue; // stars first, then by revenue
+      default:
+        return 0;
+    }
   });
 
   const toggleSort = (field: string) => {
