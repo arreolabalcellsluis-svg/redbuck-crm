@@ -312,6 +312,21 @@ export default function AssetsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Download Dialog */}
+      <Dialog open={dlOpen} onOpenChange={setDlOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Descargar Activos Excel</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Filtrar por fecha de compra. <strong>{dlFilteredCount}</strong> activos encontrados.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Desde</Label><Input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} /></div>
+              <div><Label>Hasta</Label><Input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} /></div>
+            </div>
+            <Button onClick={handleExcelDownload} className="w-full"><Download size={14} className="mr-2" />Descargar Excel ({dlFilteredCount})</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
