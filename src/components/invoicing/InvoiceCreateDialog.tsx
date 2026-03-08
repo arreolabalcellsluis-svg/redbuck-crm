@@ -15,7 +15,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
-import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
+import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
@@ -31,6 +31,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const { data: fiscal } = useFiscalSettings();
   const { data: customerFiscal } = useAllCustomerFiscalData();
   const { data: productFiscal } = useAllProductFiscalData();
+  const { data: existingInvoices } = useInvoices();
   const createMutation = useCreateInvoice();
 
   const [step, setStep] = useState<'select' | 'configure'>('select');
@@ -52,12 +53,19 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
 
+  // Auto-generate next folio number
+  const nextFolio = useMemo(() => {
+    const count = (existingInvoices ?? []).length;
+    return String(count + 1).padStart(3, '0');
+  }, [existingInvoices]);
+
   // Reset on open
   useEffect(() => {
     if (open) {
       setSearch('');
-      setSeries(fiscal?.default_series || 'A');
-      setFolio('');
+      const defaultSeries = fiscal?.default_series || 'A';
+      setSeries(defaultSeries);
+      setFolio(nextFolio);
       setPaymentForm('99');
       setPaymentMethod('PUE');
       setCurrency('MXN');
@@ -74,13 +82,14 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
         if (found) {
           setSelectedOrder(found);
           setStep('configure');
+          setNotes(`Pedido: ${found.folio}`);
           return;
         }
       }
       setStep('select');
       setSelectedOrder(null);
     }
-  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders]);
+  }, [open, fiscal, preselectedOrderId, preselectedOrderFolio, orders, nextFolio]);
 
   // Filter and sort orders (newest first)
   const eligibleOrders = useMemo(() => {
