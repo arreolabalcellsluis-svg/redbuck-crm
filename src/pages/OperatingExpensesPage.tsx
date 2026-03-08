@@ -172,6 +172,10 @@ export default function OperatingExpensesPage() {
           )}
         </p>
       </div>
+      <Button variant="outline" size="sm" onClick={() => setDlOpen(true)}>
+        <Download size={14} className="mr-1" /> Descargar Excel
+      </Button>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 border-b pb-2">
