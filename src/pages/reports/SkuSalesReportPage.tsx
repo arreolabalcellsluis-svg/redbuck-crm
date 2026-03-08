@@ -125,6 +125,7 @@ export default function SkuSalesReportPage() {
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 
