@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import CommercialSections from '@/components/dashboard/CommercialSections';
 import SalesComparative from '@/components/dashboard/SalesComparative';
 import { useAppContext } from '@/contexts/AppContext';
@@ -15,11 +17,15 @@ import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import { DaysOfInventoryDialog, DeadStockDialog, ExcessStockDialog } from '@/components/dashboard/InventoryDrillDownDialogs';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   DollarSign, TrendingUp, Package, Warehouse, Activity, ShieldAlert,
   BarChart3, Target, Users, FileText, ShoppingCart, CreditCard, Globe,
   Zap, Star, ArrowRight, AlertTriangle, Clock, Skull, Crown, Percent,
-  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator, RefreshCw,
+  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator, RefreshCw, CalendarIcon,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -44,6 +50,7 @@ export default function ExecutiveDashboardPage() {
   const [deadDialog, setDeadDialog] = useState(false);
   const [excessDialog, setExcessDialog] = useState(false);
   const [salesMonths, setSalesMonths] = useState(6);
+  const [analysisDate, setAnalysisDate] = useState<Date>(new Date());
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
@@ -167,13 +174,41 @@ export default function ExecutiveDashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="page-header">
-        <h1 className="page-title flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Crown size={20} className="text-primary-foreground" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="page-title flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <Crown size={20} className="text-primary-foreground" />
+              </div>
+              Dashboard Ejecutivo REDBUCK
+            </h1>
+            <p className="page-subtitle">
+              Visión 360° del negocio — {format(analysisDate, "d 'de' MMMM yyyy", { locale: es })}
+            </p>
           </div>
-          Dashboard Ejecutivo REDBUCK
-        </h1>
-        <p className="page-subtitle">Visión 360° del negocio — Marzo 2026</p>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start text-left text-sm h-9 gap-2")}>
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  {format(analysisDate, "dd/MM/yyyy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={analysisDate}
+                  onSelect={d => d && setAnalysisDate(d)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setAnalysisDate(new Date())}>
+              Hoy
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Restock alert banner */}
