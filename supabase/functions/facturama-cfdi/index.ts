@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     // ─── ACTION: test-connection ───
     if (action === "test-connection") {
       const res = await facturama("/api/Profile");
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(`Facturama error: ${JSON.stringify(data)}`);
       return new Response(JSON.stringify({ success: true, profile: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
