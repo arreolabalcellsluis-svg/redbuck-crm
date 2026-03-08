@@ -47,8 +47,6 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   // Reset on open
   useEffect(() => {
     if (open) {
-      setStep('select');
-      setSelectedOrder(null);
       setSearch('');
       setSeries(fiscal?.default_series || 'A');
       setFolio('');
@@ -58,8 +56,20 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setExchangeRate(1);
       setConditions('');
       setNotes('');
+
+      // Auto-select preselected order
+      if (preselectedOrderId && orders) {
+        const found = orders.find(o => o.id === preselectedOrderId);
+        if (found) {
+          setSelectedOrder(found);
+          setStep('configure');
+          return;
+        }
+      }
+      setStep('select');
+      setSelectedOrder(null);
     }
-  }, [open, fiscal]);
+  }, [open, fiscal, preselectedOrderId, orders]);
 
   // Filter orders that can be invoiced
   const eligibleOrders = (orders ?? []).filter(o =>
