@@ -143,6 +143,58 @@ export default function AccountsPayablePage() {
     return diff > 0 ? diff : 0;
   };
 
+  const handleExcelDownload = () => {
+    if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
+    if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
+
+    const data = enriched.filter(p => {
+      if (p.invoice_date < dlDateFrom || p.invoice_date > dlDateTo) return false;
+      return true;
+    });
+
+    if (data.length === 0) { toast.error('No hay facturas en el rango seleccionado'); return; }
+
+    const rows = data.map(p => ({
+      'Proveedor': p.supplier_name,
+      'No. Factura': p.invoice_number,
+      'Descripción': p.description,
+      'Fecha Factura': p.invoice_date,
+      'Fecha Vencimiento': p.due_date,
+      'Moneda': p.currency,
+      'Total': p.total,
+      'Pagado': p.paid,
+      'Saldo': p.balance,
+      'Estatus': STATUS_LABELS[p.computedStatus] || p.computedStatus,
+      'Días Vencidos': daysOverdue(p.due_date),
+      'Notas': p.notes || '',
+    }));
+
+    const summary = [
+      { Concepto: 'Total por pagar', Importe: data.reduce((s, p) => s + p.balance, 0) },
+      { Concepto: 'Total pagado', Importe: data.reduce((s, p) => s + p.paid, 0) },
+      { Concepto: 'Facturas vencidas', Importe: data.filter(p => p.computedStatus === 'vencida').length },
+      { Concepto: 'Total facturas', Importe: data.length },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(rows);
+    ws1['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 18 }));
+    XLSX.utils.book_append_sheet(wb, ws1, 'Cuentas por Pagar');
+    const ws2 = XLSX.utils.json_to_sheet(summary);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cuentas_por_Pagar_${dlDateFrom}_a_${dlDateTo}.xlsx`);
+    toast.success(`Excel generado con ${data.length} facturas`);
+    setShowDownload(false);
+  };
+
+  const dlFilteredCount = enriched.filter(p => {
+    if (dlDateFrom && p.invoice_date < dlDateFrom) return false;
+    if (dlDateTo && p.invoice_date > dlDateTo) return false;
+    return true;
+  }).length;
+
   return (
     <div>
       <div className="page-header">
