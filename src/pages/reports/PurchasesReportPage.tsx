@@ -64,13 +64,35 @@ export default function PurchasesReportPage() {
   const supplierOptions = [...new Set(records.map(r => r.proveedor))].map(s => ({ value: s, label: s }));
 
   const handleExport = () => {
-    const data = filtered.map(r => ({
-      Proveedor: r.proveedor, 'No. Orden': r.ordenNumero, Producto: r.producto,
-      Cantidad: r.cantidad, 'Costo unit. (USD)': r.costoUnitario, 'Costo total (USD)': r.costoTotal,
-      'Costo total (MXN)': r.costoTotalMXN, Estatus: IMPORT_STATUS_LABELS[r.status] || r.status,
-      'ETA': r.eta, 'Días tránsito': r.diasTransito,
-    }));
-    exportToExcel(data, `Compras_importaciones_${new Date().toISOString().split('T')[0]}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullExcel({
+      title: 'Compras e Importaciones', filename: `Compras_${dateStr}`,
+      kpis: [
+        { label: 'Total (USD)', value: fmtUSD(totalUSD) },
+        { label: 'Total (MXN)', value: fmt(totalMXN), color: 'primary' },
+        { label: 'En tránsito', value: fmt(totalTransito), color: 'warning' },
+      ],
+      sections: [
+        { title: 'Compras por proveedor', headers: ['Proveedor', 'Unidades', 'Total USD', 'Total MXN'], rows: supplierSummary.map(s => [s.proveedor, s.items, fmtUSD(s.totalUSD), fmt(s.totalMXN)]) },
+        { title: 'Detalle de compras', headers: ['Proveedor', 'No. Orden', 'Producto', 'Cant.', 'Costo USD', 'Total USD', 'Total MXN', 'Estatus', 'ETA'], rows: filtered.map(r => [r.proveedor, r.ordenNumero, r.producto, r.cantidad, fmtUSD(r.costoUnitario), fmtUSD(r.costoTotal), fmt(r.costoTotalMXN), IMPORT_STATUS_LABELS[r.status] || r.status, r.eta]) },
+      ],
+    });
+  };
+
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    exportFullPdf({
+      title: 'Compras e Importaciones', filename: `Compras_${dateStr}`,
+      kpis: [
+        { label: 'Total (USD)', value: fmtUSD(totalUSD) },
+        { label: 'Total (MXN)', value: fmt(totalMXN), color: 'primary' },
+        { label: 'En tránsito', value: fmt(totalTransito), color: 'warning' },
+      ],
+      sections: [
+        { title: 'Compras por proveedor', headers: ['Proveedor', 'Uds', 'Total USD', 'Total MXN'], rows: supplierSummary.map(s => [s.proveedor, s.items, fmtUSD(s.totalUSD), fmt(s.totalMXN)]) },
+        { title: 'Detalle', headers: ['Proveedor', 'Orden', 'Producto', 'Cant.', 'USD unit.', 'Total USD', 'Total MXN', 'Estatus', 'ETA'], rows: filtered.map(r => [r.proveedor, r.ordenNumero, r.producto, r.cantidad, fmtUSD(r.costoUnitario), fmtUSD(r.costoTotal), fmt(r.costoTotalMXN), IMPORT_STATUS_LABELS[r.status] || r.status, r.eta]) },
+      ],
+    });
   };
 
   return (
