@@ -241,6 +241,7 @@ export default function PaymentsTab() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="font-mono text-xs max-w-[100px] truncate">{p.complement_uuid || '—'}</TableCell>
                   </TableRow>
                 );
               })}
