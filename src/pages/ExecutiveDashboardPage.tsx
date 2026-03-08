@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import CommercialSections from '@/components/dashboard/CommercialSections';
 import SalesComparative from '@/components/dashboard/SalesComparative';
 import { useAppContext } from '@/contexts/AppContext';
@@ -15,11 +17,15 @@ import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import { DaysOfInventoryDialog, DeadStockDialog, ExcessStockDialog } from '@/components/dashboard/InventoryDrillDownDialogs';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   DollarSign, TrendingUp, Package, Warehouse, Activity, ShieldAlert,
   BarChart3, Target, Users, FileText, ShoppingCart, CreditCard, Globe,
   Zap, Star, ArrowRight, AlertTriangle, Clock, Skull, Crown, Percent,
-  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator, RefreshCw,
+  Banknote, ArrowUpRight, ArrowDownRight, Layers, PackageX, CalendarClock, Calculator, RefreshCw, CalendarIcon,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
