@@ -13,14 +13,14 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
-const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string } => ({
+const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string } => ({
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
   listPrice: 0, minPrice: 0, cost: 0, currency: 'MXN', deliveryDays: 5,
   supplier: '', warranty: '1 año', active: true, stock: {}, inTransit: 0, image: '',
-  satProductKey: '', satUnitKey: '', taxObject: '02',
+  satProductKey: '', satUnitKey: '', taxObject: '02', taxFamily: '16',
 });
 
-type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string };
+type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string };
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
@@ -262,6 +262,14 @@ export default function ProductsPage() {
               <option value="02">02 — Sí objeto de impuestos</option>
               <option value="03">03 — Sí objeto de impuestos y no obligado al desglose</option>
               <option value="04">04 — Sí objeto de impuesto y no causa de impuestos</option>
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Familia de Impuestos</label>
+            <select value={form.taxFamily || '16'} onChange={e => setForm(p => ({ ...p, taxFamily: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+              <option value="16">IVA 16%</option>
+              <option value="0">IVA 0%</option>
+              <option value="exento">Exento</option>
             </select>
           </div>
         </div>
