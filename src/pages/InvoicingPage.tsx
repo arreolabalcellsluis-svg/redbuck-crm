@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { openInvoicePdf, type InvoicePdfData } from '@/lib/invoicePdfExport';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -618,6 +619,8 @@ function ProductFiscalTab() {
 function InvoicesTab() {
   const { data: invoices, isLoading } = useInvoices();
   const { data: customers } = useCustomers();
+  const { data: fiscalSettings } = useFiscalSettings();
+  const { data: allCustomerFiscal } = useAllCustomerFiscalData();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -625,6 +628,7 @@ function InvoicesTab() {
   const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const customerMap = useMemo(() => new Map((customers ?? []).map(c => [c.id, c])), [customers]);
+  const customerFiscalMap = useMemo(() => new Map((allCustomerFiscal ?? []).map(f => [f.customer_id, f])), [allCustomerFiscal]);
 
   const filtered = useMemo(() => {
     return (invoices ?? []).filter(inv => {
@@ -778,6 +782,47 @@ function InvoicesTab() {
     }
   };
 
+  const handlePreviewInvoicePdf = (inv: Invoice) => {
+    const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+    const custFiscal = inv.customer_id ? customerFiscalMap.get(inv.customer_id) : null;
+    const payFormEntry = SAT_PAYMENT_FORMS.find(f => f.code === inv.payment_form);
+    const payMethodEntry = SAT_PAYMENT_METHODS.find(m => m.code === inv.payment_method);
+
+    const pdfData: InvoicePdfData = {
+      issuerName: fiscalSettings?.issuer_name ?? 'EMPRESA',
+      issuerRfc: fiscalSettings?.issuer_rfc ?? 'XAXX010101000',
+      issuerTaxRegime: fiscalSettings?.issuer_tax_regime ?? '601',
+      issuerTradeName: fiscalSettings?.issuer_trade_name ?? undefined,
+      issuerZipCode: fiscalSettings?.expedition_zip_code ?? '00000',
+      customerName: custFiscal?.legal_name ?? cust?.name ?? '—',
+      customerRfc: custFiscal?.rfc ?? cust?.rfc ?? 'XAXX010101000',
+      customerTaxRegime: custFiscal?.tax_regime ?? '601',
+      customerZipCode: custFiscal?.fiscal_zip_code ?? '00000',
+      cfdiUse: custFiscal?.cfdi_use_default ?? 'G03',
+      cfdiUseLabel: SAT_CFDI_USES.find(u => u.code === (custFiscal?.cfdi_use_default ?? 'G03'))?.label,
+      series: inv.series,
+      folio: inv.folio,
+      invoiceType: inv.invoice_type,
+      invoiceTypeLabel: inv.invoice_type === 'I' ? 'Ingreso' : inv.invoice_type === 'E' ? 'Egreso' : inv.invoice_type,
+      paymentForm: inv.payment_form,
+      paymentFormLabel: payFormEntry?.label ?? inv.payment_form,
+      paymentMethod: inv.payment_method,
+      paymentMethodLabel: payMethodEntry?.label ?? inv.payment_method,
+      currency: inv.currency,
+      exchangeRate: inv.exchange_rate,
+      uuid: inv.uuid ?? undefined,
+      issuedAt: inv.issued_at ?? inv.created_at,
+      conditions: inv.conditions ?? undefined,
+      notes: inv.notes ?? undefined,
+      items: [{ description: 'Ver detalle para conceptos', satProductKey: '—', satUnitKey: '—', qty: 1, unitPrice: inv.subtotal, discount: 0, subtotal: inv.subtotal, taxAmount: inv.tax_amount, total: inv.total }],
+      subtotal: inv.subtotal,
+      taxTotal: inv.tax_amount,
+      total: inv.total,
+      isDemo: !inv.uuid,
+    };
+    openInvoicePdf(pdfData);
+  };
+
   const handleDownloadZip = async () => {
     if (filtered.length === 0) return;
     toast.info('Generando ZIP con las facturas...');
@@ -918,6 +963,7 @@ function InvoicesTab() {
                     <TableCell><Badge className={`${st.color} text-xs`}>{st.label}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" title="Vista previa PDF" onClick={() => handlePreviewInvoicePdf(inv)}><FileText size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSinglePdf(inv)}><Download size={14} /></Button>
                       </div>
