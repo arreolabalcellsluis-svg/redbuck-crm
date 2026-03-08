@@ -14,6 +14,7 @@ import {
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Dashboard Ejecutivo', icon: Crown, path: '/ejecutivo' },
+  { label: 'Dashboard Financiero', icon: Calculator, path: '/financiero' },
   { label: 'CRM', icon: Users, path: '/crm' },
   { label: 'Reabasto', icon: RefreshCw, path: '/crm/reabasto' },
   { label: 'Agenda', icon: CalendarDays, path: '/crm/agenda' },

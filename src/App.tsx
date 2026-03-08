@@ -36,6 +36,7 @@ import OrderHistoryPage from "./pages/OrderHistoryPage";
 import OperatingExpensesPage from "./pages/OperatingExpensesPage";
 import AssetsPage from "./pages/AssetsPage";
 import AccountsPayablePage from "./pages/AccountsPayablePage";
+import CFODashboardPage from "./pages/CFODashboardPage";
 
 // Report detail pages
 import SalesReportPage from "./pages/reports/SalesReportPage";
@@ -99,6 +100,7 @@ function ProtectedRoutes() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/ejecutivo" element={<ExecutiveDashboardPage />} />
+            <Route path="/financiero" element={<CFODashboardPage />} />
             <Route path="/crm" element={<CRMPage />} />
             <Route path="/crm/reabasto" element={<RestockOpportunitiesPage />} />
             <Route path="/crm/agenda" element={<CommercialAgendaPage />} />
