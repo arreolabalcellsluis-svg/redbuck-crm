@@ -57,20 +57,36 @@ export default function PlanningPage() {
   const [purchasePriority, setPurchasePriority] = useState('');
   const [categoryDialog, setCategoryDialog] = useState<keyof typeof CAT_CONFIG | null>(null);
 
-  // Simulation state
-  const [simProductId, setSimProductId] = useState(demoProducts[0]?.id ?? '');
-  const [simQty, setSimQty] = useState(10);
-  const [simFreight, setSimFreight] = useState(50000);
-  const [simCustoms, setSimCustoms] = useState(35000);
+  // Simulation state — multi-product order
+  interface SimLine { productId: string; qty: number; freight: number; customs: number; }
+  const [simLines, setSimLines] = useState<SimLine[]>([{ productId: demoProducts[0]?.id ?? '', qty: 10, freight: 50000, customs: 35000 }]);
   const [growthFactor, setGrowthFactor] = useState(2);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
-  const importSim = useMemo(
-    () => simulateImport(simProductId, simQty, simFreight, simCustoms, analyses),
-    [simProductId, simQty, simFreight, simCustoms, analyses]
+
+  // Simulate each line
+  const simResults = useMemo(() =>
+    simLines.map(line => ({
+      line,
+      sim: simulateImport(line.productId, line.qty, line.freight, line.customs, analyses),
+    })).filter(r => r.sim !== null) as { line: SimLine; sim: NonNullable<ReturnType<typeof simulateImport>> }[],
+    [simLines, analyses]
   );
+
+  const simTotals = useMemo(() => ({
+    totalInvestment: simResults.reduce((s, r) => s + r.sim.totalInvestment, 0),
+    estimatedRevenue: simResults.reduce((s, r) => s + r.sim.estimatedRevenue, 0),
+    estimatedProfit: simResults.reduce((s, r) => s + r.sim.estimatedProfit, 0),
+    totalQty: simResults.reduce((s, r) => s + r.sim.qty, 0),
+  }), [simResults]);
+
+  const updateSimLine = (index: number, field: keyof SimLine, value: string | number) => {
+    setSimLines(prev => prev.map((l, i) => i === index ? { ...l, [field]: value } : l));
+  };
+  const addSimLine = () => setSimLines(prev => [...prev, { productId: demoProducts[0]?.id ?? '', qty: 5, freight: 0, customs: 0 }]);
+  const removeSimLine = (index: number) => setSimLines(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
 
   // Access control
   const allowed = ['director', 'administracion', 'compras'].includes(currentRole);
