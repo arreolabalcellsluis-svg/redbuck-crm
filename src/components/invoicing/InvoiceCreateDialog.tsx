@@ -20,11 +20,10 @@ import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, u
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
 const DOCUMENT_TYPES = [
-  { code: 'I', label: 'Factura (Ingreso)' },
-  { code: 'E', label: 'Nota de Crédito / Devolución (Egreso)' },
-  { code: 'P', label: 'Recibo de Pago (Complemento)' },
-  { code: 'N', label: 'Recibo de Honorarios (Nómina)' },
-  { code: 'T', label: 'Traslado' },
+  { code: 'I', label: 'Factura' },
+  { code: 'N', label: 'Recibo de Honorarios' },
+  { code: 'E', label: 'Nota de Crédito' },
+  { code: 'D', label: 'Nota de Devolución' },
 ] as const;
 
 
