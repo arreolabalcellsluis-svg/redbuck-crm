@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   FileText, Settings, Shield, Upload, CheckCircle, AlertTriangle, XCircle, Search,
-  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus,
+  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -611,37 +617,173 @@ function InvoicesTab() {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+
+  const customerMap = useMemo(() => new Map((customers ?? []).map(c => [c.id, c])), [customers]);
+
+  const filtered = useMemo(() => {
+    return (invoices ?? []).filter(inv => {
+      const q = search.toLowerCase();
+      if (q && !inv.folio.toLowerCase().includes(q) && !(inv.uuid ?? '').toLowerCase().includes(q) && !(inv.customer_id && customerMap.get(inv.customer_id)?.name?.toLowerCase().includes(q))) return false;
+      if (dateFrom) {
+        const invDate = new Date(inv.created_at);
+        if (invDate < dateFrom) return false;
+      }
+      if (dateTo) {
+        const invDate = new Date(inv.created_at);
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        if (invDate > end) return false;
+      }
+      return true;
+    });
+  }, [invoices, search, dateFrom, dateTo, customerMap]);
+
+  const handleExportExcel = () => {
+    const rows = filtered.map(inv => {
+      const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+      const st = STATUS_MAP[inv.status] ?? STATUS_MAP.borrador;
+      return {
+        Fecha: new Date(inv.created_at).toLocaleDateString('es-MX'),
+        Serie: inv.series,
+        Folio: inv.folio,
+        Cliente: cust?.name || '—',
+        RFC: cust?.rfc || '—',
+        UUID: inv.uuid || '—',
+        Subtotal: inv.subtotal,
+        IVA: inv.tax_amount,
+        Total: inv.total,
+        Moneda: inv.currency,
+        'Forma de Pago': inv.payment_form,
+        'Método de Pago': inv.payment_method,
+        Estatus: st.label,
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
+    const periodLabel = dateFrom || dateTo
+      ? `_${dateFrom ? format(dateFrom, 'yyyyMMdd') : ''}${dateTo ? '_' + format(dateTo, 'yyyyMMdd') : ''}`
+      : '';
+    XLSX.writeFile(wb, `Facturas${periodLabel}.xlsx`);
+    toast.success(`${rows.length} facturas exportadas a Excel`);
+  };
+
+  const handleExportPDF = () => {
+    // Build a printable HTML table and trigger print dialog
+    const rows = filtered.map(inv => {
+      const cust = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+      const st = STATUS_MAP[inv.status] ?? STATUS_MAP.borrador;
+      return `<tr>
+        <td>${new Date(inv.created_at).toLocaleDateString('es-MX')}</td>
+        <td>${inv.series}-${inv.folio}</td>
+        <td>${cust?.name || '—'}</td>
+        <td style="font-size:10px">${inv.uuid || '—'}</td>
+        <td style="text-align:right">${fmt(inv.subtotal)}</td>
+        <td style="text-align:right">${fmt(inv.total)}</td>
+        <td>${st.label}</td>
+      </tr>`;
+    });
+
+    const totalSum = filtered.reduce((s, i) => s + i.total, 0);
+    const subtotalSum = filtered.reduce((s, i) => s + i.subtotal, 0);
+    const taxSum = filtered.reduce((s, i) => s + i.tax_amount, 0);
+    const periodText = dateFrom || dateTo
+      ? `Periodo: ${dateFrom ? format(dateFrom, 'dd/MM/yyyy') : '—'} a ${dateTo ? format(dateTo, 'dd/MM/yyyy') : '—'}`
+      : 'Todas las facturas';
+
+    const html = `<!DOCTYPE html><html><head><title>Facturas</title>
+      <style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px}
+      table{width:100%;border-collapse:collapse;margin-top:10px}
+      th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+      th{background:#f5f5f5;font-weight:600}
+      h1{font-size:18px;margin-bottom:4px}
+      .meta{color:#666;margin-bottom:12px}
+      .totals{margin-top:12px;text-align:right;font-weight:600}</style>
+      </head><body>
+      <h1>Reporte de Facturas</h1>
+      <p class="meta">${periodText} — ${filtered.length} facturas</p>
+      <table><thead><tr><th>Fecha</th><th>Serie-Folio</th><th>Cliente</th><th>UUID</th><th style="text-align:right">Subtotal</th><th style="text-align:right">Total</th><th>Estatus</th></tr></thead>
+      <tbody>${rows.join('')}</tbody></table>
+      <p class="totals">Subtotal: ${fmt(subtotalSum)} | IVA: ${fmt(taxSum)} | Total: ${fmt(totalSum)}</p>
+      </body></html>`;
+
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.print();
+    }
+    toast.success('PDF generado para impresión');
+  };
 
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Cargando facturas...</div>;
 
-  const customerMap = new Map((customers ?? []).map(c => [c.id, c]));
-
-  const filtered = (invoices ?? []).filter(inv =>
-    inv.folio.toLowerCase().includes(search.toLowerCase()) ||
-    (inv.uuid ?? '').toLowerCase().includes(search.toLowerCase()) ||
-    (inv.customer_id && customerMap.get(inv.customer_id)?.name?.toLowerCase().includes(search.toLowerCase()))
-  );
-
   return (
     <div className="mt-4 space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
           <Input placeholder="Buscar folio, UUID o cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("gap-1.5 text-sm", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'Desde'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("gap-1.5 text-sm", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'Hasta'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-xs text-muted-foreground">
+            Limpiar fechas
+          </Button>
+        )}
+
         <Badge variant="outline">{filtered.length} facturas</Badge>
-        <Button onClick={() => setShowCreate(true)} className="gap-1.5 ml-auto">
-          <Plus size={14} /> Nueva Factura
-        </Button>
+
+        <div className="flex gap-1.5 ml-auto">
+          {filtered.length > 0 && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} className="gap-1.5">
+                <FileSpreadsheet size={14} /> Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5">
+                <Download size={14} /> PDF
+              </Button>
+            </>
+          )}
+          <Button onClick={() => setShowCreate(true)} className="gap-1.5">
+            <Plus size={14} /> Nueva Factura
+          </Button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileBadge className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No hay facturas aún</p>
+            <p className="text-muted-foreground">No hay facturas{(dateFrom || dateTo) ? ' en el periodo seleccionado' : ' aún'}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Haz clic en "Nueva Factura" para generar una desde un pedido
+              {(dateFrom || dateTo) ? 'Ajusta las fechas o limpia los filtros' : 'Haz clic en "Nueva Factura" para generar una desde un pedido'}
             </p>
           </CardContent>
         </Card>
