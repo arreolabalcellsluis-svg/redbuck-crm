@@ -45,7 +45,6 @@ export function useSaveFiscalSettings() {
     mutationFn: async (settings: Partial<FiscalSettings> & { id?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const payload = { ...settings, user_id: user?.id, updated_at: new Date().toISOString() };
-      
       if (settings.id) {
         const { error } = await supabase.from('fiscal_settings').update(payload as any).eq('id', settings.id);
         if (error) throw error;
@@ -112,14 +111,11 @@ export function useSaveCustomerFiscalData() {
     mutationFn: async (d: Partial<CustomerFiscalData> & { customer_id: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const payload = { ...d, user_id: user?.id, updated_at: new Date().toISOString() };
-
-      // Upsert by customer_id
       const { data: existing } = await supabase
         .from('customer_fiscal_data')
         .select('id')
         .eq('customer_id', d.customer_id)
         .maybeSingle();
-
       if (existing) {
         const { error } = await supabase.from('customer_fiscal_data').update(payload as any).eq('id', existing.id);
         if (error) throw error;
@@ -186,13 +182,11 @@ export function useSaveProductFiscalData() {
     mutationFn: async (d: Partial<ProductFiscalData> & { product_id: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const payload = { ...d, user_id: user?.id, updated_at: new Date().toISOString() };
-
       const { data: existing } = await supabase
         .from('product_fiscal_data')
         .select('id')
         .eq('product_id', d.product_id)
         .maybeSingle();
-
       if (existing) {
         const { error } = await supabase.from('product_fiscal_data').update(payload as any).eq('id', existing.id);
         if (error) throw error;
@@ -242,6 +236,21 @@ export interface Invoice {
   updated_at: string;
 }
 
+export interface InvoiceItem {
+  id: string;
+  invoice_id: string;
+  product_id: string | null;
+  description: string;
+  qty: number;
+  unit_price: number;
+  discount: number;
+  subtotal: number;
+  tax_amount: number;
+  total: number;
+  sat_product_key: string;
+  sat_unit_key: string;
+}
+
 export function useInvoices() {
   return useQuery({
     queryKey: ['invoices'],
@@ -253,6 +262,148 @@ export function useInvoices() {
       if (error) throw error;
       return (data ?? []) as Invoice[];
     },
+  });
+}
+
+export function useInvoiceItems(invoiceId?: string) {
+  return useQuery({
+    queryKey: ['invoice_items', invoiceId],
+    enabled: !!invoiceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoiceId!);
+      if (error) throw error;
+      return (data ?? []) as InvoiceItem[];
+    },
+  });
+}
+
+export function useCreateInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      invoice: Omit<Invoice, 'id' | 'created_at' | 'updated_at' | 'uuid' | 'pac_response' | 'xml_path' | 'pdf_path' | 'issued_at' | 'canceled_at'>;
+      items: Omit<InvoiceItem, 'id' | 'invoice_id'>[];
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .insert({
+          ...payload.invoice,
+          user_id: user?.id,
+          created_by: user?.email || '',
+        } as any)
+        .select('id')
+        .single();
+      if (invErr) throw invErr;
+
+      if (payload.items.length > 0) {
+        const itemsWithInvoice = payload.items.map(it => ({
+          ...it,
+          invoice_id: inv.id,
+        }));
+        const { error: itemsErr } = await supabase
+          .from('invoice_items')
+          .insert(itemsWithInvoice as any);
+        if (itemsErr) throw itemsErr;
+      }
+
+      return inv.id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      toast.success('Factura creada como borrador');
+    },
+    onError: (e: any) => toast.error('Error al crear factura: ' + e.message),
+  });
+}
+
+export function useUpdateInvoiceStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: status as any, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+}
+
+export function useStampInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { data, error } = await supabase.functions.invoke('facturama-cfdi', {
+        body: { action: 'stamp', invoice_id: invoiceId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error de timbrado');
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      toast.success('¡Factura timbrada exitosamente!');
+    },
+    onError: (e: any) => toast.error('Error al timbrar: ' + e.message),
+  });
+}
+
+export function useCancelInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { invoice_id: string; reason: string; substitute_uuid?: string; canceled_by: string }) => {
+      const { data, error } = await supabase.functions.invoke('facturama-cfdi', {
+        body: { action: 'cancel', ...payload },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error de cancelación');
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['invoice_cancellations'] });
+      toast.success('Factura cancelada');
+    },
+    onError: (e: any) => toast.error('Error al cancelar: ' + e.message),
+  });
+}
+
+export function useDownloadInvoiceFile() {
+  return useMutation({
+    mutationFn: async ({ invoice_id, file_type }: { invoice_id: string; file_type: 'xml' | 'pdf' }) => {
+      const { data, error } = await supabase.functions.invoke('facturama-cfdi', {
+        body: { action: 'download', invoice_id, file_type },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error al descargar');
+      return data.url as string;
+    },
+    onSuccess: (url) => {
+      window.open(url, '_blank');
+    },
+    onError: (e: any) => toast.error('Error: ' + e.message),
+  });
+}
+
+export function useTestPacConnection() {
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('facturama-cfdi', {
+        body: { action: 'test-connection' },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error de conexión');
+      return data;
+    },
+    onSuccess: () => toast.success('Conexión con Facturama exitosa'),
+    onError: (e: any) => toast.error('Error de conexión: ' + e.message),
   });
 }
 
