@@ -5,6 +5,7 @@ import {
   type ProductAnalysis, type ImportSimulation,
 } from '@/lib/planningEngine';
 import { demoProducts } from '@/data/demo-data';
+import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import MetricCard from '@/components/shared/MetricCard';
 import {
   AlertTriangle, TrendingUp, Package, DollarSign, Truck, BarChart3,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -57,20 +59,36 @@ export default function PlanningPage() {
   const [purchasePriority, setPurchasePriority] = useState('');
   const [categoryDialog, setCategoryDialog] = useState<keyof typeof CAT_CONFIG | null>(null);
 
-  // Simulation state
-  const [simProductId, setSimProductId] = useState(demoProducts[0]?.id ?? '');
-  const [simQty, setSimQty] = useState(10);
-  const [simFreight, setSimFreight] = useState(50000);
-  const [simCustoms, setSimCustoms] = useState(35000);
+  // Simulation state — multi-product order
+  interface SimLine { productId: string; qty: number; freight: number; customs: number; }
+  const [simLines, setSimLines] = useState<SimLine[]>([{ productId: demoProducts[0]?.id ?? '', qty: 10, freight: 50000, customs: 35000 }]);
   const [growthFactor, setGrowthFactor] = useState(2);
 
   const analyses = useMemo(() => analyzeProducts(), []);
   const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
-  const importSim = useMemo(
-    () => simulateImport(simProductId, simQty, simFreight, simCustoms, analyses),
-    [simProductId, simQty, simFreight, simCustoms, analyses]
+
+  // Simulate each line
+  const simResults = useMemo(() =>
+    simLines.map(line => ({
+      line,
+      sim: simulateImport(line.productId, line.qty, line.freight, line.customs, analyses),
+    })).filter(r => r.sim !== null) as { line: SimLine; sim: NonNullable<ReturnType<typeof simulateImport>> }[],
+    [simLines, analyses]
   );
+
+  const simTotals = useMemo(() => ({
+    totalInvestment: simResults.reduce((s, r) => s + r.sim.totalInvestment, 0),
+    estimatedRevenue: simResults.reduce((s, r) => s + r.sim.estimatedRevenue, 0),
+    estimatedProfit: simResults.reduce((s, r) => s + r.sim.estimatedProfit, 0),
+    totalQty: simResults.reduce((s, r) => s + r.sim.qty, 0),
+  }), [simResults]);
+
+  const updateSimLine = (index: number, field: keyof SimLine, value: string | number) => {
+    setSimLines(prev => prev.map((l, i) => i === index ? { ...l, [field]: value } : l));
+  };
+  const addSimLine = () => setSimLines(prev => [...prev, { productId: demoProducts[0]?.id ?? '', qty: 5, freight: 0, customs: 0 }]);
+  const removeSimLine = (index: number) => setSimLines(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
 
   // Access control
   const allowed = ['director', 'administracion', 'compras'].includes(currentRole);
@@ -564,76 +582,161 @@ export default function PlanningPage() {
       {tab === 'simulador' && (
         <div className="space-y-6">
           <div className="bg-card rounded-xl border p-6">
-            <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
-              <Calculator size={18} className="text-primary" />
-              Simulador de importación desde China
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Producto</label>
-                <select
-                  value={simProductId}
-                  onChange={e => setSimProductId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm"
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display font-semibold flex items-center gap-2">
+                <Calculator size={18} className="text-primary" />
+                Simulador de importación — Orden de compra
+              </h3>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="text-xs" onClick={addSimLine}>
+                  + Agregar producto
+                </Button>
+                <Button
+                  variant="default" size="sm" className="text-xs"
+                  disabled={simResults.length === 0}
+                  onClick={() => {
+                    const data = simResults.map(r => ({
+                      Producto: r.sim.productName,
+                      Cantidad: r.sim.qty,
+                      'Costo unitario': r.sim.unitCost,
+                      'Costo producto': r.sim.totalCost,
+                      Flete: r.sim.freight,
+                      Aduana: r.sim.customs,
+                      'Inversión total': r.sim.totalInvestment,
+                      'Venta estimada': r.sim.estimatedRevenue,
+                      'Utilidad proyectada': r.sim.estimatedProfit,
+                      'Cobertura (meses)': r.sim.monthsCoverage,
+                      'Stock actual': analyses.find(a => a.product.id === r.line.productId)?.totalStock ?? 0,
+                      'Nuevo stock': r.sim.newStock,
+                    }));
+                    // Totals row
+                    data.push({
+                      Producto: 'TOTAL',
+                      Cantidad: simTotals.totalQty,
+                      'Costo unitario': 0,
+                      'Costo producto': simResults.reduce((s, r) => s + r.sim.totalCost, 0),
+                      Flete: simResults.reduce((s, r) => s + r.sim.freight, 0),
+                      Aduana: simResults.reduce((s, r) => s + r.sim.customs, 0),
+                      'Inversión total': simTotals.totalInvestment,
+                      'Venta estimada': simTotals.estimatedRevenue,
+                      'Utilidad proyectada': simTotals.estimatedProfit,
+                      'Cobertura (meses)': 0,
+                      'Stock actual': 0,
+                      'Nuevo stock': 0,
+                    });
+                    exportToExcel(data, `Simulacion_importacion_${new Date().toISOString().split('T')[0]}`);
+                  }}
                 >
-                  {demoProducts.filter(p => p.active).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Cantidad a importar</label>
-                <input type="number" min={1} value={simQty} onChange={e => setSimQty(+e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo de flete (MXN)</label>
-                <input type="number" min={0} value={simFreight} onChange={e => setSimFreight(+e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo de aduana (MXN)</label>
-                <input type="number" min={0} value={simCustoms} onChange={e => setSimCustoms(+e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm" />
+                  📥 Descargar Excel
+                </Button>
               </div>
             </div>
 
-            {importSim && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-muted/50 rounded-xl p-4 text-center">
-                    <div className="text-xs text-muted-foreground mb-1">Inversión total</div>
-                    <div className="text-lg font-bold text-primary">{fmt(importSim.totalInvestment)}</div>
-                  </div>
-                  <div className="bg-muted/50 rounded-xl p-4 text-center">
-                    <div className="text-xs text-muted-foreground mb-1">Venta estimada</div>
-                    <div className="text-lg font-bold text-success">{fmt(importSim.estimatedRevenue)}</div>
-                  </div>
-                  <div className="bg-muted/50 rounded-xl p-4 text-center">
-                    <div className="text-xs text-muted-foreground mb-1">Utilidad proyectada</div>
-                    <div className={`text-lg font-bold ${importSim.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>
-                      {fmt(importSim.estimatedProfit)}
-                    </div>
-                  </div>
-                  <div className="bg-muted/50 rounded-xl p-4 text-center">
-                    <div className="text-xs text-muted-foreground mb-1">Cobertura con nuevo stock</div>
-                    <div className="text-lg font-bold">{importSim.monthsCoverage} meses</div>
-                  </div>
-                </div>
+            {/* Lines table */}
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Flete (MXN)</th>
+                    <th>Aduana (MXN)</th>
+                    <th>Inversión</th>
+                    <th>Venta est.</th>
+                    <th>Utilidad</th>
+                    <th>Cobertura</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {simLines.map((line, i) => {
+                    const result = simResults.find(r => r.line === line);
+                    return (
+                      <tr key={i}>
+                        <td className="text-xs text-muted-foreground">{i + 1}</td>
+                        <td>
+                          <select
+                            value={line.productId}
+                            onChange={e => updateSimLine(i, 'productId', e.target.value)}
+                            className="px-2 py-1.5 rounded-lg border bg-background text-xs w-full min-w-[160px]"
+                          >
+                            {demoProducts.filter(p => p.active).map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <input type="number" min={1} value={line.qty}
+                            onChange={e => updateSimLine(i, 'qty', +e.target.value)}
+                            className="w-20 px-2 py-1.5 rounded-lg border bg-background text-xs text-center" />
+                        </td>
+                        <td>
+                          <input type="number" min={0} value={line.freight}
+                            onChange={e => updateSimLine(i, 'freight', +e.target.value)}
+                            className="w-24 px-2 py-1.5 rounded-lg border bg-background text-xs text-right" />
+                        </td>
+                        <td>
+                          <input type="number" min={0} value={line.customs}
+                            onChange={e => updateSimLine(i, 'customs', +e.target.value)}
+                            className="w-24 px-2 py-1.5 rounded-lg border bg-background text-xs text-right" />
+                        </td>
+                        <td className="text-xs font-semibold text-primary">{result ? fmt(result.sim.totalInvestment) : '—'}</td>
+                        <td className="text-xs font-semibold text-success">{result ? fmt(result.sim.estimatedRevenue) : '—'}</td>
+                        <td className={`text-xs font-bold ${result && result.sim.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>
+                          {result ? fmt(result.sim.estimatedProfit) : '—'}
+                        </td>
+                        <td className="text-xs text-center">{result ? `${result.sim.monthsCoverage}m` : '—'}</td>
+                        <td>
+                          <button onClick={() => removeSimLine(i)} className="text-muted-foreground hover:text-destructive text-xs px-1" title="Eliminar">✕</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Totals row */}
+                  {simResults.length > 0 && (
+                    <tr className="bg-muted/50 font-bold border-t-2 border-primary/30">
+                      <td></td>
+                      <td className="text-xs">TOTAL ORDEN</td>
+                      <td className="text-xs text-center">{simTotals.totalQty} uds</td>
+                      <td className="text-xs text-right">{fmt(simResults.reduce((s, r) => s + r.sim.freight, 0))}</td>
+                      <td className="text-xs text-right">{fmt(simResults.reduce((s, r) => s + r.sim.customs, 0))}</td>
+                      <td className="text-xs text-primary">{fmt(simTotals.totalInvestment)}</td>
+                      <td className="text-xs text-success">{fmt(simTotals.estimatedRevenue)}</td>
+                      <td className={`text-xs ${simTotals.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>{fmt(simTotals.estimatedProfit)}</td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold mb-2">Desglose de costos</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-                    <div><span className="text-muted-foreground">Costo producto:</span> <span className="font-semibold">{fmt(importSim.totalCost)}</span></div>
-                    <div><span className="text-muted-foreground">Flete:</span> <span className="font-semibold">{fmt(importSim.freight)}</span></div>
-                    <div><span className="text-muted-foreground">Aduana:</span> <span className="font-semibold">{fmt(importSim.customs)}</span></div>
-                    <div><span className="text-muted-foreground">Stock actual:</span> <span className="font-semibold">{analyses.find(a => a.product.id === simProductId)?.totalStock ?? 0}</span></div>
-                    <div><span className="text-muted-foreground">Nuevo stock:</span> <span className="font-bold text-primary">{importSim.newStock}</span></div>
-                  </div>
+          {/* Summary cards */}
+          {simResults.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-card rounded-xl border p-4 text-center border-l-4 border-l-primary">
+                <div className="text-xs text-muted-foreground">Inversión total</div>
+                <div className="text-xl font-bold text-primary">{fmt(simTotals.totalInvestment)}</div>
+                <div className="text-[10px] text-muted-foreground">{simResults.length} productos</div>
+              </div>
+              <div className="bg-card rounded-xl border p-4 text-center border-l-4 border-l-success">
+                <div className="text-xs text-muted-foreground">Venta estimada</div>
+                <div className="text-xl font-bold text-success">{fmt(simTotals.estimatedRevenue)}</div>
+              </div>
+              <div className="bg-card rounded-xl border p-4 text-center border-l-4 border-l-warning">
+                <div className="text-xs text-muted-foreground">Utilidad proyectada</div>
+                <div className={`text-xl font-bold ${simTotals.estimatedProfit > 0 ? 'text-success' : 'text-destructive'}`}>{fmt(simTotals.estimatedProfit)}</div>
+              </div>
+              <div className="bg-card rounded-xl border p-4 text-center">
+                <div className="text-xs text-muted-foreground">Margen promedio</div>
+                <div className="text-xl font-bold">
+                  {simTotals.estimatedRevenue > 0 ? `${Math.round((simTotals.estimatedProfit / simTotals.estimatedRevenue) * 100)}%` : '—'}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
