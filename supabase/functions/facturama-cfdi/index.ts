@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
       // Download PDF
       let pdfPath = "";
       try {
-        const pdfRes = await facturama(`/api/Cfdi/pdf/${stampData.Id || uuid}`, "GET");
+        const pdfRes = await facturama(`/api-lite/cfdis/${stampData.Id || uuid}`, "GET");
         if (pdfRes.ok) {
           const pdfBlob = await pdfRes.blob();
           pdfPath = `pdf/${invoice_id}.pdf`;
