@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
 import { analyzeProducts } from '@/lib/planningEngine';
 import { demoProducts } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
