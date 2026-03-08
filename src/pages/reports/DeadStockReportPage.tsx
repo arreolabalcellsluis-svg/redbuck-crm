@@ -126,6 +126,7 @@ export default function DeadStockReportPage() {
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
         onClear={() => setFilters({ search: '', categoria: '', bodega: '', periodo: filters.periodo })}
         onExportExcel={handleExport}
+        onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
       />
 
