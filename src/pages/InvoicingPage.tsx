@@ -77,6 +77,8 @@ export default function InvoicingPage() {
 function IssuerConfigTab() {
   const { data: settings, isLoading } = useFiscalSettings();
   const saveMutation = useSaveFiscalSettings();
+  const testPacMutation = useTestPacConnection();
+  const saveMutation = useSaveFiscalSettings();
   const [form, setForm] = useState<Partial<FiscalSettings>>({});
   const [initialized, setInitialized] = useState(false);
 
