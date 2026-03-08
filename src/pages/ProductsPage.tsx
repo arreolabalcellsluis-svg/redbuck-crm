@@ -17,7 +17,7 @@ const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?:
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
   listPrice: 0, minPrice: 0, cost: 0, currency: 'MXN', deliveryDays: 5,
   supplier: '', warranty: '1 año', active: true, stock: {}, inTransit: 0, image: '',
-  satProductKey: '', satUnitKey: '',
+  satProductKey: '', satUnitKey: '', taxObject: '02',
 });
 
 type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string };
