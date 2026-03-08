@@ -13,8 +13,11 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import {
   TrendingUp, Target, Users, AlertTriangle, BarChart3, Eye,
-  DollarSign, FileText, ArrowUpDown, ShieldCheck, Zap,
+  DollarSign, FileText, ArrowUpDown, ShieldCheck, Zap, Download,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
