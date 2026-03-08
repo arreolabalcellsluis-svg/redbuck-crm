@@ -135,12 +135,16 @@ export function generateInvoicePdfHtml(data: InvoicePdfData): string {
 </head>
 <body>
   ${demoWatermark}
+  ${logoWatermark}
   <div class="invoice-container">
     <!-- Header -->
     <div class="inv-header">
-      <div>
-        <div class="inv-brand">${data.issuerTradeName || data.issuerName}</div>
-        <div class="inv-brand-sub">${data.issuerName}</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="${logoUrl}" alt="Logo" style="height:40px;max-width:130px;object-fit:contain;" onerror="this.style.display='none'" />
+        <div>
+          <div class="inv-brand">${data.issuerTradeName || data.issuerName}</div>
+          <div class="inv-brand-sub">${data.issuerName}</div>
+        </div>
       </div>
       <div class="inv-doc-type">
         <h2>${data.invoiceTypeLabel}</h2>
