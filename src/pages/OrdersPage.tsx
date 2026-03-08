@@ -334,7 +334,7 @@ export default function OrdersPage() {
                       <button onClick={() => setPaymentOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-success" title="Registrar pago"><DollarSign size={14} /></button>
                       {isAdmin && <button onClick={() => { setEditFolioOrder(o); setNewFolio(o.folio); }} className="p-1.5 rounded-md hover:bg-muted" title="Editar folio"><Edit2 size={14} /></button>}
                       {!['cancelado', 'nuevo'].includes(o.status) && (
-                        <button onClick={() => setInvoiceOrderFolio(o.folio)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
+                        <button onClick={() => setInvoiceOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
                       )}
                     </div>
                   </td>
