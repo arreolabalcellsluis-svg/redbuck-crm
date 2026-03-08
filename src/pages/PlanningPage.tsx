@@ -55,6 +55,7 @@ export default function PlanningPage() {
   const [purchaseSearch, setPurchaseSearch] = useState('');
   const [purchaseCat, setPurchaseCat] = useState('');
   const [purchasePriority, setPurchasePriority] = useState('');
+  const [categoryDialog, setCategoryDialog] = useState<keyof typeof CAT_CONFIG | null>(null);
 
   // Simulation state
   const [simProductId, setSimProductId] = useState(demoProducts[0]?.id ?? '');
