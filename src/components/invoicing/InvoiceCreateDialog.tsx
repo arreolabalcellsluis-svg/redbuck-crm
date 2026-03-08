@@ -108,6 +108,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setRelationType('');
       setRelatedUuid('');
       setSavedInvoiceId(null);
+      setCfdiUse(customerFiscalData?.cfdi_use_default || 'G03');
 
       // Auto-select: first try direct preselectedOrder object, then search DB orders
       if (preselectedOrder) {
