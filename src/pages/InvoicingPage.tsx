@@ -861,8 +861,13 @@ function InvoicesTab() {
                 <FileSpreadsheet size={14} /> Excel
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5">
-                <Download size={14} /> PDF
+                <Download size={14} /> PDF Reporte
               </Button>
+              {filtered.length > 1 && (
+                <Button variant="outline" size="sm" onClick={handleDownloadZip} className="gap-1.5">
+                  <Archive size={14} /> ZIP ({filtered.length})
+                </Button>
+              )}
             </>
           )}
           <Button onClick={() => setShowCreate(true)} className="gap-1.5">
