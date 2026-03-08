@@ -7,6 +7,10 @@ import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
   calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
 } from '@/lib/cfoDashboardEngine';
+import {
+  calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
+  detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
+} from '@/lib/leakDetectorEngine';
 import MetricCard from '@/components/shared/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +19,7 @@ import {
   DollarSign, TrendingUp, Package, CreditCard, Building2,
   Wallet, BarChart3, Download, AlertTriangle,
   CheckCircle, RefreshCw, Banknote, Layers, Activity, Target, Radar,
+  ShieldAlert, Eye,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -61,6 +66,14 @@ export default function CFODashboardPage() {
   const kpis = useMemo(() => calcStrategicKPIs(balance, income, payables), [balance, income, payables]);
   const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses), [expenses]);
   const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
+
+  // Leak detector data
+  const leakSummary = useMemo(() => calcLeakSummary(payables), [payables]);
+  const slowInv = useMemo(() => detectSlowInventory(), []);
+  const lowMargin = useMemo(() => detectLowMarginProducts(), []);
+  const capClients = useMemo(() => detectCapitalConsumingClients(), []);
+  const excessInv = useMemo(() => detectExcessInventory(), []);
+  const payPressure = useMemo(() => detectPaymentPressure(payables), [payables]);
 
   // Radar chart data (normalized to max for spider chart)
   const radarChartData = useMemo(() => {
@@ -176,6 +189,15 @@ export default function CFODashboardPage() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpiData), 'Indicadores');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(radarData), 'Radar Financiero');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(flowData), 'Flujo Mensual');
+      // Leak detector sheets
+      const leakAlerts = leakSummary.alertas.map(a => ({ Tipo: a.tipo, Severidad: a.severity, Alerta: a.titulo, Descripción: a.descripcion, Monto: a.monto }));
+      const slowData = slowInv.map(s => ({ Producto: s.name, SKU: s.sku, Stock: s.totalStock, 'Capital Detenido': s.capitalDetenido, 'Días sin venta': s.diasSinVenta, Severidad: s.severity }));
+      const marginData = lowMargin.map(l => ({ Producto: l.name, Costo: l.cost, 'Precio Lista': l.listPrice, 'Precio Mín': l.minPrice, 'Margen Lista %': l.margenLista.toFixed(1), 'Margen Mín %': l.margenMinimo.toFixed(1), Severidad: l.severity }));
+      const clientData = capClients.map(c => ({ Cliente: c.customerName, 'Saldo CxC': c.saldoPorCobrar, 'Días promedio': c.diasPromedioCobro, Facturas: c.facturasPendientes, Severidad: c.severity }));
+      if (leakAlerts.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leakAlerts), 'Alertas Fugas');
+      if (slowData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slowData), 'Inv. Lento');
+      if (marginData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(marginData), 'Bajo Margen');
+      if (clientData.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientData), 'Clientes Riesgo');
       XLSX.writeFile(wb, `Dashboard_Financiero_${new Date().toISOString().split('T')[0]}.xlsx`);
     });
   };
@@ -228,13 +250,21 @@ export default function CFODashboardPage() {
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
       <Tabs defaultValue="radar" className="space-y-4">
-        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+        <TabsList className="grid grid-cols-7 w-full max-w-5xl">
           <TabsTrigger value="radar">Radar</TabsTrigger>
           <TabsTrigger value="income">Resultados</TabsTrigger>
           <TabsTrigger value="balance">Balance</TabsTrigger>
-          <TabsTrigger value="cashflow">Flujo Efectivo</TabsTrigger>
-          <TabsTrigger value="kpis">Indicadores</TabsTrigger>
-          <TabsTrigger value="moneymap">Mapa del Dinero</TabsTrigger>
+          <TabsTrigger value="cashflow">Flujo</TabsTrigger>
+          <TabsTrigger value="kpis">KPIs</TabsTrigger>
+          <TabsTrigger value="moneymap">Mapa Dinero</TabsTrigger>
+          <TabsTrigger value="leaks" className="gap-1">
+            <ShieldAlert size={14} /> Fugas
+            {leakSummary.alertas.length > 0 && (
+              <span className="ml-1 bg-destructive text-destructive-foreground text-[10px] rounded-full px-1.5 py-0.5 font-bold">
+                {leakSummary.alertas.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── FINANCIAL RADAR TAB ──────────────────────────────── */}
@@ -752,6 +782,179 @@ export default function CFODashboardPage() {
             </div>
           </div>
         </TabsContent>
+
+        {/* ─── LEAK DETECTOR TAB ────────────────────────────────── */}
+        <TabsContent value="leaks">
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            <MetricCard title="Inv. Detenido" value={fmt(leakSummary.capitalInventarioLento)} icon={Package} variant={leakSummary.capitalInventarioLento > 300000 ? 'danger' : 'warning'} />
+            <MetricCard title="Bajo Margen" value={`${lowMargin.length} prod.`} icon={TrendingUp} variant={lowMargin.length > 3 ? 'danger' : 'warning'} />
+            <MetricCard title="CxC Lenta" value={fmt(leakSummary.capitalClientesLentos)} icon={CreditCard} variant={leakSummary.capitalClientesLentos > 80000 ? 'danger' : 'warning'} />
+            <MetricCard title="Exceso Inv." value={fmt(leakSummary.capitalExcesoInventario)} icon={Layers} variant={leakSummary.capitalExcesoInventario > 200000 ? 'danger' : 'warning'} />
+            <MetricCard title="Pagos 30d" value={fmt(leakSummary.presionPagos30d)} icon={Wallet} variant={leakSummary.presionPagos30d > 100000 ? 'danger' : 'info'} />
+          </div>
+
+          {/* Total leak banner */}
+          <div className={`rounded-xl border-2 p-4 mb-6 flex items-center justify-between ${leakSummary.totalFugas > 500000 ? 'bg-destructive/5 border-destructive/30' : 'bg-amber-500/5 border-amber-500/30'}`}>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Capital Total en Riesgo / Detenido</div>
+              <div className={`text-3xl font-bold ${leakSummary.totalFugas > 500000 ? 'text-destructive' : 'text-amber-600'}`}>{fmt(leakSummary.totalFugas)}</div>
+            </div>
+            <ShieldAlert size={40} className={leakSummary.totalFugas > 500000 ? 'text-destructive/40' : 'text-amber-500/40'} />
+          </div>
+
+          {/* Alerts */}
+          {leakSummary.alertas.length > 0 && (
+            <div className="bg-card rounded-xl border p-6 mb-6">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <AlertTriangle size={18} /> Alertas del Negocio
+              </h3>
+              <div className="space-y-2">
+                {leakSummary.alertas.map((alerta, i) => (
+                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${
+                    alerta.severity === 'critico' ? 'bg-destructive/10' : alerta.severity === 'alto' ? 'bg-amber-500/10' : 'bg-muted/50'
+                  }`}>
+                    <span className="text-lg mt-0.5">{alerta.severity === 'critico' ? '🔴' : alerta.severity === 'alto' ? '🟡' : '🟠'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm">{alerta.titulo}</div>
+                      <div className="text-xs text-muted-foreground">{alerta.descripcion}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-bold text-sm">{fmt(alerta.monto)}</div>
+                      <div className={`text-[10px] uppercase font-bold ${
+                        alerta.severity === 'critico' ? 'text-destructive' : 'text-amber-600'
+                      }`}>{alerta.severity}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Slow Inventory */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Package size={16} /> Inventario sin Rotación
+              </h3>
+              {slowInv.length === 0 ? (
+                <p className="text-sm text-muted-foreground">✅ Todos los productos tienen ventas recientes</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {slowInv.map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                      <SeverityDot severity={item.severity} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">{item.totalStock} uds · {item.diasSinVenta} días sin venta</div>
+                      </div>
+                      <div className="text-right shrink-0 font-bold text-sm">{fmt(item.capitalDetenido)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Low Margin */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <TrendingUp size={16} /> Productos Bajo Margen
+              </h3>
+              {lowMargin.length === 0 ? (
+                <p className="text-sm text-muted-foreground">✅ Todos los productos tienen margen saludable</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {lowMargin.map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                      <SeverityDot severity={item.severity} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Margen lista: {item.margenLista.toFixed(1)}% · Margen mín: {item.margenMinimo.toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs text-muted-foreground">Costo: {fmt(item.cost)}</div>
+                        <div className="text-xs">Lista: {fmt(item.listPrice)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Capital Consuming Clients */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Eye size={16} /> Clientes que Consumen Capital
+              </h3>
+              {capClients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">✅ Todos los clientes pagan a tiempo</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {capClients.map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                      <SeverityDot severity={item.severity} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{item.customerName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.facturasPendientes} factura(s) · {item.diasPromedioCobro} días promedio
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 font-bold text-sm">{fmt(item.saldoPorCobrar)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Excess Inventory */}
+            <div className="bg-card rounded-xl border p-6">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Layers size={16} /> Exceso de Inventario
+              </h3>
+              {excessInv.length === 0 ? (
+                <p className="text-sm text-muted-foreground">✅ Niveles de inventario dentro del rango óptimo</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {excessInv.map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                      <SeverityDot severity={item.severity} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Actual: {item.stockActual} · Recomendado: {item.stockRecomendado} · Exceso: +{item.exceso}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 font-bold text-sm">{fmt(item.capitalExceso)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Payment Pressure */}
+            <div className="bg-card rounded-xl border p-6 lg:col-span-2">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Wallet size={16} /> Presión de Pagos a Proveedores
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {payPressure.map((item, i) => (
+                  <div key={i} className={`rounded-lg p-3 text-center border ${
+                    item.severity === 'critico' ? 'bg-destructive/10 border-destructive/30' :
+                    item.severity === 'alto' ? 'bg-amber-500/10 border-amber-500/30' :
+                    item.severity === 'medio' ? 'bg-blue-500/5 border-blue-500/20' :
+                    'bg-muted/30 border-border'
+                  }`}>
+                    <div className="text-xs text-muted-foreground mb-1">{item.periodo}</div>
+                    <div className="text-lg font-bold">{fmt(item.totalPagar)}</div>
+                    <div className="text-[10px] text-muted-foreground">{item.cantidadFacturas} factura(s)</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -843,4 +1046,9 @@ function DiagnosticItem({ condition, warn, ok }: { condition: boolean; warn: str
       <span>{condition ? warn : ok}</span>
     </div>
   );
+}
+
+function SeverityDot({ severity }: { severity: 'critico' | 'alto' | 'medio' }) {
+  const color = severity === 'critico' ? 'bg-destructive' : severity === 'alto' ? 'bg-amber-500' : 'bg-blue-500';
+  return <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />;
 }
