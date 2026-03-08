@@ -978,6 +978,22 @@ function InvoicesTab() {
                     <TableCell><Badge className={`${st.color} text-xs`}>{st.label}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {(inv.status === 'borrador' || inv.status === 'lista_timbrar') && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Timbrar factura"
+                            disabled={stampMutation.isPending}
+                            onClick={() => {
+                              if (confirm(`¿Deseas timbrar la factura ${inv.series}-${inv.folio}? Esta acción enviará el CFDI al SAT.`)) {
+                                stampMutation.mutate(inv.id);
+                              }
+                            }}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            {stampMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Stamp size={14} />}
+                          </Button>
+                        )}
                         <Button size="icon" variant="ghost" title="Vista previa PDF" onClick={() => handlePreviewInvoicePdf(inv)}><FileText size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSinglePdf(inv)}><Download size={14} /></Button>
