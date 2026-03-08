@@ -16,7 +16,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useOrders, type DBOrder } from '@/hooks/useOrders';
-import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, useStampInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from '@/hooks/useInvoicing';
+import { useAllCustomerFiscalData, useAllProductFiscalData, useFiscalSettings, useCreateInvoice, useInvoices, useStampInvoice, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS, SAT_CFDI_USES } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
@@ -79,6 +79,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const [notes, setNotes] = useState('');
   const [relationType, setRelationType] = useState('');
   const [relatedUuid, setRelatedUuid] = useState('');
+  const [cfdiUse, setCfdiUse] = useState('G03');
 
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
@@ -107,6 +108,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setRelationType('');
       setRelatedUuid('');
       setSavedInvoiceId(null);
+      setCfdiUse(customerFiscalData?.cfdi_use_default || 'G03');
 
       // Auto-select: first try direct preselectedOrder object, then search DB orders
       if (preselectedOrder) {
@@ -361,11 +363,17 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
             )}
 
             {/* Document type + Relation */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label>Tipo de documento</Label>
                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
                   {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Uso de CFDI</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={cfdiUse} onChange={e => setCfdiUse(e.target.value)}>
+                  {SAT_CFDI_USES.map(u => <option key={u.code} value={u.code}>{u.label}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
