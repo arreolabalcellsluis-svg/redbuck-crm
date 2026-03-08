@@ -367,13 +367,6 @@ export default function CRMPage() {
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Correo para factura</label>
                   <input value={fiscal.invoiceEmail} onChange={e => setFiscal(p => ({ ...p, invoiceEmail: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="facturacion@empresa.com" />
                 </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Uso de CFDI</label>
-                  <select value={fiscal.cfdiUse} onChange={e => setFiscal(p => ({ ...p, cfdiUse: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
-                    <option value="">Seleccionar uso de CFDI...</option>
-                    {SAT_CFDI_USES.map(u => <option key={u.code} value={u.code}>{u.label}</option>)}
-                  </select>
-                </div>
               </div>
             )}
           </div>
