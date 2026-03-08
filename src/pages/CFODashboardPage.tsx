@@ -259,16 +259,52 @@ export default function CFODashboardPage() {
     { name: 'Activos Fijos', value: balance.activosFijosNeto },
   ];
 
-  return (
+   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard Financiero del Director</h1>
           <p className="page-subtitle">Visión consolidada: Estado de Resultados · Balance General · Flujo de Efectivo · Radar · KPIs</p>
         </div>
-        <Button onClick={handleExportAll} className="gap-2">
-          <Download size={16} /> Exportar Excel
-        </Button>
+        <div className="flex flex-wrap items-center gap-3 mt-3 sm:mt-0">
+          {/* Period selector */}
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-1.5">
+            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Periodo:</span>
+            <select
+              value={periodFrom}
+              onChange={e => setPeriodFrom(e.target.value)}
+              className="text-xs bg-transparent border-0 focus:ring-0 py-0.5 font-medium"
+            >
+              {availableMonths.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <span className="text-xs text-muted-foreground">a</span>
+            <select
+              value={periodTo}
+              onChange={e => setPeriodTo(e.target.value)}
+              className="text-xs bg-transparent border-0 focus:ring-0 py-0.5 font-medium"
+            >
+              {availableMonths.filter(m => m.value >= periodFrom).map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <Button onClick={handleExportAll} className="gap-2">
+            <Download size={16} /> Exportar Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Period badge */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+          <Activity size={12} />
+          {periodLabel}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {monthlySales.filter(m => { const k = parseMonthLabel(m.month); return k >= periodFrom && k <= periodTo; }).length} meses seleccionados
+        </span>
       </div>
 
       {/* ─── Top KPIs — Executive style ──────────────────────── */}
