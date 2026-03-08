@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
+import { useNavigate } from 'react-router-dom';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 const vendors = demoUsers.filter(u => u.role === 'vendedor');
