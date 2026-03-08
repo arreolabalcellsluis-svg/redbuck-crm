@@ -72,6 +72,51 @@ export default function SalesForecastPage() {
 
   const selectedForecast = selectedVendor ? forecasts.find(f => f.vendorId === selectedVendor) : null;
 
+  // Excel download state
+  const [dlOpen, setDlOpen] = useState(false);
+  const [dlDateFrom, setDlDateFrom] = useState('');
+  const [dlDateTo, setDlDateTo] = useState('');
+
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx');
+    const { saveAs } = await import('file-saver');
+    const wb = XLSX.utils.book_new();
+
+    const forecastData = sortedForecasts.map(f => ({
+      Vendedor: f.vendorName, Vendido: f.salesActual, 'Pipeline total': f.pipelineTotal,
+      'Pipeline ponderado': f.pipelineWeighted, Pronóstico: f.forecastTotal, Meta: f.goalSales,
+      'Cumplimiento %': f.projectedCompletion, Gap: f.gap, 'Tasa cierre %': Number(f.closeRateHistoric.toFixed(1)),
+      'Cotizaciones abiertas': f.openQuotations.length, Confianza: f.confidenceScore,
+      'Nivel confianza': f.confidence, '¿Cumple meta?': f.willMeetGoal ? 'Sí' : 'No',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(forecastData), 'Pronósticos');
+
+    const teamData = [
+      { Indicador: 'Periodo', Valor: `${MONTHS[month - 1]} ${year}` },
+      { Indicador: 'Rango', Valor: dlDateFrom && dlDateTo ? `${dlDateFrom} a ${dlDateTo}` : 'Mes completo' },
+      { Indicador: 'Total vendido', Valor: team.totalSalesActual },
+      { Indicador: 'Pipeline ponderado', Valor: team.totalPipelineWeighted },
+      { Indicador: 'Pronóstico total', Valor: team.totalForecast },
+      { Indicador: 'Meta total', Valor: team.totalGoal },
+      { Indicador: 'Cumplimiento proyectado %', Valor: team.projectedCompletion },
+      { Indicador: 'Confianza promedio', Valor: team.avgConfidenceScore },
+      { Indicador: 'Exceden meta', Valor: team.vendorsExceeding },
+      { Indicador: 'En riesgo', Valor: team.vendorsAtRisk },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(teamData), 'Resumen Equipo');
+
+    if (team.alerts.length > 0) {
+      const alertData = team.alerts.map(a => ({ Vendedor: a.vendorName, Tipo: a.type, Mensaje: a.message }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alertData), 'Alertas');
+    }
+
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const dateStr = dlDateFrom && dlDateTo ? `${dlDateFrom}_${dlDateTo}` : `${MONTHS[month-1]}-${year}`;
+    saveAs(blob, `pronostico-ventas_${dateStr}.xlsx`);
+    setDlOpen(false);
+  };
+
   const barData = sortedForecasts.map(f => ({
     name: f.vendorName.split(' ')[0],
     'Vendido': f.salesActual,
