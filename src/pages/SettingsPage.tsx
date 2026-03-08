@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { demoUsers as initialUsers, demoWarehouses as initialWarehouses, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate } from '@/data/demo-data';
 import { ROLE_LABELS, UserRole, User, Warehouse } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { Users, Warehouse as WarehouseIcon, Shield, Building2, FileText, MessageCircle, Hash, Pencil, Plus, Trash2, X, Check, Upload, Image, FileUp } from 'lucide-react';
+import { useCompanyLogo } from '@/hooks/useCompanyLogo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
