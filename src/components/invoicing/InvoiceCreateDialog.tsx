@@ -27,6 +27,20 @@ const DOCUMENT_TYPES = [
   { code: 'T', label: 'Traslado' },
 ] as const;
 
+
+const RELATION_TYPES = [
+  { code: '', label: 'Sin relación' },
+  { code: '01', label: '01 — Nota de crédito de los documentos relacionados' },
+  { code: '02', label: '02 — Nota de débito de los documentos relacionados' },
+  { code: '03', label: '03 — Devolución de mercancía sobre facturas o traslados previos' },
+  { code: '04', label: '04 — Sustitución de los CFDI previos' },
+  { code: '05', label: '05 — Traslados de mercancías facturados previamente' },
+  { code: '06', label: '06 — Factura generada por los traslados previos' },
+  { code: '07', label: '07 — CFDI por aplicación de anticipos' },
+  { code: '08', label: '08 — Factura generada por pagos en parcialidades' },
+  { code: '09', label: '09 — Factura generada por pagos diferidos' },
+] as const;
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +73,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const [exchangeRate, setExchangeRate] = useState(1);
   const [conditions, setConditions] = useState('');
   const [notes, setNotes] = useState('');
+  const [relationType, setRelationType] = useState('');
+  const [relatedUuid, setRelatedUuid] = useState('');
 
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
@@ -83,6 +99,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
       setExchangeRate(1);
       setConditions('');
       setNotes('');
+      setRelationType('');
+      setRelatedUuid('');
 
       // Auto-select: first try direct preselectedOrder object, then search DB orders
       if (preselectedOrder) {
@@ -317,13 +335,29 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
               </div>
             )}
 
-            {/* Document type */}
-            <div className="space-y-1.5">
-              <Label>Tipo de documento</Label>
-              <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
-                {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
-              </select>
+            {/* Document type + Relation */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Tipo de documento</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value as any)}>
+                  {DOCUMENT_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo de relación</Label>
+                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={relationType} onChange={e => setRelationType(e.target.value)}>
+                  {RELATION_TYPES.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
+                </select>
+              </div>
             </div>
+
+            {relationType && (
+              <div className="space-y-1.5">
+                <Label>UUID del CFDI relacionado</Label>
+                <Input value={relatedUuid} onChange={e => setRelatedUuid(e.target.value.trim())} placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" />
+                <p className="text-[10px] text-muted-foreground">UUID (folio fiscal) del documento relacionado</p>
+              </div>
+            )}
 
             {/* CFDI Fields */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
