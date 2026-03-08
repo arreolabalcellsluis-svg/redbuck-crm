@@ -26,7 +26,7 @@ import {
   useFiscalSettings, useSaveFiscalSettings, FiscalSettings,
   useCustomerFiscalData, useAllCustomerFiscalData, useSaveCustomerFiscalData,
   useAllProductFiscalData, useSaveProductFiscalData,
-  useInvoices, type Invoice, useTestPacConnection,
+  useInvoices, type Invoice, useTestPacConnection, useStampInvoice,
   SAT_TAX_REGIMES, SAT_CFDI_USES, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS, TAX_OBJECTS,
 } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
