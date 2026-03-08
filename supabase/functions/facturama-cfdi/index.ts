@@ -156,9 +156,12 @@ Deno.serve(async (req) => {
         Items: cfdiItems,
       };
 
-      // Call Facturama API to stamp
-      const stampRes = await facturama("/3/cfdis", "POST", cfdiPayload);
+      // Call Facturama API to stamp (API Web uses /2/cfdis)
+      console.log("Stamping CFDI payload:", JSON.stringify(cfdiPayload));
+      const stampRes = await facturama("/2/cfdis", "POST", cfdiPayload);
       const stampData = await safeJson(stampRes);
+
+      console.log("Facturama stamp response status:", stampRes.status, "data:", JSON.stringify(stampData));
 
       if (!stampRes.ok) {
         // Update invoice with error
@@ -166,11 +169,11 @@ Deno.serve(async (req) => {
           .from("invoices")
           .update({
             status: "error_timbrado",
-            pac_response: stampData,
+            pac_response: stampData || { status: stampRes.status },
             updated_at: new Date().toISOString(),
           })
           .eq("id", invoice_id);
-        throw new Error(`Error de timbrado: ${JSON.stringify(stampData)}`);
+        throw new Error(`Error de timbrado (HTTP ${stampRes.status}): ${JSON.stringify(stampData)}`);
       }
 
       // Extract UUID and update invoice
@@ -367,9 +370,12 @@ Deno.serve(async (req) => {
         },
       };
 
-      // Call Facturama to stamp complement
-      const compRes = await facturama("/3/cfdis", "POST", complementPayload);
+      // Call Facturama to stamp complement (API Web uses /2/cfdis)
+      console.log("Complement payload:", JSON.stringify(complementPayload));
+      const compRes = await facturama("/2/cfdis", "POST", complementPayload);
       const compData = await safeJson(compRes);
+
+      console.log("Facturama complement response status:", compRes.status, "data:", JSON.stringify(compData));
 
       if (!compRes.ok) {
         // Update payment with error
@@ -380,7 +386,7 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", payment_id);
-        throw new Error(`Error al generar complemento: ${JSON.stringify(compData)}`);
+        throw new Error(`Error al generar complemento (HTTP ${compRes.status}): ${JSON.stringify(compData)}`);
       }
 
       const compUuid = compData.Complement?.TaxStamp?.Uuid || compData.Id || "";
