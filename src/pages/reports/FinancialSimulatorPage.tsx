@@ -358,8 +358,11 @@ export default function FinancialSimulatorPage() {
           <p className="page-subtitle">Análisis de impacto financiero, ROI y simulación de crecimiento</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportAllExcel}>
+            <FileSpreadsheet size={14} className="mr-1" /> Excel Completo
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportPdf}>
-            <Download size={14} className="mr-1" /> PDF
+            <Download size={14} className="mr-1" /> PDF Completo
           </Button>
         </div>
       </div>
