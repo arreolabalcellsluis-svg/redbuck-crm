@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CommercialSections from '@/components/dashboard/CommercialSections';
+import SalesComparative from '@/components/dashboard/SalesComparative';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   dashboardMetrics, salesByVendor, salesByCategory, monthlySales,
@@ -592,6 +593,9 @@ export default function ExecutiveDashboardPage() {
           <div className="text-xs text-success font-semibold text-center">{topVendor?.closeRate}% cierre</div>
         </div>
       </div>
+
+      {/* ═══ SECCIÓN: COMPARATIVO DE VENTAS ═══ */}
+      <SalesComparative />
 
       {/* ═══ SECCIÓN 9: INDICADORES ESTRATÉGICOS ═══ */}
       <div className="bg-card rounded-xl border p-5">
