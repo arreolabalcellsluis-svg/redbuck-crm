@@ -30,6 +30,7 @@ const ALL_MODULES = [
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'servicio', label: 'Servicio Técnico' },
   { key: 'comisiones', label: 'Comisiones' },
+  { key: 'metas_vendedores', label: 'Metas Vendedores' },
   { key: 'gastos', label: 'Gastos Operativos' },
   { key: 'activos', label: 'Activos / Depreciación' },
   { key: 'planeacion', label: 'Planeación' },
@@ -47,7 +48,7 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   gerencia_comercial: [
     'dashboard', 'ejecutivo', 'crm', 'reabasto', 'agenda', 'asistente', 'mapa_mercado',
     'productos', 'refacciones', 'inventario', 'cotizaciones', 'pedidos', 'historial_pedidos',
-    'cobranza', 'comisiones', 'reportes', 'reportes_ejecutivos',
+    'cobranza', 'comisiones', 'metas_vendedores', 'reportes', 'reportes_ejecutivos',
   ],
   vendedor: [
     'dashboard', 'crm', 'agenda', 'asistente', 'mapa_mercado',
