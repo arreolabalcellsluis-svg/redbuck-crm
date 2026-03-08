@@ -87,12 +87,81 @@ export default function MarketMapPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Mapa de Mercado');
-    if (format === 'csv') {
-      const csv = XLSX.utils.sheet_to_csv(ws);
-      saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'mapa-mercado.csv');
-    } else {
+
+    if (format === 'xlsx') {
+      // Sheet 2: Oportunidades de Crecimiento
+      const oppRows = growth.map(g => ({
+        Ciudad: g.city,
+        Estado: g.state,
+        Leads: g.leads,
+        Cotizaciones: g.quotations,
+        Ventas: g.sales,
+        'Valor Potencial': g.potentialValue,
+        Prioridad: g.priority.charAt(0).toUpperCase() + g.priority.slice(1),
+        Oportunidades: g.reasons.join('; '),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(oppRows), 'Oportunidades');
+
+      // Sheet 3: Top Ventas
+      const topSalesRows = analytics.topSalesCities.map((d, i) => ({
+        '#': i + 1,
+        Ciudad: d.city,
+        Estado: d.state,
+        Clientes: d.customers,
+        'Ventas Cerradas': d.closedSales,
+        'Valor Ventas': d.totalSalesValue,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(topSalesRows), 'Top Ventas');
+
+      // Sheet 4: Top Leads
+      const topLeadsRows = analytics.topLeadsCities.map((d, i) => ({
+        '#': i + 1,
+        Ciudad: d.city,
+        Estado: d.state,
+        Leads: d.leads,
+        Cotizaciones: d.quotations,
+        'Ventas Cerradas': d.closedSales,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(topLeadsRows), 'Top Leads');
+
+      // Sheet 5: Baja Penetración
+      const lowPenRows = analytics.lowPenetrationCities.map(d => ({
+        Ciudad: d.city,
+        Estado: d.state,
+        Penetración: PENETRATION_LABELS[d.penetration],
+        Leads: d.leads,
+        Cotizaciones: d.quotations,
+        'Ventas Cerradas': d.closedSales,
+        'Valor Potencial': d.potentialValue,
+        Oportunidades: d.opportunities.join('; '),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lowPenRows), 'Baja Penetración');
+
+      // Sheet 6: Cobertura por Penetración
+      const coverageRows = (['alto', 'medio', 'bajo', 'sin_presencia'] as PenetrationLevel[]).map(p => {
+        const count = allData.filter(d => d.penetration === p).length;
+        const pct = allData.length > 0 ? Math.round((count / allData.length) * 100) : 0;
+        return { Nivel: PENETRATION_LABELS[p], Ciudades: count, Porcentaje: `${pct}%` };
+      });
+      coverageRows.push({ Nivel: 'TOTAL', Ciudades: allData.length, Porcentaje: '100%' });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(coverageRows), 'Cobertura');
+
+      // Sheet 7: KPIs Resumen
+      const kpiRows = [
+        { Indicador: 'Ciudades Total', Valor: analytics.totalCities },
+        { Indicador: 'Con Presencia', Valor: analytics.citiesWithPresence },
+        { Indicador: 'Cobertura', Valor: `${analytics.coverageRate}%` },
+        { Indicador: 'Ventas Totales', Valor: analytics.totalSales },
+        { Indicador: 'Valor Potencial', Valor: analytics.totalPotential },
+        { Indicador: 'Sin Presencia', Valor: allData.filter(d => d.penetration === 'sin_presencia').length },
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpiRows), 'KPIs Resumen');
+
       const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       saveAs(new Blob([buf]), 'mapa-mercado.xlsx');
+    } else {
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'mapa-mercado.csv');
     }
     toast.success(`Exportado a ${format.toUpperCase()}`);
   };
