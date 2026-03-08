@@ -185,18 +185,44 @@ export default function InventoryPage() {
     </div>
   );
 
+  const [inventoryDate, setInventoryDate] = useState<Date>(new Date());
+
   return (
     <div>
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Inventario</h1>
-          <p className="page-subtitle">Control de existencias por bodega</p>
+          <p className="page-subtitle">
+            Control de existencias — {format(inventoryDate, "d 'de' MMMM yyyy", { locale: es })}
+          </p>
         </div>
-        {isAdmin && (
-          <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus size={16} /> Nuevo inventario
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("justify-start text-left text-sm h-9 gap-2")}>
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                {format(inventoryDate, "dd/MM/yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={inventoryDate}
+                onSelect={d => d && setInventoryDate(d)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setInventoryDate(new Date())}>
+            Hoy
+          </Button>
+          {isAdmin && (
+            <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+              <Plus size={16} /> Nuevo inventario
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
