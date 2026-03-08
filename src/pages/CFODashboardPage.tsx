@@ -261,13 +261,13 @@ export default function CFODashboardPage() {
 
       {/* ─── Tabs ──────────────────────────────────────────────── */}
       <Tabs defaultValue="radar" className="space-y-4">
-        <TabsList className="grid grid-cols-7 w-full max-w-5xl">
+        <TabsList className="grid grid-cols-4 md:grid-cols-8 w-full max-w-5xl">
           <TabsTrigger value="radar">Radar</TabsTrigger>
           <TabsTrigger value="income">Resultados</TabsTrigger>
           <TabsTrigger value="balance">Balance</TabsTrigger>
           <TabsTrigger value="cashflow">Flujo</TabsTrigger>
           <TabsTrigger value="kpis">KPIs</TabsTrigger>
-          <TabsTrigger value="moneymap">Mapa Dinero</TabsTrigger>
+          <TabsTrigger value="moneymap">Mapa</TabsTrigger>
           <TabsTrigger value="leaks" className="gap-1">
             <ShieldAlert size={14} /> Fugas
             {leakSummary.alertas.length > 0 && (
@@ -275,6 +275,9 @@ export default function CFODashboardPage() {
                 {leakSummary.alertas.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="forecast" className="gap-1">
+            <Sparkles size={14} /> Predicción
           </TabsTrigger>
         </TabsList>
 
