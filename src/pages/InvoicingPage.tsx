@@ -34,6 +34,7 @@ import { useProducts } from '@/hooks/useProducts';
 import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
 import InvoiceDetailDialog from '@/components/invoicing/InvoiceDetailDialog';
 import PaymentsTab from '@/components/invoicing/PaymentsTab';
+import CancellationsTab from '@/components/invoicing/CancellationsTab';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 
@@ -65,13 +66,14 @@ export default function InvoicingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 w-full max-w-5xl">
+        <TabsList className="grid grid-cols-8 w-full max-w-6xl">
           <TabsTrigger value="config" className="gap-1.5"><Settings size={14} /> Emisor</TabsTrigger>
           <TabsTrigger value="csd" className="gap-1.5"><Shield size={14} /> CSD</TabsTrigger>
           <TabsTrigger value="customers" className="gap-1.5"><Users size={14} /> Clientes</TabsTrigger>
           <TabsTrigger value="products" className="gap-1.5"><Package size={14} /> Productos</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-1.5"><FileBadge size={14} /> Facturas</TabsTrigger>
           <TabsTrigger value="payments" className="gap-1.5"><CreditCard size={14} /> Pagos</TabsTrigger>
+          <TabsTrigger value="cancellations" className="gap-1.5"><Ban size={14} /> Cancelaciones</TabsTrigger>
           <TabsTrigger value="drafts" className="gap-1.5"><Archive size={14} /> Borradores</TabsTrigger>
         </TabsList>
 
@@ -81,6 +83,7 @@ export default function InvoicingPage() {
         <TabsContent value="products"><ProductFiscalTab /></TabsContent>
         <TabsContent value="invoices"><InvoicesTab /></TabsContent>
         <TabsContent value="payments"><PaymentsTab /></TabsContent>
+        <TabsContent value="cancellations"><CancellationsTab /></TabsContent>
         <TabsContent value="drafts"><DraftsTab /></TabsContent>
       </Tabs>
     </div>
