@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   FileText, Settings, Shield, Upload, CheckCircle, AlertTriangle, XCircle, Search,
-  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet, Archive, CreditCard,
+  Download, Eye, Send, Ban, RefreshCw, Users, Package, FileBadge, Plus, CalendarIcon, FileSpreadsheet, Archive, CreditCard, Stamp, Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -26,7 +26,7 @@ import {
   useFiscalSettings, useSaveFiscalSettings, FiscalSettings,
   useCustomerFiscalData, useAllCustomerFiscalData, useSaveCustomerFiscalData,
   useAllProductFiscalData, useSaveProductFiscalData,
-  useInvoices, type Invoice, useTestPacConnection,
+  useInvoices, type Invoice, useTestPacConnection, useStampInvoice,
   SAT_TAX_REGIMES, SAT_CFDI_USES, SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS, TAX_OBJECTS,
 } from '@/hooks/useInvoicing';
 import { useCustomers } from '@/hooks/useCustomers';
@@ -627,6 +627,7 @@ function InvoicesTab() {
   const { data: customers } = useCustomers();
   const { data: fiscalSettings } = useFiscalSettings();
   const { data: allCustomerFiscal } = useAllCustomerFiscalData();
+  const stampMutation = useStampInvoice();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -977,6 +978,22 @@ function InvoicesTab() {
                     <TableCell><Badge className={`${st.color} text-xs`}>{st.label}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {(inv.status === 'borrador' || inv.status === 'lista_timbrar') && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Timbrar factura"
+                            disabled={stampMutation.isPending}
+                            onClick={() => {
+                              if (confirm(`¿Deseas timbrar la factura ${inv.series}-${inv.folio}? Esta acción enviará el CFDI al SAT.`)) {
+                                stampMutation.mutate(inv.id);
+                              }
+                            }}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            {stampMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Stamp size={14} />}
+                          </Button>
+                        )}
                         <Button size="icon" variant="ghost" title="Vista previa PDF" onClick={() => handlePreviewInvoicePdf(inv)}><FileText size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Ver detalle" onClick={() => setSelectedInvoice(inv)}><Eye size={14} /></Button>
                         <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSinglePdf(inv)}><Download size={14} /></Button>
