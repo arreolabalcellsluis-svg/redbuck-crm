@@ -935,3 +935,173 @@ function InvoicesTab() {
     </div>
   );
 }
+
+// ─── TAB 6: Drafts ───
+function DraftsTab() {
+  const { data: invoices, isLoading } = useInvoices();
+  const { data: customers } = useCustomers();
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [downloading, setDownloading] = useState(false);
+
+  const customerMap = new Map((customers ?? []).map(c => [c.id, c.name]));
+
+  const drafts = useMemo(() => {
+    return (invoices ?? [])
+      .filter(inv => inv.status === 'borrador')
+      .filter(inv => {
+        if (dateFrom) {
+          const created = new Date(inv.created_at);
+          if (created < new Date(dateFrom.setHours(0, 0, 0, 0))) return false;
+        }
+        if (dateTo) {
+          const created = new Date(inv.created_at);
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59, 999);
+          if (created > end) return false;
+        }
+        return true;
+      });
+  }, [invoices, dateFrom, dateTo]);
+
+  const DOCUMENT_TYPES: Record<string, string> = {
+    I: 'Factura',
+    N: 'Recibo de Honorarios',
+    E: 'Nota de Crédito',
+    D: 'Nota de Devolución',
+  };
+
+  const generateDraftPdfBlob = (inv: Invoice): Blob => {
+    const customerName = inv.customer_id ? (customerMap.get(inv.customer_id) ?? 'Sin cliente') : 'Sin cliente';
+    const docType = DOCUMENT_TYPES[inv.invoice_type] || inv.invoice_type;
+    const lines = [
+      `BORRADOR DE ${docType.toUpperCase()}`,
+      `Serie: ${inv.series} | Folio: ${inv.folio}`,
+      `Fecha: ${format(new Date(inv.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}`,
+      `Cliente: ${customerName}`,
+      `Forma de pago: ${inv.payment_form} | Método: ${inv.payment_method}`,
+      `Moneda: ${inv.currency}`,
+      ``,
+      `Subtotal: ${fmt(inv.subtotal)}`,
+      `IVA: ${fmt(inv.tax_amount)}`,
+      `Total: ${fmt(inv.total)}`,
+      ``,
+      `Notas: ${inv.notes || 'Sin notas'}`,
+      `Condiciones: ${inv.conditions || 'Sin condiciones'}`,
+    ];
+    const content = lines.join('\n');
+    return new Blob([content], { type: 'application/pdf' });
+  };
+
+  const handleDownloadSingle = (inv: Invoice) => {
+    const blob = generateDraftPdfBlob(inv);
+    saveAs(blob, `borrador_${inv.series}${inv.folio}.pdf`);
+    toast.success('PDF descargado');
+  };
+
+  const handleDownloadAll = async () => {
+    if (drafts.length === 0) { toast.error('No hay borradores para descargar'); return; }
+    setDownloading(true);
+    try {
+      const zip = new JSZip();
+      drafts.forEach(inv => {
+        const blob = generateDraftPdfBlob(inv);
+        zip.file(`borrador_${inv.series}${inv.folio}.pdf`, blob);
+      });
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const rangeLabel = dateFrom && dateTo
+        ? `_${format(dateFrom, 'ddMMyyyy')}_a_${format(dateTo, 'ddMMyyyy')}`
+        : '';
+      saveAs(zipBlob, `borradores_facturas${rangeLabel}.zip`);
+      toast.success(`${drafts.length} borradores descargados en ZIP`);
+    } catch (e: any) {
+      toast.error('Error al generar ZIP: ' + e.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (isLoading) return <div className="py-8 text-center text-muted-foreground">Cargando borradores...</div>;
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn('h-9 gap-1.5', !dateFrom && 'text-muted-foreground')}>
+              <CalendarIcon size={14} />
+              {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'Desde'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} locale={es} className="p-3 pointer-events-auto" />
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn('h-9 gap-1.5', !dateTo && 'text-muted-foreground')}>
+              <CalendarIcon size={14} />
+              {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'Hasta'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} locale={es} className="p-3 pointer-events-auto" />
+          </PopoverContent>
+        </Popover>
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+            Limpiar
+          </Button>
+        )}
+        <div className="ml-auto">
+          <Button onClick={handleDownloadAll} disabled={downloading || drafts.length === 0} variant="outline" className="gap-1.5">
+            <Archive size={14} />
+            {downloading ? 'Generando ZIP...' : `Descargar todos (${drafts.length}) en ZIP`}
+          </Button>
+        </div>
+      </div>
+
+      <Badge variant="outline">{drafts.length} borradores</Badge>
+
+      {drafts.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No hay borradores de facturas en este rango</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Serie/Folio</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-center">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drafts.map(inv => (
+                <TableRow key={inv.id}>
+                  <TableCell className="font-mono font-medium">{inv.series}-{inv.folio}</TableCell>
+                  <TableCell>{DOCUMENT_TYPES[inv.invoice_type] || inv.invoice_type}</TableCell>
+                  <TableCell>{inv.customer_id ? (customerMap.get(inv.customer_id) ?? '—') : '—'}</TableCell>
+                  <TableCell>{format(new Date(inv.created_at), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                  <TableCell className="text-right font-medium">{fmt(inv.total)}</TableCell>
+                  <TableCell className="text-center">
+                    <Button size="icon" variant="ghost" title="Descargar PDF" onClick={() => handleDownloadSingle(inv)}>
+                      <Download size={14} />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+    </div>
+  );
+}
