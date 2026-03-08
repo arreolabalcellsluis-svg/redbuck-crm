@@ -67,6 +67,14 @@ export default function CFODashboardPage() {
   const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses), [expenses]);
   const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
 
+  // Leak detector data
+  const leakSummary = useMemo(() => calcLeakSummary(payables), [payables]);
+  const slowInv = useMemo(() => detectSlowInventory(), []);
+  const lowMargin = useMemo(() => detectLowMarginProducts(), []);
+  const capClients = useMemo(() => detectCapitalConsumingClients(), []);
+  const excessInv = useMemo(() => detectExcessInventory(), []);
+  const payPressure = useMemo(() => detectPaymentPressure(payables), [payables]);
+
   // Radar chart data (normalized to max for spider chart)
   const radarChartData = useMemo(() => {
     const maxVal = Math.max(radar.bancos, radar.cuentasPorCobrar, radar.inventario, radar.cuentasPorPagar, radar.creditosBancarios, Math.abs(radar.utilidadNeta), 1);
