@@ -486,7 +486,7 @@ export default function QuotationsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowZipDialog(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">
-            <Download size={16} /> Descargar ZIP
+            <Download size={16} /> Descargar Excel
           </button>
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
             <Plus size={16} /> Nueva cotización
