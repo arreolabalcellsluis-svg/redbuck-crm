@@ -32,6 +32,7 @@ const ALL_MODULES = [
   { key: 'comisiones', label: 'Comisiones' },
   { key: 'metas_vendedores', label: 'Metas y KPIs Vendedores' },
   { key: 'simulador_comisiones', label: 'Simulador de Comisiones' },
+  { key: 'pronostico_ventas', label: 'Pronóstico de Ventas' },
   { key: 'gastos', label: 'Gastos Operativos' },
   { key: 'activos', label: 'Activos / Depreciación' },
   { key: 'planeacion', label: 'Planeación' },
