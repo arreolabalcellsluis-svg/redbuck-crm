@@ -37,7 +37,7 @@ const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
 ];
 
 export default function OrdersPage() {
-  const { currentRole, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
@@ -116,7 +116,10 @@ export default function OrdersPage() {
     const updated = [...items];
     if (field === 'productId') {
       const prod = demoProducts.find(p => p.id === value);
-      if (prod) updated[i] = { ...updated[i], productId: value, productName: prod.name, unitPrice: prod.listPrice };
+      if (prod) {
+        const priceInMxn = prod.currency === 'USD' ? Math.round(prod.listPrice * exchangeRate) : prod.listPrice;
+        updated[i] = { ...updated[i], productId: value, productName: prod.name, unitPrice: priceInMxn };
+      }
     } else {
       (updated[i] as any)[field] = value;
     }
@@ -404,7 +407,7 @@ export default function OrdersPage() {
                                 <Check className={cn("mr-2 h-4 w-4", it.productId === p.id ? "opacity-100" : "opacity-0")} />
                                 <div className="flex flex-col">
                                   <span className="text-sm">{p.name}</span>
-                                  <span className="text-xs text-muted-foreground">{p.sku} — {fmt(p.listPrice)}</span>
+                                  <span className="text-xs text-muted-foreground">{p.sku} — ${p.listPrice} USD {p.currency === 'USD' ? `(≈ ${fmt(p.listPrice * exchangeRate)} MXN)` : fmt(p.listPrice)}</span>
                                 </div>
                               </CommandItem>
                             ))}

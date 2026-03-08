@@ -19,7 +19,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, quotations, addQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, quotations, addQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showPreview, setShowPreview] = useState<Quotation | null>(null);
@@ -67,13 +67,14 @@ export default function QuotationsPage() {
   const addItem = (productId: string) => {
     const product = demoProducts.find(p => p.id === productId);
     if (!product) return;
+    const priceInMxn = product.currency === 'USD' ? Math.round(product.listPrice * exchangeRate) : product.listPrice;
     setItems(prev => [...prev, {
       productId: product.id,
       productName: product.name,
       productImage: getProductImage(product.id),
       sku: product.sku,
       qty: 1,
-      unitPrice: product.listPrice,
+      unitPrice: priceInMxn,
       discount: 0,
     }]);
   };
