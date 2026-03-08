@@ -258,7 +258,7 @@ export default function DailyAssistantPage() {
                   title="Cotizar">
                   <FileText size={13} /> Cotizar
                 </button>
-                <button onClick={() => navigate('/agenda', { state: { newActivityForCustomer: { customerId: rec.id, customerName: rec.customerName, vendorName: rec.vendorName, suggestedProduct: rec.suggestedProduct } } })}
+                <button onClick={() => navigate('/crm/agenda', { state: { newActivityForCustomer: { customerId: rec.customerId, customerName: rec.customerName, vendorName: rec.vendorName, suggestedProduct: rec.suggestedProduct } } })}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-info/10 hover:border-info/30 transition-colors"
                   title="Registrar actividad">
                   <CalendarPlus size={13} /> Actividad
