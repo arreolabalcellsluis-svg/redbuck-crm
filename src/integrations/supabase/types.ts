@@ -453,6 +453,54 @@ export type Database = {
           },
         ]
       }
+      sales_goals: {
+        Row: {
+          created_at: string
+          goal_followups: number
+          goal_new_customers: number
+          goal_orders: number
+          goal_quotations: number
+          goal_sales: number
+          id: string
+          month: number
+          updated_at: string
+          user_id: string | null
+          vendor_id: string
+          vendor_name: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          goal_followups?: number
+          goal_new_customers?: number
+          goal_orders?: number
+          goal_quotations?: number
+          goal_sales?: number
+          id?: string
+          month: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_id: string
+          vendor_name?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          goal_followups?: number
+          goal_new_customers?: number
+          goal_orders?: number
+          goal_quotations?: number
+          goal_sales?: number
+          id?: string
+          month?: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_id?: string
+          vendor_name?: string
+          year?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
