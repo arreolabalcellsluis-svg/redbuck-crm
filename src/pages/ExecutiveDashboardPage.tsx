@@ -216,7 +216,7 @@ export default function ExecutiveDashboardPage() {
       list.push({ type: 'warning', message: `${r.customer_name} — pago vencido ${r.days_overdue}d (${fmt(r.balance)})` })
     );
     dbImports.filter(i => i.status === 'produccion').forEach(i =>
-      list.push({ type: 'info', message: `${i.order_number} — ${IMPORT_STATUS_LABELS[i.status as keyof typeof IMPORT_STATUS_LABELS] || i.status}` })
+      list.push({ type: 'info', message: `${i.orderNumber} — ${IMPORT_STATUS_LABELS[i.status as keyof typeof IMPORT_STATUS_LABELS] || i.status}` })
     );
     return list.slice(0, 10);
   }, [lowStockProducts, overdueReceivables, dbImports]);
