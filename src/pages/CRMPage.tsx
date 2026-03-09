@@ -348,6 +348,10 @@ export default function CRMPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre / Razón social *</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Ej: Taller Automotriz Los Reyes" />
             </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre de contacto</label>
+              <input value={form.contactName || ''} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Ej: Juan Pérez" />
+            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
               <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="811-234-5678" />
