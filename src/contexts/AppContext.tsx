@@ -56,8 +56,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>(buildInitialSeries(demoUsers));
 
   // Shared state for orders, receivables, payments
-  const [orders, setOrders] = useState<Order[]>(demoOrders);
-  const [receivables, setReceivables] = useState<AccountReceivable[]>(demoAccountsReceivable);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [receivables, setReceivables] = useState<AccountReceivable[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   // Sync auth role with app context
   useEffect(() => {
