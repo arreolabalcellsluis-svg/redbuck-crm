@@ -40,28 +40,22 @@ const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(280,65%,55%)', 'hsl(190,80%,45%)'];
 
 // Fallback assets
-const fallbackAssets = [
-  { id:'a1', nombre:'Camioneta Nissan NP300', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-06-15', costoAdquisicion:420000, vidaUtilMeses:60, valorRescate:120000, estatus:'activo' as const },
-  { id:'a2', nombre:'Camioneta RAM 700', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-01-10', costoAdquisicion:350000, vidaUtilMeses:60, valorRescate:100000, estatus:'activo' as const },
-  { id:'a3', nombre:'Montacargas Yale', categoria:'maquinaria' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2022-03-01', costoAdquisicion:280000, vidaUtilMeses:120, valorRescate:40000, estatus:'activo' as const },
-  { id:'a4', nombre:'MacBook Pro', categoria:'computadoras' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-06-01', costoAdquisicion:65000, vidaUtilMeses:36, valorRescate:15000, estatus:'activo' as const },
-  { id:'a5', nombre:'Licencia ERP', categoria:'software' as const, tipo:'amortizacion' as const, descripcion:'', fechaCompra:'2025-01-01', costoAdquisicion:48000, vidaUtilMeses:12, valorRescate:0, estatus:'activo' as const },
-];
+const fallbackAssets: any[] = [];
 
 export default function CFODashboardPage() {
   const { data: dbExpenses } = useExpenses();
   const { data: dbAssets } = useAssets();
   const { data: dbPayables } = useAccountsPayable();
 
-  const expenses = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
-  const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
+  const expenses = dbExpenses ?? [];
+  const assets = dbAssets ?? [];
   const payables = dbPayables ?? [];
 
   const [bsConfig, setBsConfig] = useState({
-    bancos: 850000,
+    bancos: 0,
     creditosBancarios: 0,
-    aportacionSocios: 2000000,
-    utilidadesAcumuladas: 500000,
+    aportacionSocios: 0,
+    utilidadesAcumuladas: 0,
   });
 
   // Period selector — derive available months from monthlySales
