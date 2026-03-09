@@ -20,15 +20,6 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
-// Fallback demo assets for depreciation
-const fallbackAssets = [
-  { id:'a1', nombre:'Camioneta Nissan NP300', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-06-15', costoAdquisicion:420000, vidaUtilMeses:60, valorRescate:120000, estatus:'activo' as const },
-  { id:'a2', nombre:'Camioneta RAM 700', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-01-10', costoAdquisicion:350000, vidaUtilMeses:60, valorRescate:100000, estatus:'activo' as const },
-  { id:'a3', nombre:'Montacargas Yale', categoria:'maquinaria' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2022-03-01', costoAdquisicion:280000, vidaUtilMeses:120, valorRescate:40000, estatus:'activo' as const },
-  { id:'a4', nombre:'MacBook Pro', categoria:'computadoras' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-06-01', costoAdquisicion:65000, vidaUtilMeses:36, valorRescate:15000, estatus:'activo' as const },
-  { id:'a5', nombre:'Licencia ERP', categoria:'software' as const, tipo:'amortizacion' as const, descripcion:'', fechaCompra:'2025-01-01', costoAdquisicion:48000, vidaUtilMeses:12, valorRescate:0, estatus:'activo' as const },
-  { id:'a6', nombre:'Escritorios', categoria:'mobiliario' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-01-15', costoAdquisicion:35000, vidaUtilMeses:120, valorRescate:5000, estatus:'activo' as const },
-];
 
 function parseMonthLabel(label: string): Date {
   const monthMap: Record<string, string> = {
