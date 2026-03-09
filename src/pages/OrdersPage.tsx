@@ -668,7 +668,7 @@ export default function OrdersPage() {
                   )}
                   {orderPays.length > 0 ? orderPays.map(p => (
                     <div key={p.id} className="flex justify-between text-xs p-2 rounded bg-success/5 mb-1">
-                      <span>{p.date} · {p.method} {p.reference && `· Ref: ${p.reference}`}</span>
+                      <span>{p.payment_date} · {p.method} {p.reference && `· Ref: ${p.reference}`}</span>
                       <span className="font-semibold text-success">{fmt(p.amount)}</span>
                     </div>
                   )) : !detailOrder.advance && <div className="text-xs text-muted-foreground">Sin pagos registrados</div>}
