@@ -370,7 +370,7 @@ export default function CommercialAgendaPage() {
             setForm(p => ({ ...p, quotationId: e.target.value || undefined, quotationFolio: q?.folio }));
           }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
             <option value="">Ninguna</option>
-            {dbQuotations.map(q => <option key={q.id} value={q.id}>{q.folio} — {q.customerName}</option>)}
+            {dbQuotations.map(q => <option key={q.id} value={q.id}>{q.folio} — {q.customer_name}</option>)}
           </select>
         </div>
         <div>
