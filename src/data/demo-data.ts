@@ -57,21 +57,90 @@ export const demoCustomers: Customer[] = [
   { id: 'c12', name: 'Distribuidora Automotriz del Bajío', type: 'distribuidor', phone: '442-345-6789', city: 'Querétaro', state: 'Querétaro', vendorId: 'u4', source: 'expos', priority: 'alta', createdAt: '2024-12-01' },
 ];
 
-export const demoOpportunities: Opportunity[] = [];
+export const demoOpportunities: Opportunity[] = [
+  { id: 'o1', customerId: 'c1', customerName: 'Taller Los Reyes', vendorId: 'u3', vendorName: 'Roberto Juárez', products: ['Elevador 4 Postes', 'Alineadora 3D'], estimatedAmount: 274000, probability: 75, stage: 'negociacion', estimatedCloseDate: '2026-03-20', nextActivity: 'Visita demo', createdAt: '2025-12-01' },
+  { id: 'o2', customerId: 'c2', customerName: 'Llantamax', vendorId: 'u4', vendorName: 'Miguel Torres', products: ['Balanceadora Automática', 'Desmontadora Automática'], estimatedAmount: 97000, probability: 90, stage: 'cotizacion_enviada', estimatedCloseDate: '2026-03-15', nextActivity: 'Seguimiento cotización', createdAt: '2025-12-10' },
+  { id: 'o3', customerId: 'c5', customerName: 'Grupo Llantas Express', vendorId: 'u6', vendorName: 'Fernando Ruiz', products: ['Elevador 2 Postes', 'Balanceadora', 'Desmontadora', 'Compresor'], estimatedAmount: 200000, probability: 50, stage: 'diagnostico', estimatedCloseDate: '2026-04-10', nextActivity: 'Diagnóstico de taller', createdAt: '2026-01-05' },
+  { id: 'o4', customerId: 'c8', customerName: 'AutoAgencia Premium', vendorId: 'u3', vendorName: 'Roberto Juárez', products: ['Alineadora 3D', 'Elevador Tijera'], estimatedAmount: 250000, probability: 60, stage: 'seguimiento', estimatedCloseDate: '2026-04-01', createdAt: '2026-01-10' },
+  { id: 'o5', customerId: 'c4', customerName: 'Servicio Automotriz Juárez', vendorId: 'u5', vendorName: 'Alejandra Vega', products: ['Prensa Hidráulica 20T', 'Compresor 5HP'], estimatedAmount: 43000, probability: 85, stage: 'cierre_ganado', estimatedCloseDate: '2026-02-28', createdAt: '2025-11-15' },
+  { id: 'o6', customerId: 'c12', customerName: 'Distribuidora Bajío', vendorId: 'u4', vendorName: 'Miguel Torres', products: ['5x Balanceadora', '5x Desmontadora'], estimatedAmount: 435000, probability: 40, stage: 'calificado', estimatedCloseDate: '2026-05-01', createdAt: '2026-02-01' },
+  { id: 'o7', customerId: 'c6', customerName: 'Transportes García', vendorId: 'u5', vendorName: 'Alejandra Vega', products: ['Gato Patín 3T x5'], estimatedAmount: 42500, probability: 70, stage: 'contactado', estimatedCloseDate: '2026-03-30', createdAt: '2026-02-15' },
+];
 
-export const demoQuotations: Quotation[] = [];
+export const demoQuotations: Quotation[] = [
+  { id: 'q1', folio: 'V1-1001', customerId: 'c1', customerName: 'Taller Los Reyes', customerPhone: '811-234-5678', vendorId: 'u3', vendorName: 'Roberto Juárez', vendorPhone: '81-1000-0003', vendorEmail: 'roberto@redbuck.mx', items: [{ productId: 'p1', productName: 'Elevador 4 Postes 4 Ton', productImage: '/products/elevador-4-postes.jpg', sku: 'RB-ELV-4P01', qty: 1, unitPrice: 85000, discount: 5 }, { productId: 'p8', productName: 'Alineadora 3D', productImage: '/products/alineadora-3d.jpg', sku: 'RB-ALI-3D01', qty: 1, unitPrice: 175000, discount: 5 }], subtotal: 247000, tax: 39520, total: 286520, status: 'enviada', validUntil: '2026-03-25', createdAt: '2026-02-20' },
+  { id: 'q2', folio: 'V2-2001', customerId: 'c2', customerName: 'Llantamax', customerPhone: '333-456-7890', vendorId: 'u4', vendorName: 'Miguel Torres', vendorPhone: '81-1000-0004', vendorEmail: 'miguel@redbuck.mx', items: [{ productId: 'p4', productName: 'Balanceadora Automática', productImage: '/products/balanceadora-auto.jpg', sku: 'RB-BAL-001', qty: 1, unitPrice: 40000, discount: 3 }, { productId: 'p6', productName: 'Desmontadora Automática 24"', productImage: '/products/desmontadora-auto.jpg', sku: 'RB-DES-001', qty: 1, unitPrice: 52000, discount: 3 }], subtotal: 89240, tax: 14278, total: 103518, status: 'seguimiento', validUntil: '2026-03-20', createdAt: '2026-02-15' },
+  { id: 'q3', folio: 'V4-4001', customerId: 'c5', customerName: 'Grupo Llantas Express', customerPhone: '55-4567-8901', vendorId: 'u6', vendorName: 'Fernando Ruiz', vendorPhone: '81-1000-0006', vendorEmail: 'fernando@redbuck.mx', items: [{ productId: 'p2', productName: 'Elevador 2 Postes 4.5 Ton', productImage: '/products/elevador-2-postes.jpg', sku: 'RB-ELV-2P01', qty: 2, unitPrice: 72000, discount: 5 }], subtotal: 136800, tax: 21888, total: 158688, status: 'borrador', validUntil: '2026-04-05', createdAt: '2026-03-01' },
+  { id: 'q4', folio: 'V3-3001', customerId: 'c4', customerName: 'Servicio Automotriz Juárez', customerPhone: '656-345-6789', vendorId: 'u5', vendorName: 'Alejandra Vega', vendorPhone: '81-1000-0005', vendorEmail: 'ale@redbuck.mx', items: [{ productId: 'p10', productName: 'Prensa Hidráulica 20 Ton', productImage: '/products/prensa-hidraulica.jpg', sku: 'RB-HID-PR01', qty: 1, unitPrice: 17000, discount: 0 }, { productId: 'p14', productName: 'Compresor 5 HP 235L', productImage: '/products/compresor.jpg', sku: 'RB-AIR-COM01', qty: 1, unitPrice: 24000, discount: 0 }], subtotal: 41000, tax: 6560, total: 47560, status: 'aceptada', validUntil: '2026-03-10', createdAt: '2026-02-10' },
+];
 
-export const demoOrders: Order[] = [];
+export const demoOrders: Order[] = [
+  { id: 'or1', folio: 'PED-2026-001', customerId: 'c4', customerName: 'Servicio Automotriz Juárez', vendorName: 'Alejandra Vega', items: [{ productName: 'Prensa Hidráulica 20 Ton', qty: 1, unitPrice: 17000 }, { productName: 'Compresor 5 HP 235L', qty: 1, unitPrice: 24000 }], total: 47560, advance: 23780, balance: 23780, status: 'confirmado', warehouse: 'Bodega Principal', promiseDate: '2026-03-15', createdAt: '2026-02-12' },
+  { id: 'or2', folio: 'PED-2026-002', customerId: 'c1', customerName: 'Taller Los Reyes', vendorName: 'Roberto Juárez', items: [{ productName: 'Balanceadora Semiautomática', qty: 2, unitPrice: 26000 }], total: 60320, advance: 60320, balance: 0, status: 'entregado', warehouse: 'Bodega Principal', promiseDate: '2026-02-28', createdAt: '2026-02-01' },
+  { id: 'or3', folio: 'PED-2026-003', customerId: 'c2', customerName: 'Llantamax', vendorName: 'Miguel Torres', items: [{ productName: 'Desmontadora Semiautomática', qty: 1, unitPrice: 30000 }], total: 34800, advance: 17400, balance: 17400, status: 'en_entrega', warehouse: 'Bodega Sur', promiseDate: '2026-03-10', createdAt: '2026-02-20' },
+  { id: 'or4', folio: 'PED-2026-004', customerId: 'c10', customerName: 'Taller Hernández', vendorName: 'Fernando Ruiz', items: [{ productName: 'Gato Hidráulico Patin 3 Ton', qty: 3, unitPrice: 8000 }], total: 27840, advance: 0, balance: 27840, status: 'nuevo', warehouse: 'Bodega CDMX', promiseDate: '2026-03-20', createdAt: '2026-03-04' },
+];
 
-export const demoImports: ImportOrder[] = [];
+export const demoImports: ImportOrder[] = [
+  {
+    id: 'imp1', orderNumber: 'IMP-2026-001', supplier: 'Guangzhou Lift Co.', country: 'China',
+    departurePort: 'Guangzhou', arrivalPort: 'Manzanillo', currency: 'USD', exchangeRate: 17.2,
+    purchaseDate: '2025-12-15', estimatedDeparture: '2026-01-20', estimatedArrival: '2026-03-25',
+    status: 'transito_maritimo',
+    items: [{ productName: 'Elevador 4 Postes 4 Ton', qty: 5, unitCost: 3020 }, { productName: 'Elevador 2 Postes 4.5 Ton', qty: 3, unitCost: 2560 }],
+    totalCost: 22780, freightCost: 4500, customsCost: 3200, totalLanded: 30480, daysInTransit: 45,
+  },
+  {
+    id: 'imp2', orderNumber: 'IMP-2026-002', supplier: 'Zhongshan Auto Equipment', country: 'China',
+    departurePort: 'Shenzhen', arrivalPort: 'Manzanillo', currency: 'USD', exchangeRate: 17.2,
+    purchaseDate: '2026-01-10', estimatedDeparture: '2026-02-15', estimatedArrival: '2026-04-10',
+    status: 'embarcado',
+    items: [{ productName: 'Balanceadora Automática', qty: 8, unitCost: 1280 }, { productName: 'Desmontadora Automática 24"', qty: 6, unitCost: 1685 }],
+    totalCost: 20350, freightCost: 3800, customsCost: 2800, totalLanded: 26950, daysInTransit: 19,
+  },
+  {
+    id: 'imp3', orderNumber: 'IMP-2026-003', supplier: 'Shenzhen Alignment Tech', country: 'China',
+    departurePort: 'Shenzhen', arrivalPort: 'Lázaro Cárdenas', currency: 'USD', exchangeRate: 17.2,
+    purchaseDate: '2026-02-01', estimatedDeparture: '2026-03-01', estimatedArrival: '2026-04-25',
+    status: 'produccion',
+    items: [{ productName: 'Alineadora 3D', qty: 2, unitCost: 5700 }, { productName: 'Elevador Tijera 3 Ton', qty: 4, unitCost: 2210 }],
+    totalCost: 20240, freightCost: 3500, customsCost: 2600, totalLanded: 26340, daysInTransit: 0,
+  },
+];
 
-export const demoAccountsReceivable: AccountReceivable[] = [];
+export const demoAccountsReceivable: AccountReceivable[] = [
+  { id: 'ar1', customerId: 'c4', customerName: 'Servicio Automotriz Juárez', orderId: 'or1', orderFolio: 'PED-2026-001', total: 47560, paid: 23780, balance: 23780, dueDate: '2026-03-15', daysOverdue: 0, status: 'al_corriente' },
+  { id: 'ar2', customerId: 'c2', customerName: 'Llantamax', orderId: 'or3', orderFolio: 'PED-2026-003', total: 34800, paid: 17400, balance: 17400, dueDate: '2026-03-10', daysOverdue: 0, status: 'por_vencer' },
+  { id: 'ar3', customerId: 'c10', customerName: 'Taller Hernández', orderId: 'or4', orderFolio: 'PED-2026-004', total: 27840, paid: 0, balance: 27840, dueDate: '2026-03-20', daysOverdue: 0, status: 'al_corriente' },
+  { id: 'ar4', customerId: 'c6', customerName: 'Transportes García', orderId: 'or-old1', orderFolio: 'PED-2025-045', total: 85000, paid: 42500, balance: 42500, dueDate: '2026-02-15', daysOverdue: 19, status: 'vencido' },
+  { id: 'ar5', customerId: 'c7', customerName: 'Vulcanizadora El Rápido', orderId: 'or-old2', orderFolio: 'PED-2025-052', total: 32000, paid: 16000, balance: 16000, dueDate: '2026-02-28', daysOverdue: 6, status: 'vencido' },
+];
 
-export const demoServiceOrders: ServiceOrder[] = [];
+export const demoServiceOrders: ServiceOrder[] = [
+  { id: 'so1', folio: 'SRV-2026-001', customerId: 'c1', customerName: 'Taller Los Reyes', productName: 'Balanceadora Semiautomática', technicianName: 'Jorge Pérez', type: 'instalacion', scheduledDate: '2026-03-08', status: 'programado', description: 'Instalación y capacitación de 2 balanceadoras' },
+  { id: 'so2', folio: 'SRV-2026-002', customerId: 'c3', customerName: 'Suspensiones del Norte', productName: 'Elevador 2 Postes', technicianName: 'Jorge Pérez', type: 'garantia', scheduledDate: '2026-03-10', status: 'pendiente', description: 'Revisión de fuga hidráulica en cilindro principal' },
+  { id: 'so3', folio: 'SRV-2026-003', customerId: 'c5', customerName: 'Grupo Llantas Express', productName: 'Alineadora CCD', technicianName: 'Jorge Pérez', type: 'mantenimiento', scheduledDate: '2026-03-12', status: 'programado', description: 'Mantenimiento preventivo y calibración' },
+];
 
-export const demoSpareParts: SparePart[] = [];
+export const demoSuppliers: Supplier[] = [
+  { id: 's1', name: 'Guangzhou Lift Co.', country: 'China', contact: 'Wang Li', phone: '+86-20-8888-1234', email: 'wang@gzlift.cn', currency: 'USD', type: 'internacional' },
+  { id: 's2', name: 'Zhongshan Auto Equipment', country: 'China', contact: 'Chen Wei', phone: '+86-760-8888-5678', email: 'chen@zsauto.cn', currency: 'USD', type: 'internacional' },
+  { id: 's3', name: 'Shenzhen Alignment Tech', country: 'China', contact: 'Liu Ming', phone: '+86-755-8888-9012', email: 'liu@szalign.cn', currency: 'USD', type: 'internacional' },
+  { id: 's4', name: 'Herramientas MX S.A. de C.V.', country: 'México', contact: 'Arturo Sánchez', phone: '81-1234-5678', email: 'arturo@herramientasmx.com', currency: 'MXN', type: 'nacional' },
+  { id: 's5', name: 'Logística Global MX', country: 'México', contact: 'Sandra Reyes', phone: '33-2345-6789', email: 'sandra@logisticaglobal.mx', currency: 'MXN', type: 'logistica' },
+  { id: 's6', name: 'Agencia Aduanal Torres', country: 'México', contact: 'Ing. Torres', phone: '314-345-6789', email: 'torres@aduanaltorres.mx', currency: 'MXN', type: 'aduana' },
+];
 
-export const demoSuppliers: Supplier[] = [];
+export const demoSpareParts: SparePart[] = [
+  { id: 'sp1', sku: 'REF-ELV-CIL01', name: 'Cilindro hidráulico elevador', productId: 'p1', productName: 'Elevador 4 Postes', cost: 3500, price: 6800, stock: 4, minStock: 2, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp2', sku: 'REF-ELV-CAB01', name: 'Cable de acero elevador', productId: 'p2', productName: 'Elevador 2 Postes', cost: 1200, price: 2400, stock: 6, minStock: 3, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp3', sku: 'REF-BAL-SEN01', name: 'Sensor de balanceadora', productId: 'p4', productName: 'Balanceadora Automática', cost: 800, price: 1800, stock: 8, minStock: 4, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp4', sku: 'REF-DES-UÑA01', name: 'Uña desmontadora', productId: 'p6', productName: 'Desmontadora Automática', cost: 450, price: 950, stock: 12, minStock: 6, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp5', sku: 'REF-ALI-CAM01', name: 'Cámara alineadora 3D', productId: 'p8', productName: 'Alineadora 3D', cost: 8500, price: 15000, stock: 2, minStock: 1, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp6', sku: 'REF-ELV-SEL01', name: 'Sello hidráulico kit', productId: 'p1', productName: 'Elevador 4 Postes', cost: 280, price: 650, stock: 15, minStock: 5, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp7', sku: 'REF-BAL-PCB01', name: 'Tarjeta electrónica balanceadora', productId: 'p4', productName: 'Balanceadora Automática', cost: 2200, price: 4500, stock: 3, minStock: 2, warehouse: 'Bodega Principal', active: true },
+  { id: 'sp8', sku: 'REF-COM-VAL01', name: 'Válvula check compresor', productId: 'p14', productName: 'Compresor 5 HP', cost: 350, price: 750, stock: 10, minStock: 5, warehouse: 'Bodega Principal', active: true },
+];
 
 // Company info
 export const demoCompanyInfo: CompanyInfo = {
@@ -93,24 +162,53 @@ export const demoWhatsAppTemplate: WhatsAppTemplate = {
 
 // Summary metrics
 export const dashboardMetrics = {
-  salesMonth: 0,
-  salesQuarter: 0,
-  activeOpportunities: 0,
-  quotationsSent: 0,
-  closeRate: 0,
-  avgTicket: 0,
-  grossMargin: 0,
-  overdueReceivables: 0,
-  pendingCollection: 0,
-  totalInventoryValue: 0,
-  productsInTransit: 0,
-  activeImports: 0,
-  activeServiceOrders: 0,
-  activeWarranties: 0,
+  salesMonth: 1_245_000,
+  salesQuarter: 3_780_000,
+  activeOpportunities: 7,
+  quotationsSent: 12,
+  closeRate: 42,
+  avgTicket: 68500,
+  grossMargin: 38,
+  overdueReceivables: 58500,
+  pendingCollection: 109520,
+  totalInventoryValue: 4_250_000,
+  productsInTransit: 28,
+  activeImports: 3,
+  activeServiceOrders: 3,
+  activeWarranties: 1,
 };
 
-export const salesByVendor: { name: string; sales: number }[] = [];
+export const salesByVendor = [
+  { name: 'Roberto J.', sales: 380000 },
+  { name: 'Miguel T.', sales: 310000 },
+  { name: 'Alejandra V.', sales: 245000 },
+  { name: 'Fernando R.', sales: 180000 },
+  { name: 'Diana C.', sales: 130000 },
+];
 
-export const salesByCategory: { name: string; value: number }[] = [];
+export const salesByCategory = [
+  { name: 'Elevadores', value: 520000 },
+  { name: 'Balanceadoras', value: 280000 },
+  { name: 'Desmontadoras', value: 195000 },
+  { name: 'Alineadoras', value: 185000 },
+  { name: 'Hidráulico', value: 42000 },
+  { name: 'Aire', value: 23000 },
+];
 
-export const monthlySales: { month: string; sales: number }[] = [];
+export const monthlySales = [
+  { month: 'Ene 24', sales: 720000 },
+  { month: 'Feb 24', sales: 810000 },
+  { month: 'Mar 24', sales: 890000 },
+  { month: 'Abr 24', sales: 760000 },
+  { month: 'May 24', sales: 920000 },
+  { month: 'Jun 24', sales: 870000 },
+  { month: 'Jul 24', sales: 950000 },
+  { month: 'Ago 24', sales: 1010000 },
+  { month: 'Sep 24', sales: 930000 },
+  { month: 'Oct 24', sales: 980000 },
+  { month: 'Nov 24', sales: 1120000 },
+  { month: 'Dic 24', sales: 1450000 },
+  { month: 'Ene 25', sales: 1080000 },
+  { month: 'Feb 25', sales: 1350000 },
+  { month: 'Mar 25', sales: 1245000 },
+];
