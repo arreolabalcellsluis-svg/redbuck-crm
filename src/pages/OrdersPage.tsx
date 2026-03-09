@@ -75,9 +75,25 @@ export default function OrdersPage() {
   const updateOrderMutation = useUpdateOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbOrderPayments = [] } = useOrderPayments();
+  const addOrderPaymentMutation = useAddOrderPayment();
+  const { data: dbReceivables = [] } = useAccountsReceivable();
+  const addReceivableMutation = useAddAccountReceivable();
+  const updateReceivableMutation = useUpdateAccountReceivable();
 
   // Map DB orders to Order type
   const orders = useMemo(() => dbOrders.map(dbToOrder), [dbOrders]);
+
+  // Helper functions using DB data
+  const getOrderPayments = useCallback((orderId: string) => {
+    return dbOrderPayments.filter(p => p.order_id === orderId);
+  }, [dbOrderPayments]);
+
+  const getTotalPaid = useCallback((orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+    const paymentSum = dbOrderPayments.filter(p => p.order_id === orderId).reduce((s, p) => s + p.amount, 0);
+    return (order?.advance || 0) + paymentSum;
+  }, [orders, dbOrderPayments]);
 
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
 
