@@ -45,7 +45,7 @@ export default function VendorPerformanceReportPage() {
       const conversion = quotesEnviadas > 0 ? (quotesAceptadas / quotesEnviadas * 100) : 0;
       const meta = 300000;
       const cumplimiento = meta > 0 ? (ventasTotales / meta * 100) : 0;
-      const commRate = user.commission_rate || 5;
+      const commRate = user.commissionRate || 5;
       return {
         id: user.id, vendedor: user.name, email: user.email, ventasTotales, numVentas, ticketProm,
         productosVendidos, cotizacionesEnviadas: quotesEnviadas, cotizacionesAceptadas: quotesAceptadas,
