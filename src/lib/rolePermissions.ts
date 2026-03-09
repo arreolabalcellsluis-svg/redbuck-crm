@@ -7,6 +7,7 @@ const VENDEDOR_BLOCKED_PATHS = [
   '/historial-compras',
   '/proveedores',
   '/productos',
+  '/refacciones',
   '/configuracion',
   '/pedidos',
   '/historial-pedidos',
