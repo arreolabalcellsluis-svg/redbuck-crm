@@ -2,20 +2,18 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import CommercialSections from '@/components/dashboard/CommercialSections';
-import SalesComparative from '@/components/dashboard/SalesComparative';
 import { useAppContext } from '@/contexts/AppContext';
-import {
-  dashboardMetrics, salesByVendor, salesByCategory, monthlySales,
-  demoImports, demoAccountsReceivable, demoOpportunities, demoProducts, demoOrders, demoCustomers,
-} from '@/data/demo-data';
-import { analyzeProducts, getPlanningSummary } from '@/lib/planningEngine';
-import { getFinancialAnalysis } from '@/lib/financialSimulator';
-import { generateRestockOpportunities, getRestockAlerts } from '@/lib/restockEngine';
-import { generateDailyRecommendations, getAssistantSummary } from '@/lib/dailyAssistantEngine';
+import { useProducts } from '@/hooks/useProducts';
+import { useOrders } from '@/hooks/useOrders';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
+import { useAccountsPayable } from '@/hooks/useAccountsPayable';
+import { useImportOrders } from '@/hooks/useImportOrders';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useExpenses } from '@/hooks/useExpenses';
 import { IMPORT_STATUS_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
-import { DaysOfInventoryDialog, DeadStockDialog, ExcessStockDialog } from '@/components/dashboard/InventoryDrillDownDialogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,59 +39,204 @@ const COLORS = [
   'hsl(38,92%,50%)', 'hsl(280,65%,55%)', 'hsl(0,0%,60%)',
   'hsl(190,80%,45%)', 'hsl(330,70%,50%)',
 ];
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 export default function ExecutiveDashboardPage() {
   const { currentRole } = useAppContext();
   const navigate = useNavigate();
 
-  const [daysDialog, setDaysDialog] = useState(false);
-  const [deadDialog, setDeadDialog] = useState(false);
-  const [excessDialog, setExcessDialog] = useState(false);
+  const { data: dbProducts = [] } = useProducts();
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbReceivables = [] } = useAccountsReceivable();
+  const { data: dbPayables = [] } = useAccountsPayable();
+  const { data: dbImports = [] } = useImportOrders();
+  const { data: dbQuotations = [] } = useQuotations();
+  const { data: dbTeam = [] } = useTeamMembers();
+  const { data: dbExpenses = [] } = useExpenses();
+
   const [salesMonths, setSalesMonths] = useState(6);
   const [analysisDate, setAnalysisDate] = useState<Date>(new Date());
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
-  const fin = useMemo(() => getFinancialAnalysis(analyses), [analyses]);
-
-  const invByCategory = useMemo(() => {
-    const cats: Record<string, number> = {};
-    demoProducts.forEach(p => {
-      if (!p.active || !p.stock) return;
-      const total = Object.values(p.stock).reduce((a, b) => a + b, 0);
-      const cat = p.category.charAt(0).toUpperCase() + p.category.slice(1);
-      cats[cat] = (cats[cat] || 0) + total * p.cost;
+  // ─── Compute monthly sales from real orders ───────────────────
+  const monthlySales = useMemo(() => {
+    const groups: Record<string, number> = {};
+    dbOrders.filter(o => o.status !== 'cancelado').forEach(o => {
+      const d = new Date(o.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      groups[key] = (groups[key] || 0) + o.total;
     });
-    return Object.entries(cats).map(([name, value]) => ({ name, value }));
-  }, []);
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, sales]) => {
+        const [y, m] = key.split('-');
+        return { month: `${MONTH_NAMES[parseInt(m) - 1]} ${y.slice(2)}`, sales };
+      });
+  }, [dbOrders]);
 
+  // ─── Current month sales ──────────────────────────────────────
+  const now = new Date();
+  const currentMonthOrders = useMemo(() =>
+    dbOrders.filter(o => {
+      if (o.status === 'cancelado') return false;
+      const d = new Date(o.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }), [dbOrders]);
+
+  const salesMonth = useMemo(() => currentMonthOrders.reduce((s, o) => s + o.total, 0), [currentMonthOrders]);
+
+  // ─── Gross margin from catalog ────────────────────────────────
+  const grossMarginPct = useMemo(() => {
+    const active = dbProducts.filter(p => p.active && p.list_price > 0);
+    if (active.length === 0) return 0;
+    return active.reduce((s, p) => s + (p.list_price - p.cost) / p.list_price * 100, 0) / active.length;
+  }, [dbProducts]);
+
+  // ─── Sales by vendor from orders ──────────────────────────────
+  const salesByVendor = useMemo(() => {
+    const map: Record<string, number> = {};
+    currentMonthOrders.forEach(o => {
+      const name = o.vendor_name || 'Sin vendedor';
+      map[name] = (map[name] || 0) + o.total;
+    });
+    return Object.entries(map).map(([name, sales]) => ({ name, sales })).sort((a, b) => b.sales - a.sales);
+  }, [currentMonthOrders]);
+
+  // ─── Sales by category from orders ────────────────────────────
+  const salesByCategory = useMemo(() => {
+    const cats: Record<string, number> = {};
+    currentMonthOrders.forEach(o => {
+      const items = o.items as any[];
+      items?.forEach((item: any) => {
+        const product = dbProducts.find(p => p.name === item.productName);
+        const cat = product?.category ?? 'otros';
+        const label = cat.charAt(0).toUpperCase() + cat.slice(1);
+        cats[label] = (cats[label] || 0) + (item.qty || 1) * (item.unitPrice || 0);
+      });
+    });
+    return Object.entries(cats).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [currentMonthOrders, dbProducts]);
+
+  // ─── Inventory valuation ──────────────────────────────────────
+  const inventoryData = useMemo(() => {
+    let totalValue = 0;
+    let totalUnits = 0;
+    const byCat: Record<string, number> = {};
+    dbProducts.filter(p => p.active).forEach(p => {
+      const stock = p.stock as Record<string, number>;
+      const units = Object.values(stock).reduce((a: number, b) => a + Number(b), 0);
+      const value = units * p.cost;
+      totalValue += value;
+      totalUnits += units;
+      const cat = (p.category ?? 'otros').charAt(0).toUpperCase() + (p.category ?? 'otros').slice(1);
+      byCat[cat] = (byCat[cat] || 0) + value;
+    });
+    const invByCategory = Object.entries(byCat).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return { totalValue, totalUnits, invByCategory };
+  }, [dbProducts]);
+
+  // ─── Receivables / Payables ───────────────────────────────────
+  const totalReceivable = useMemo(() => dbReceivables.reduce((s, r) => s + r.balance, 0), [dbReceivables]);
+  const totalPayable = useMemo(() => dbPayables.filter(p => p.status !== 'liquidada' && p.status !== 'cancelada').reduce((s, p) => s + p.balance, 0), [dbPayables]);
+  const overdueReceivables = useMemo(() => dbReceivables.filter(r => r.days_overdue > 0), [dbReceivables]);
+
+  // ─── Leads by source ──────────────────────────────────────────
   const leadsBySource = useMemo(() => {
     const sources: Record<string, number> = {};
-    demoCustomers.forEach(c => {
-      const label = c.source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    dbCustomers.forEach(c => {
+      const label = (c.source || 'otro').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       sources[label] = (sources[label] || 0) + 1;
     });
-    return Object.entries(sources)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, []);
+    return Object.entries(sources).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [dbCustomers]);
 
+  // ─── Derived metrics ──────────────────────────────────────────
+  const salesGoal = 1_500_000;
+  const salesPct = salesGoal > 0 ? Math.round((salesMonth / salesGoal) * 100) : 0;
+  const prevMonthSales = monthlySales.length >= 2 ? monthlySales[monthlySales.length - 2]?.sales ?? 0 : 0;
+  const growthMoM = prevMonthSales > 0 ? ((salesMonth - prevMonthSales) / prevMonthSales) * 100 : 0;
+
+  const grossProfit = salesMonth * (grossMarginPct / 100);
+  const monthlyExpenses = useMemo(() => {
+    const thisMonth = dbExpenses.filter(e => {
+      const d = new Date(e.fecha);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    return thisMonth.reduce((s, e) => s + e.monto, 0);
+  }, [dbExpenses]);
+  const netProfit = grossProfit - monthlyExpenses;
+  const netMargin = salesMonth > 0 ? (netProfit / salesMonth) * 100 : 0;
+
+  const cashInBank = 0; // Will be configured in CFO dashboard
+  const netCashFlow = cashInBank - totalPayable + totalReceivable * 0.3;
+
+  // ─── Avg ticket ───────────────────────────────────────────────
+  const avgTicket = currentMonthOrders.length > 0 ? salesMonth / currentMonthOrders.length : 0;
+
+  // ─── Low stock products ───────────────────────────────────────
+  const lowStockProducts = useMemo(() => {
+    return dbProducts.filter(p => {
+      if (!p.active) return false;
+      const stock = p.stock as Record<string, number>;
+      const total = Object.values(stock).reduce((a: number, b) => a + Number(b), 0);
+      return total <= 2;
+    }).slice(0, 5);
+  }, [dbProducts]);
+
+  // ─── Monthly growth chart ─────────────────────────────────────
+  const filteredMonthlySales = monthlySales.slice(-salesMonths);
+  const monthlyGrowth = filteredMonthlySales.map((m, i) => ({
+    ...m,
+    growth: i > 0 && filteredMonthlySales[i - 1].sales > 0
+      ? Math.round(((m.sales - filteredMonthlySales[i - 1].sales) / filteredMonthlySales[i - 1].sales) * 100)
+      : 0,
+  }));
+
+  // ─── Inventory rotation ───────────────────────────────────────
+  const annualSalesValue = monthlySales.reduce((s, m) => s + m.sales, 0);
+  const annualCOGS = annualSalesValue * (1 - grossMarginPct / 100);
+  const inventoryRotation = inventoryData.totalValue > 0 ? annualCOGS / inventoryData.totalValue : 0;
+  const daysOfInventory = inventoryRotation > 0 ? Math.round(365 / inventoryRotation) : 0;
+
+  // ─── Quotations metrics ───────────────────────────────────────
+  const openQuotations = useMemo(() => dbQuotations.filter(q =>
+    ['enviada', 'seguimiento', 'borrador', 'vista'].includes(q.status)
+  ), [dbQuotations]);
+  const acceptedQuotations = useMemo(() => dbQuotations.filter(q => q.status === 'aceptada'), [dbQuotations]);
+
+  // ─── Alerts ───────────────────────────────────────────────────
   const alerts = useMemo(() => {
     const list: { type: 'danger' | 'warning' | 'info'; message: string }[] = [];
-    analyses.filter(a => a.riskLevel === 'critico').forEach(a =>
-      list.push({ type: 'danger', message: `${a.product.name} — stock crítico (${a.totalStock} uds)` })
+    lowStockProducts.forEach(p => {
+      const stock = p.stock as Record<string, number>;
+      const total = Object.values(stock).reduce((a: number, b) => a + Number(b), 0);
+      list.push({ type: 'danger', message: `${p.name} — stock bajo (${total} uds)` });
+    });
+    overdueReceivables.forEach(r =>
+      list.push({ type: 'warning', message: `${r.customer_name} — pago vencido ${r.days_overdue}d (${fmt(r.balance)})` })
     );
-    demoAccountsReceivable.filter(a => a.daysOverdue > 0).forEach(a =>
-      list.push({ type: 'warning', message: `${a.customerName} — pago vencido ${a.daysOverdue}d (${fmt(a.balance)})` })
-    );
-    demoImports.filter(i => i.status === 'produccion').forEach(i =>
-      list.push({ type: 'info', message: `${i.orderNumber} — ${IMPORT_STATUS_LABELS[i.status]}` })
-    );
-    analyses.filter(a => a.daysOfStock > 180).forEach(a =>
-      list.push({ type: 'warning', message: `${a.product.name} — inventario sin rotación (${a.daysOfStock}d)` })
+    dbImports.filter(i => i.status === 'produccion').forEach(i =>
+      list.push({ type: 'info', message: `${i.order_number} — ${IMPORT_STATUS_LABELS[i.status as keyof typeof IMPORT_STATUS_LABELS] || i.status}` })
     );
     return list.slice(0, 10);
-  }, [analyses]);
+  }, [lowStockProducts, overdueReceivables, dbImports]);
+
+  // ─── Vendor performance ───────────────────────────────────────
+  const vendorData = useMemo(() => {
+    return salesByVendor.map(v => ({
+      ...v,
+      deals: currentMonthOrders.filter(o => o.vendor_name === v.name).length,
+      avgTicket: currentMonthOrders.filter(o => o.vendor_name === v.name).length > 0
+        ? v.sales / currentMonthOrders.filter(o => o.vendor_name === v.name).length
+        : 0,
+    }));
+  }, [salesByVendor, currentMonthOrders]);
+
+  // clickable card helper
+  const clickCard = (path: string) => ({
+    className: 'bg-card rounded-xl border p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 hover:scale-[1.02] transition-all duration-200 group',
+    onClick: () => navigate(path),
+  });
 
   // Access control
   if (currentRole !== 'director') {
@@ -105,70 +248,6 @@ export default function ExecutiveDashboardPage() {
       </div>
     );
   }
-
-  // ─── Derived metrics ──────────────────────────────────────────
-  const salesMonth = dashboardMetrics.salesMonth;
-  const salesGoal = 1_500_000;
-  const salesPct = Math.round((salesMonth / salesGoal) * 100);
-  const prevMonth = monthlySales[monthlySales.length - 2]?.sales ?? 0;
-  const growthMoM = prevMonth > 0 ? ((salesMonth - prevMonth) / prevMonth) * 100 : 0;
-
-  const grossProfit = salesMonth * (dashboardMetrics.grossMargin / 100);
-  const operatingExpenses = salesMonth * 0.18;
-  const netProfit = grossProfit - operatingExpenses;
-  const netMargin = (netProfit / salesMonth) * 100;
-  const ebitda = netProfit + salesMonth * 0.05;
-
-  const totalReceivable = demoAccountsReceivable.reduce((s, a) => s + a.balance, 0);
-  const totalPayable = demoImports.reduce((s, i) => s + (i.totalLanded * 17.2) * 0.3, 0);
-  const cashInBank = salesMonth * 0.6;
-  const netCashFlow = cashInBank - totalPayable + totalReceivable * 0.3;
-
-  const lowStockProducts = analyses
-    .filter(a => a.riskLevel === 'critico' || a.riskLevel === 'alerta')
-    .sort((a, b) => a.daysOfStock - b.daysOfStock)
-    .slice(0, 5);
-
-  const vendorData = salesByVendor.map(v => ({
-    ...v,
-    deals: Math.round(v.sales / dashboardMetrics.avgTicket),
-    avgTicket: dashboardMetrics.avgTicket,
-    closeRate: Math.round(30 + Math.random() * 30),
-  }));
-
-  const profitRanking = [...analyses]
-    .sort((a, b) => b.annualProfit - a.annualProfit)
-    .slice(0, 8);
-
-  // Strategic highlights
-  const mostSold = analyses.sort((a, b) => b.monthlySales - a.monthlySales)[0];
-  const mostProfitable = analyses.sort((a, b) => b.margin - a.margin)[0];
-  const lowestRotation = analyses.sort((a, b) => b.daysOfStock - a.daysOfStock)[0];
-  const topVendor = vendorData.sort((a, b) => b.closeRate - a.closeRate)[0];
-
-  // Monthly growth data with % — filtered by selected months
-  const filteredMonthlySales = monthlySales.slice(-salesMonths);
-  const monthlyGrowth = filteredMonthlySales.map((m, i) => ({
-    ...m,
-    growth: i > 0 ? Math.round(((m.sales - filteredMonthlySales[i - 1].sales) / filteredMonthlySales[i - 1].sales) * 100) : 0,
-  }));
-
-  // Inventory rotation
-  const annualCOGS = analyses.reduce((s, a) => s + a.annualSales * a.product.cost, 0);
-  const avgInventory = summary.totalStockValue;
-  const inventoryRotation = avgInventory > 0 ? annualCOGS / avgInventory : 0;
-  const daysOfInventory = inventoryRotation > 0 ? Math.round(365 / inventoryRotation) : 0;
-
-  // Leads metrics
-  const totalLeads = demoCustomers.length;
-  const closedDeals = demoOpportunities.filter(o => o.stage === 'cierre_ganado').length;
-  const conversionRate = totalLeads > 0 ? (closedDeals / totalLeads) * 100 : 0;
-
-  // clickable card helper
-  const clickCard = (path: string) => ({
-    className: 'bg-card rounded-xl border p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 hover:scale-[1.02] transition-all duration-200 group',
-    onClick: () => navigate(path),
-  });
 
   return (
     <div className="space-y-6">
@@ -211,28 +290,6 @@ export default function ExecutiveDashboardPage() {
         </div>
       </div>
 
-      {/* Restock alert banner */}
-      {(() => {
-        const restockAlerts = getRestockAlerts(generateRestockOpportunities());
-        if (restockAlerts.length === 0) return null;
-        return (
-          <Link to="/crm/reabasto" className="block p-4 rounded-xl border border-success/30 bg-success/5 hover:bg-success/10 transition-colors group">
-            <div className="flex items-center gap-3">
-              <RefreshCw size={20} className="text-success shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-success">
-                  Tienes {restockAlerts.length} oportunidad{restockAlerts.length !== 1 ? 'es' : ''} por reabasto disponibles para reactivar
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {restockAlerts.map(a => a.productName).slice(0, 3).join(', ')}{restockAlerts.length > 3 ? ` y ${restockAlerts.length - 3} más` : ''}
-                </p>
-              </div>
-              <ArrowRight size={16} className="text-success opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-            </div>
-          </Link>
-        );
-      })()}
-
       {/* ═══ SECCIÓN 1: TOP KPIs ═══ */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* 1. Ventas del mes */}
@@ -248,11 +305,12 @@ export default function ExecutiveDashboardPage() {
             <span className="text-xs font-bold ml-2 whitespace-nowrap">{salesPct}%</span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">Meta: {fmt(salesGoal)}</div>
-          <div className={`text-xs font-semibold mt-1 flex items-center gap-1 ${growthMoM >= 0 ? 'text-success' : 'text-destructive'}`}>
-            {growthMoM >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-            {fmtPct(Math.abs(growthMoM))} vs mes anterior
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
+          {monthlySales.length >= 2 && (
+            <div className={`text-xs font-semibold mt-1 flex items-center gap-1 ${growthMoM >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {growthMoM >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {fmtPct(Math.abs(growthMoM))} vs mes anterior
+            </div>
+          )}
         </div>
 
         {/* 2. Utilidad */}
@@ -265,7 +323,6 @@ export default function ExecutiveDashboardPage() {
             <div><span className="text-muted-foreground">Bruta:</span> <span className="font-semibold">{fmt(grossProfit)}</span></div>
             <div><span className="text-muted-foreground">Margen:</span> <span className="font-semibold">{fmtPct(netMargin)}</span></div>
           </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
         </div>
 
         {/* 3. Inventario */}
@@ -273,52 +330,42 @@ export default function ExecutiveDashboardPage() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <Warehouse size={14} /> Inventario total
           </div>
-          <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(summary.totalStockValue)}</div>
+          <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(inventoryData.totalValue)}</div>
           <div className="space-y-0.5 mt-2">
-            {invByCategory.slice(0, 3).map(c => (
+            {inventoryData.invByCategory.slice(0, 3).map(c => (
               <div key={c.name} className="text-[10px] flex justify-between">
                 <span className="text-muted-foreground">{c.name}</span>
                 <span className="font-medium">{fmt(c.value)}</span>
               </div>
             ))}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
         </div>
 
         {/* 4. Flujo de efectivo */}
         <div {...clickCard('/cobranza')} style={{ borderLeft: '4px solid hsl(var(--info))' }}>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Banknote size={14} /> Flujo de efectivo
+            <Banknote size={14} /> Cuentas
           </div>
-          <div className={`text-xl font-bold ${netCashFlow >= 0 ? 'text-success' : 'text-destructive'} group-hover:text-primary transition-colors`}>{fmt(netCashFlow)}</div>
-          <div className="space-y-0.5 mt-2 text-[10px]">
-            <div className="flex justify-between"><span className="text-muted-foreground">En banco:</span> <span className="font-medium">{fmt(cashInBank)}</span></div>
+          <div className="space-y-0.5 mt-2 text-[11px]">
             <div className="flex justify-between"><span className="text-muted-foreground">x Cobrar:</span> <span className="font-medium text-warning">{fmt(totalReceivable)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">x Pagar:</span> <span className="font-medium text-destructive">{fmt(totalPayable)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Vencidas:</span> <span className="font-medium text-destructive">{overdueReceivables.length}</span></div>
           </div>
         </div>
 
-        {/* 5. Productos por agotarse (predictivo) */}
+        {/* 5. Stock bajo */}
         <div {...clickCard('/reportes/bajo-stock')} style={{ borderLeft: '4px solid hsl(var(--destructive))' }}>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <AlertTriangle size={14} /> Por agotarse
+            <AlertTriangle size={14} /> Stock bajo
           </div>
-          <div className="text-xl font-bold text-destructive group-hover:text-primary transition-colors">{summary.requirePurchase} <span className="text-xs font-normal text-muted-foreground">SKUs</span></div>
+          <div className="text-xl font-bold text-destructive group-hover:text-primary transition-colors">
+            {lowStockProducts.length} <span className="text-xs font-normal text-muted-foreground">SKUs</span>
+          </div>
           <div className="space-y-0.5 mt-2">
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">🔴 Compra inmediata</span>
-              <span className="font-bold text-destructive">{summary.immediateAction}</span>
-            </div>
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">🟠 Riesgo desabasto</span>
-              <span className="font-bold text-destructive">{summary.stockoutRisk}</span>
-            </div>
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">💰 Reposición est.</span>
-              <span className="font-bold text-primary">{fmt(summary.totalRepositionValue)}</span>
-            </div>
+            {lowStockProducts.slice(0, 3).map(p => (
+              <div key={p.id} className="text-[10px] text-muted-foreground truncate">{p.name}</div>
+            ))}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver motor predictivo →</div>
         </div>
       </div>
 
@@ -330,47 +377,54 @@ export default function ExecutiveDashboardPage() {
             <h3 className="font-display font-semibold group-hover:text-primary transition-colors cursor-pointer"
               onClick={() => navigate('/reportes/ventas')}>
               Ventas últimos {salesMonths} meses
-              <span className="text-[10px] text-muted-foreground ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</span>
             </h3>
-            <select
-              value={salesMonths}
-              onChange={e => { e.stopPropagation(); setSalesMonths(+e.target.value); }}
-              onClick={e => e.stopPropagation()}
-              className="text-xs border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {[3, 4, 5, 6, 9, 12, 15].filter(n => n <= monthlySales.length).map(n => (
-                <option key={n} value={n}>{n} meses</option>
-              ))}
-            </select>
+            {monthlySales.length > 0 && (
+              <select
+                value={salesMonths}
+                onChange={e => { e.stopPropagation(); setSalesMonths(+e.target.value); }}
+                onClick={e => e.stopPropagation()}
+                className="text-xs border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {[3, 6, 9, 12].filter(n => n <= monthlySales.length).map(n => (
+                  <option key={n} value={n}>{n} meses</option>
+                ))}
+              </select>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground mb-4">Crecimiento mensual: <span className={`font-bold ${growthMoM >= 0 ? 'text-success' : 'text-destructive'}`}>{fmtPct(growthMoM)}</span></p>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={monthlyGrowth}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Ventas" />
-            </BarChart>
-          </ResponsiveContainer>
+          {monthlySales.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12">Sin datos de ventas aún</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={monthlyGrowth}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Ventas" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Ventas por categoría */}
         <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group"
           onClick={() => navigate('/reportes/ventas-sku')}>
           <h3 className="font-display font-semibold mb-4 group-hover:text-primary transition-colors">
-            Ventas por producto
-            <span className="text-[10px] text-muted-foreground ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</span>
+            Ventas por categoría
           </h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie data={salesByCategory} cx="50%" cy="50%" outerRadius={85} innerRadius={40} dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                {salesByCategory.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip formatter={(v: number) => fmt(v)} />
-            </PieChart>
-          </ResponsiveContainer>
+          {salesByCategory.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12">Sin datos aún</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={salesByCategory} cx="50%" cy="50%" outerRadius={85} innerRadius={40} dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {salesByCategory.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip formatter={(v: number) => fmt(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -379,195 +433,110 @@ export default function ExecutiveDashboardPage() {
         <div className="p-5 border-b cursor-pointer hover:bg-muted/30 transition-colors group"
           onClick={() => navigate('/reportes/vendedor')}>
           <h3 className="font-display font-semibold flex items-center gap-2 group-hover:text-primary transition-colors">
-            <Users size={18} className="text-primary" /> Ventas por vendedor
-            <span className="text-[10px] text-muted-foreground ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</span>
+            <Users size={18} className="text-primary" /> Ventas por vendedor (mes actual)
           </h3>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr><th>Vendedor</th><th>Ventas mes</th><th># Ventas</th><th>Ticket prom.</th><th>Tasa cierre</th></tr>
-          </thead>
-          <tbody>
-            {vendorData.map(v => (
-              <tr key={v.name} className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(`/reportes/vendedor?nombre=${encodeURIComponent(v.name)}`)}>
-                <td className="font-medium group-hover:text-primary">{v.name}</td>
-                <td className="font-bold">{fmt(v.sales)}</td>
-                <td>{v.deals}</td>
-                <td>{fmt(v.avgTicket)}</td>
-                <td>
-                  <span className={`font-semibold ${v.closeRate >= 50 ? 'text-success' : v.closeRate >= 30 ? 'text-warning' : 'text-destructive'}`}>
-                    {v.closeRate}%
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {vendorData.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Sin pedidos este mes</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr><th>Vendedor</th><th>Ventas mes</th><th># Pedidos</th><th>Ticket prom.</th></tr>
+            </thead>
+            <tbody>
+              {vendorData.map(v => (
+                <tr key={v.name} className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(`/reportes/vendedor?nombre=${encodeURIComponent(v.name)}`)}>
+                  <td className="font-medium">{v.name}</td>
+                  <td className="font-bold">{fmt(v.sales)}</td>
+                  <td>{v.deals}</td>
+                  <td>{fmt(v.avgTicket)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* ═══ SECCIÓN 3: INVENTARIO ═══ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <MetricCard title="Rotación inventario" value={`${inventoryRotation.toFixed(1)}x`} icon={Activity} variant="primary" subtitle="anual" href="/reportes/inventario" />
-        <MetricCard title="Días de inventario" value={daysOfInventory} icon={Clock} variant={daysOfInventory > 90 ? 'warning' : 'success'} subtitle={daysOfInventory <= 90 ? 'Saludable' : 'Excesivo'} onClick={() => setDaysDialog(true)} />
-        <MetricCard title="Inventario muerto" value={fmt(summary.deadStockValue)} icon={Skull} variant="danger" subtitle="> 180 días" onClick={() => setDeadDialog(true)} />
-        <MetricCard title="Productos excedentes" value={summary.excessProducts} icon={Layers} variant="warning" onClick={() => setExcessDialog(true)} />
-
-        {/* Simulador financiero KPI */}
-        <div {...clickCard('/reportes/simulador-financiero')} style={{ borderLeft: '4px solid hsl(var(--info))' }}>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Calculator size={14} /> Simulador financiero
-          </div>
-          <div className="text-xl font-bold group-hover:text-primary transition-colors">{fmt(fin.totalInventoryValue)}</div>
-          <div className="space-y-0.5 mt-2">
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">ROI inv.</span>
-              <span className="font-bold text-success">{fmtPct(fin.roi)}</span>
-            </div>
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">Capital lento</span>
-              <span className="font-bold text-warning">{fmt(fin.slowInventoryValue)}</span>
-            </div>
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para simulador →</div>
-        </div>
-
-        {/* Sobreinventario KPI */}
-        <div {...clickCard('/reportes/sobreinventario')} style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <PackageX size={14} /> Sobreinventario
-          </div>
-          <div className="text-xl font-bold text-warning group-hover:text-primary transition-colors">{summary.overstockProducts} <span className="text-xs font-normal text-muted-foreground">SKUs</span></div>
-          <div className="space-y-0.5 mt-2">
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">Capital excedente</span>
-              <span className="font-bold text-destructive">{fmt(summary.totalExcessValue)}</span>
-            </div>
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">Riesgo muerto</span>
-              <span className="font-bold text-destructive">{summary.overstockRiskProducts}</span>
-            </div>
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver detalle →</div>
-        </div>
-
-        {/* Planeación importaciones KPI */}
-        <div {...clickCard('/reportes/plan-importaciones')} style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <CalendarClock size={14} /> Plan importaciones
-          </div>
-          <div className="text-xl font-bold group-hover:text-primary transition-colors">{summary.purchaseUrgentProducts + summary.purchaseSoonProducts} <span className="text-xs font-normal text-muted-foreground">compras pendientes</span></div>
-          <div className="space-y-0.5 mt-2">
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">🔴 Urgentes</span>
-              <span className="font-bold text-destructive">{summary.purchaseUrgentProducts}</span>
-            </div>
-            <div className="text-[10px] flex justify-between">
-              <span className="text-muted-foreground">Inversión est.</span>
-              <span className="font-bold text-primary">{fmt(summary.nextPurchaseValue)}</span>
-            </div>
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click para ver plan →</div>
-        </div>
+      {/* ═══ SECCIÓN 3: INVENTARIO KPIs ═══ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <MetricCard title="Rotación inventario" value={inventoryRotation > 0 ? `${inventoryRotation.toFixed(1)}x` : '—'} icon={Activity} variant="primary" subtitle="anual" href="/reportes/inventario" />
+        <MetricCard title="Días de inventario" value={daysOfInventory > 0 ? daysOfInventory : '—'} icon={Clock} variant={daysOfInventory > 90 ? 'warning' : 'success'} subtitle={daysOfInventory <= 90 ? 'Saludable' : daysOfInventory > 0 ? 'Excesivo' : ''} href="/reportes/inventario" />
+        <MetricCard title="Cotizaciones abiertas" value={openQuotations.length} icon={FileText} variant="primary" subtitle={`${fmt(openQuotations.reduce((s, q) => s + q.total, 0))} en juego`} href="/cotizaciones" />
+        <MetricCard title="Ticket promedio" value={avgTicket > 0 ? fmt(avgTicket) : '—'} icon={Target} variant="primary" href="/reportes/ventas" />
       </div>
 
       {/* ═══ SECCIÓN 4: IMPORTACIONES ═══ */}
-      <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate('/importaciones')}>
-        <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
-          <Globe size={18} className="text-primary" /> Importaciones activas
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {demoImports.map(imp => (
-            <div key={imp.id} className="p-4 rounded-xl bg-muted/50 border">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-sm">{imp.orderNumber}</span>
-                <StatusBadge status={imp.status} type="import" />
+      {dbImports.length > 0 && (
+        <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate('/importaciones')}>
+          <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
+            <Globe size={18} className="text-primary" /> Importaciones activas
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {dbImports.slice(0, 6).map(imp => (
+              <div key={imp.id} className="p-4 rounded-xl bg-muted/50 border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-sm">{imp.order_number}</span>
+                  <StatusBadge status={imp.status} type="import" />
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">{imp.supplier}</p>
+                <div className="space-y-1 text-xs">
+                  {(imp.items as any[])?.slice(0, 3).map((item: any, i: number) => (
+                    <div key={i} className="flex justify-between">
+                      <span className="text-muted-foreground truncate mr-2">{item.productName}</span>
+                      <span className="font-medium">{item.qty} uds</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between mt-3 pt-2 border-t text-xs">
+                  <span className="text-muted-foreground">ETA: {imp.estimated_arrival || '—'}</span>
+                  <span className="font-semibold">{imp.days_in_transit}d tránsito</span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mb-2">{imp.supplier}</p>
-              <div className="space-y-1 text-xs">
-                {imp.items.map((item, i) => (
-                  <div key={i} className="flex justify-between">
-                    <span className="text-muted-foreground truncate mr-2">{item.productName}</span>
-                    <span className="font-medium">{item.qty} uds</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between mt-3 pt-2 border-t text-xs">
-                <span className="text-muted-foreground">ETA: {imp.estimatedArrival}</span>
-                <span className="font-semibold">{imp.daysInTransit}d tránsito</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ═══ SECCIÓN 5: CRM Y MARKETING ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate('/crm')}>
-          <h3 className="font-display font-semibold mb-4">Leads y conversión</h3>
+          <h3 className="font-display font-semibold mb-4">Clientes y conversión</h3>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{totalLeads}</div>
-              <div className="text-[10px] text-muted-foreground">Leads totales</div>
+              <div className="text-2xl font-bold text-primary">{dbCustomers.length}</div>
+              <div className="text-[10px] text-muted-foreground">Clientes</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-success">{closedDeals}</div>
-              <div className="text-[10px] text-muted-foreground">Ventas cerradas</div>
+              <div className="text-2xl font-bold text-success">{acceptedQuotations.length}</div>
+              <div className="text-[10px] text-muted-foreground">Cot. aceptadas</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold">{fmtPct(conversionRate)}</div>
-              <div className="text-[10px] text-muted-foreground">Conversión</div>
+              <div className="text-2xl font-bold">{dbOrders.filter(o => o.status !== 'cancelado').length}</div>
+              <div className="text-[10px] text-muted-foreground">Pedidos totales</div>
             </div>
           </div>
         </div>
 
         <div className="bg-card rounded-xl border p-5">
-          <h3 className="font-display font-semibold mb-4">Ventas por canal</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={leadsBySource} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={90} />
-              <Tooltip />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Leads" />
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 className="font-display font-semibold mb-4">Clientes por canal</h3>
+          {leadsBySource.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12">Sin datos aún</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={leadsBySource} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={90} />
+                <Tooltip />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Clientes" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
-      {/* ═══ SECCIÓN 6: RENTABILIDAD POR PRODUCTO ═══ */}
-      <div className="bg-card rounded-xl border overflow-x-auto cursor-pointer hover:shadow-lg transition-all"
-        onClick={() => navigate('/reportes/rentabilidad')}>
-        <div className="p-5 border-b">
-          <h3 className="font-display font-semibold flex items-center gap-2">
-            <Star size={18} className="text-warning" /> Rentabilidad por producto (Top 8)
-            <span className="text-[10px] text-muted-foreground ml-2">Click para ver reporte completo →</span>
-          </h3>
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr><th>Producto</th><th>Precio prom.</th><th>Costo</th><th>Utilidad/ud</th><th>Margen %</th><th>Utilidad anual est.</th></tr>
-          </thead>
-          <tbody>
-            {profitRanking.map(a => (
-              <tr key={a.product.id}>
-                <td className="font-medium">{a.product.name}</td>
-                <td>{fmt(a.product.listPrice)}</td>
-                <td className="text-muted-foreground">{fmt(a.product.cost)}</td>
-                <td className="font-semibold text-success">{fmt(a.product.listPrice - a.product.cost)}</td>
-                <td>
-                  <span className={`font-bold ${a.margin >= 40 ? 'text-success' : a.margin >= 30 ? 'text-primary' : 'text-destructive'}`}>
-                    {a.margin}%
-                  </span>
-                </td>
-                <td className="font-bold">{fmt(a.annualProfit)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ═══ SECCIÓN 7: ALERTAS ═══ */}
+      {/* ═══ SECCIÓN 6: ALERTAS ═══ */}
       <div className="bg-card rounded-xl border p-5">
         <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
           <AlertTriangle size={18} className="text-warning" /> Alertas del negocio
@@ -584,7 +553,6 @@ export default function ExecutiveDashboardPage() {
               onClick={() => {
                 if (alert.type === 'danger') navigate('/reportes/bajo-stock');
                 else if (alert.message.includes('vencido')) navigate('/cobranza');
-                else if (alert.message.includes('rotación')) navigate('/reportes/inventario-muerto');
                 else navigate('/importaciones');
               }}
             >
@@ -596,43 +564,12 @@ export default function ExecutiveDashboardPage() {
             </div>
           ))}
           {alerts.length === 0 && (
-            <p className="text-muted-foreground text-center py-4">Sin alertas activas</p>
+            <p className="text-muted-foreground text-center py-4">Sin alertas activas — alimenta datos para ver señales</p>
           )}
         </div>
       </div>
 
-      {/* ═══ SECCIÓN 8: DECISIONES ESTRATÉGICAS ═══ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div {...clickCard('/reportes/ventas-sku')}>
-          <Zap size={20} className="mx-auto text-primary mb-2" />
-          <div className="text-[10px] text-muted-foreground mb-1 text-center">Más vendido</div>
-          <div className="text-sm font-bold truncate text-center">{mostSold?.product.name}</div>
-          <div className="text-xs text-muted-foreground text-center">{mostSold?.monthlySales.toFixed(1)}/mes</div>
-        </div>
-        <div {...clickCard('/reportes/rentabilidad')}>
-          <Star size={20} className="mx-auto text-warning mb-2" />
-          <div className="text-[10px] text-muted-foreground mb-1 text-center">Más rentable</div>
-          <div className="text-sm font-bold truncate text-center">{mostProfitable?.product.name}</div>
-          <div className="text-xs text-success font-semibold text-center">{mostProfitable?.margin}% margen</div>
-        </div>
-        <div {...clickCard('/reportes/inventario-muerto')}>
-          <Skull size={20} className="mx-auto text-destructive mb-2" />
-          <div className="text-[10px] text-muted-foreground mb-1 text-center">Menor rotación</div>
-          <div className="text-sm font-bold truncate text-center">{lowestRotation?.product.name}</div>
-          <div className="text-xs text-destructive text-center">{lowestRotation?.daysOfStock > 900 ? '> 1 año' : `${lowestRotation?.daysOfStock}d`}</div>
-        </div>
-        <div {...clickCard('/reportes/vendedor')}>
-          <Crown size={20} className="mx-auto text-success mb-2" />
-          <div className="text-[10px] text-muted-foreground mb-1 text-center">Mayor conversión</div>
-          <div className="text-sm font-bold truncate text-center">{topVendor?.name}</div>
-          <div className="text-xs text-success font-semibold text-center">{topVendor?.closeRate}% cierre</div>
-        </div>
-      </div>
-
-      {/* ═══ SECCIÓN: COMPARATIVO DE VENTAS ═══ */}
-      <SalesComparative />
-
-      {/* ═══ SECCIÓN 9: INDICADORES ESTRATÉGICOS ═══ */}
+      {/* ═══ SECCIÓN 7: INDICADORES ESTRATÉGICOS ═══ */}
       <div className="bg-card rounded-xl border p-5">
         <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
           <BarChart3 size={18} className="text-primary" /> Indicadores estratégicos
@@ -641,16 +578,16 @@ export default function ExecutiveDashboardPage() {
           {[
             { label: 'Ventas mensuales', value: fmt(salesMonth), path: '/reportes/ventas' },
             { label: 'Utilidad neta', value: fmt(netProfit), path: '/reportes/rentabilidad' },
-            { label: 'Margen neto', value: fmtPct(netMargin), path: '/reportes/rentabilidad' },
-            { label: 'EBITDA', value: fmt(ebitda), path: '/reportes/rentabilidad' },
-            { label: 'Inventario total', value: fmt(summary.totalStockValue), path: '/reportes/inventario' },
-            { label: 'Rotación inv.', value: `${inventoryRotation.toFixed(1)}x`, path: '/reportes/inventario' },
-            { label: 'Flujo efectivo', value: fmt(netCashFlow), path: '/cobranza' },
+            { label: 'Margen neto', value: salesMonth > 0 ? fmtPct(netMargin) : '—', path: '/reportes/rentabilidad' },
+            { label: 'Margen bruto', value: grossMarginPct > 0 ? fmtPct(grossMarginPct) : '—', path: '/reportes/rentabilidad' },
+            { label: 'Inventario total', value: fmt(inventoryData.totalValue), path: '/reportes/inventario' },
+            { label: 'Rotación inv.', value: inventoryRotation > 0 ? `${inventoryRotation.toFixed(1)}x` : '—', path: '/reportes/inventario' },
             { label: 'Ctas. x cobrar', value: fmt(totalReceivable), path: '/cobranza' },
-            { label: 'Ctas. x pagar', value: fmt(totalPayable), path: '/importaciones' },
-            { label: 'Ticket promedio', value: fmt(dashboardMetrics.avgTicket), path: '/reportes/ventas' },
-            { label: 'Crecimiento mensual', value: fmtPct(growthMoM), path: '/reportes/ventas' },
-            { label: 'Margen bruto', value: fmtPct(dashboardMetrics.grossMargin), path: '/reportes/rentabilidad' },
+            { label: 'Ctas. x pagar', value: fmt(totalPayable), path: '/cuentas-por-pagar' },
+            { label: 'Ticket promedio', value: avgTicket > 0 ? fmt(avgTicket) : '—', path: '/reportes/ventas' },
+            { label: 'Crecimiento mensual', value: monthlySales.length >= 2 ? fmtPct(growthMoM) : '—', path: '/reportes/ventas' },
+            { label: 'Cotizaciones abiertas', value: String(openQuotations.length), path: '/cotizaciones' },
+            { label: 'Gastos del mes', value: fmt(monthlyExpenses), path: '/gastos-operativos' },
           ].map((kpi, i) => (
             <div key={i} className="bg-muted/40 rounded-lg p-3 text-center cursor-pointer hover:bg-primary/10 hover:scale-[1.03] transition-all"
               onClick={() => navigate(kpi.path)}>
@@ -661,17 +598,17 @@ export default function ExecutiveDashboardPage() {
         </div>
       </div>
 
-      {/* ═══ SECCIÓN 10: ACCESOS RÁPIDOS ═══ */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* ═══ SECCIÓN 8: ACCESOS RÁPIDOS ═══ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Reporte ventas', path: '/reportes/ventas', icon: DollarSign, color: 'bg-primary/10 text-primary' },
-          { label: 'Ventas por SKU', path: '/reportes/ventas-sku', icon: BarChart3, color: 'bg-chart-2/10 text-chart-2' },
-          { label: 'Inventario muerto', path: '/reportes/inventario-muerto', icon: Skull, color: 'bg-destructive/10 text-destructive' },
-          { label: 'Por agotarse', path: '/reportes/bajo-stock', icon: AlertTriangle, color: 'bg-warning/10 text-warning' },
-          { label: 'Sobreinventario', path: '/reportes/sobreinventario', icon: PackageX, color: 'bg-warning/10 text-warning' },
-          { label: 'Plan importaciones', path: '/reportes/plan-importaciones', icon: CalendarClock, color: 'bg-primary/10 text-primary' },
+          { label: 'Inventario', path: '/reportes/inventario', icon: Package, color: 'bg-warning/10 text-warning' },
+          { label: 'Cobranza', path: '/cobranza', icon: CreditCard, color: 'bg-info/10 text-info' },
           { label: 'Rentabilidad', path: '/reportes/rentabilidad', icon: Star, color: 'bg-success/10 text-success' },
-          { label: 'Simulador financiero', path: '/reportes/simulador-financiero', icon: Calculator, color: 'bg-info/10 text-info' },
+          { label: 'Importaciones', path: '/importaciones', icon: Globe, color: 'bg-primary/10 text-primary' },
+          { label: 'Cotizaciones', path: '/cotizaciones', icon: FileText, color: 'bg-warning/10 text-warning' },
+          { label: 'CRM / Clientes', path: '/crm', icon: Users, color: 'bg-info/10 text-info' },
+          { label: 'Dashboard CFO', path: '/cfo', icon: Calculator, color: 'bg-success/10 text-success' },
         ].map(item => (
           <Link
             key={item.path}
@@ -686,66 +623,6 @@ export default function ExecutiveDashboardPage() {
           </Link>
         ))}
       </div>
-
-      {/* ═══ ASISTENTE COMERCIAL — Métricas Director ═══ */}
-      {(() => {
-        const assistRecs = generateDailyRecommendations();
-        const assistSummary = getAssistantSummary(assistRecs);
-        const byVendor: Record<string, { total: number; worked: number }> = {};
-        assistRecs.forEach(r => {
-          if (!byVendor[r.vendorName]) byVendor[r.vendorName] = { total: 0, worked: 0 };
-          byVendor[r.vendorName].total++;
-          if (r.worked) byVendor[r.vendorName].worked++;
-        });
-        return (
-          <div className="bg-card rounded-xl border p-5">
-            <h3 className="font-display font-semibold flex items-center gap-2 mb-4">
-              <Zap size={18} className="text-primary" /> Asistente Comercial — Métricas
-            </h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div className="p-3 rounded-lg bg-muted/50 text-center">
-                <div className="text-2xl font-bold">{assistSummary.total}</div>
-                <div className="text-xs text-muted-foreground">Oportunidades generadas</div>
-              </div>
-              <div className="p-3 rounded-lg bg-success/5 text-center">
-                <div className="text-2xl font-bold text-success">{assistSummary.workedCount}</div>
-                <div className="text-xs text-muted-foreground">Trabajadas</div>
-              </div>
-              <div className="p-3 rounded-lg bg-primary/5 text-center">
-                <div className="text-2xl font-bold text-primary">{assistSummary.complianceRate}%</div>
-                <div className="text-xs text-muted-foreground">Tasa cumplimiento</div>
-              </div>
-              <div className="p-3 rounded-lg bg-warning/5 text-center">
-                <div className="text-2xl font-bold text-warning">{assistSummary.closedCount}</div>
-                <div className="text-xs text-muted-foreground">Ventas cerradas</div>
-              </div>
-            </div>
-            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Cumplimiento por vendedor</h4>
-            <div className="space-y-2">
-              {Object.entries(byVendor).map(([name, data]) => {
-                const pct = data.total > 0 ? Math.round((data.worked / data.total) * 100) : 0;
-                return (
-                  <div key={name} className="flex items-center gap-3">
-                    <span className="text-sm w-40 truncate">{name}</span>
-                    <div className="flex-1 bg-muted rounded-full h-2">
-                      <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-xs font-medium w-12 text-right">{pct}%</span>
-                    <span className="text-[10px] text-muted-foreground w-16 text-right">{data.worked}/{data.total}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ═══ SECCIONES COMERCIALES ═══ */}
-      <CommercialSections />
-      {/* ═══ DRILL-DOWN DIALOGS ═══ */}
-      <DaysOfInventoryDialog open={daysDialog} onOpenChange={setDaysDialog} analyses={analyses} />
-      <DeadStockDialog open={deadDialog} onOpenChange={setDeadDialog} analyses={analyses} />
-      <ExcessStockDialog open={excessDialog} onOpenChange={setExcessDialog} analyses={analyses} />
     </div>
   );
 }
