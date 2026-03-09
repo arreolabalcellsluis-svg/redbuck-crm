@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { demoOrders, demoProducts, demoCustomers, demoUsers } from '@/data/demo-data';
-import { CATEGORY_LABELS, OrderStatus } from '@/types';
+import { useOrders } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
+import { CATEGORY_LABELS } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CalendarIcon, Search, X, FileSpreadsheet, Download, ShoppingCart, DollarSign, Users, Receipt, ArrowUpDown, Eye } from 'lucide-react';
-import { format, subMonths, startOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, subMonths, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
@@ -32,7 +33,6 @@ interface OrderRecord {
   total: number;
   status: string;
   vendorName: string;
-  notes?: string;
 }
 
 const ORDER_STATUSES: { value: string; label: string }[] = [
@@ -53,75 +53,6 @@ const ORDER_STATUSES: { value: string; label: string }[] = [
 
 const statusLabel = (s: string) => ORDER_STATUSES.find(st => st.value === s)?.label || s;
 
-// Flatten demo orders into line-item records plus generate more history
-function generateOrderHistory(): OrderRecord[] {
-  const records: OrderRecord[] = [];
-
-  // Expand real orders
-  demoOrders.forEach(order => {
-    order.items.forEach(item => {
-      const product = demoProducts.find(p => p.name === item.productName || p.name.includes(item.productName.split(' ')[0]));
-      const subtotal = item.qty * item.unitPrice;
-      const tax = Math.round(subtotal * 0.16);
-      records.push({
-        id: `oh-${order.id}-${item.productName.slice(0, 5)}`,
-        date: order.createdAt,
-        folio: order.folio,
-        customerName: order.customerName,
-        productName: item.productName,
-        category: product ? (CATEGORY_LABELS[product.category] || product.category) : 'Otros',
-        qty: item.qty,
-        unitPrice: item.unitPrice,
-        subtotal,
-        tax,
-        total: subtotal + tax,
-        status: order.status,
-        vendorName: order.vendorName,
-      });
-    });
-  });
-
-  // Generate additional historical records
-  const customers = demoCustomers;
-  const products = demoProducts;
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
-  const statuses: OrderStatus[] = ['entregado', 'confirmado', 'en_entrega', 'surtido_total', 'nuevo'];
-
-  const dates = [
-    '2025-09-10', '2025-09-25', '2025-10-05', '2025-10-18', '2025-11-02',
-    '2025-11-15', '2025-11-28', '2025-12-03', '2025-12-15', '2026-01-08',
-    '2026-01-20', '2026-02-05', '2026-02-18',
-  ];
-
-  dates.forEach((date, i) => {
-    const customer = customers[i % customers.length];
-    const product = products[i % products.length];
-    const vendor = vendors[i % vendors.length];
-    const qty = Math.floor(Math.random() * 3) + 1;
-    const subtotal = product.listPrice * qty;
-    const tax = Math.round(subtotal * 0.16);
-    records.push({
-      id: `oh-gen-${i}`,
-      date,
-      folio: `PED-${date.slice(0, 4)}-${String(100 + i).padStart(3, '0')}`,
-      customerName: customer.name,
-      productName: product.name,
-      category: CATEGORY_LABELS[product.category] || product.category,
-      qty,
-      unitPrice: product.listPrice,
-      subtotal,
-      tax,
-      total: subtotal + tax,
-      status: i < dates.length - 3 ? 'entregado' : statuses[i % statuses.length],
-      vendorName: vendor.name,
-    });
-  });
-
-  return records.sort((a, b) => b.date.localeCompare(a.date));
-}
-
-const allRecords = generateOrderHistory();
-
 const DATE_PRESETS = [
   { label: 'Hoy', getRange: () => ({ from: new Date(), to: new Date() }) },
   { label: 'Esta semana', getRange: () => ({ from: startOfWeek(new Date(), { weekStartsOn: 1 }), to: endOfWeek(new Date(), { weekStartsOn: 1 }) }) },
@@ -132,6 +63,38 @@ const DATE_PRESETS = [
 type SortKey = 'date' | 'folio' | 'customerName' | 'total' | 'status';
 
 export default function OrderHistoryPage() {
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbProducts = [] } = useProducts();
+
+  // Flatten real orders into line-item records
+  const allRecords = useMemo<OrderRecord[]>(() => {
+    const records: OrderRecord[] = [];
+    dbOrders.forEach(order => {
+      const items = order.items as any[];
+      items?.forEach((item: any) => {
+        const product = dbProducts.find(p => p.name === item.productName);
+        const subtotal = (item.qty || 1) * (item.unitPrice || 0);
+        const tax = Math.round(subtotal * 0.16);
+        records.push({
+          id: `oh-${order.id}-${(item.productName || '').slice(0, 5)}`,
+          date: order.created_at?.slice(0, 10) || '',
+          folio: order.folio,
+          customerName: order.customer_name,
+          productName: item.productName || '',
+          category: product ? (CATEGORY_LABELS[product.category as keyof typeof CATEGORY_LABELS] || product.category) : 'Otros',
+          qty: item.qty || 1,
+          unitPrice: item.unitPrice || 0,
+          subtotal,
+          tax,
+          total: subtotal + tax,
+          status: order.status,
+          vendorName: order.vendor_name,
+        });
+      });
+    });
+    return records.sort((a, b) => b.date.localeCompare(a.date));
+  }, [dbOrders, dbProducts]);
+
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [search, setSearch] = useState('');
@@ -158,14 +121,13 @@ export default function OrderHistoryPage() {
     if (customer) data = data.filter(r => r.customerName === customer);
     if (category) data = data.filter(r => r.category === category);
     if (status) data = data.filter(r => r.status === status);
-
     data.sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey];
       const cmp = typeof av === 'number' ? (av as number) - (bv as number) : String(av).localeCompare(String(bv));
       return sortAsc ? cmp : -cmp;
     });
     return data;
-  }, [dateFrom, dateTo, search, customer, category, status, sortKey, sortAsc]);
+  }, [allRecords, dateFrom, dateTo, search, customer, category, status, sortKey, sortAsc]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -283,7 +245,7 @@ export default function OrderHistoryPage() {
           </TableHeader>
           <TableBody>
             {paged.length === 0 && (
-              <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Sin resultados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Sin pedidos registrados</TableCell></TableRow>
             )}
             {paged.map(r => (
               <TableRow key={r.id}>
@@ -335,7 +297,6 @@ export default function OrderHistoryPage() {
               <Row label="Total" value={fmt(detailRecord.total)} bold />
               <Row label="Estatus" value={statusLabel(detailRecord.status)} />
               <Row label="Vendedor" value={detailRecord.vendorName} />
-              {detailRecord.notes && <Row label="Notas" value={detailRecord.notes} />}
             </div>
           )}
         </DialogContent>
@@ -355,13 +316,13 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 
 function OrderStatusPill({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    entregado: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    confirmado: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    en_entrega: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    entregado: 'bg-success/10 text-success',
+    confirmado: 'bg-info/10 text-info',
+    en_entrega: 'bg-primary/10 text-primary',
     nuevo: 'bg-muted text-muted-foreground',
-    cancelado: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    surtido_total: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-    surtido_parcial: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    cancelado: 'bg-destructive/10 text-destructive',
+    surtido_total: 'bg-success/10 text-success',
+    surtido_parcial: 'bg-warning/10 text-warning',
   };
   return <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', colors[status] || 'bg-muted text-muted-foreground')}>{statusLabel(status)}</span>;
 }

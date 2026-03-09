@@ -1,287 +1,203 @@
+/**
+ * Daily Assistant Page — Uses real DB data.
+ * Shows actionable commercial recommendations based on quotations, activities, and customers.
+ */
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import {
-  generateDailyRecommendations, getAssistantSummary, refreshRecommendations,
-  REASON_LABELS, REASON_ICONS, type DailyRecommendation, type RecommendationPriority, type RecommendationReason,
-} from '@/lib/dailyAssistantEngine';
-import { useAppContext } from '@/contexts/AppContext';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useActivities } from '@/hooks/useActivities';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useOrders } from '@/hooks/useOrders';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import MetricCard from '@/components/shared/MetricCard';
 import { Input } from '@/components/ui/input';
 import {
-  Brain, Search, Filter, Phone, MessageCircle, FileText, CalendarPlus,
-  CheckCircle2, Trophy, ArrowRight, Sparkles, Download, RefreshCw,
-  Zap, Target, TrendingUp, AlertTriangle,
+  Brain, Search, Phone, MessageCircle, FileText,
+  CheckCircle2, Zap, Target, TrendingUp, AlertTriangle, Clock,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-const PRIORITY_STYLES: Record<RecommendationPriority, string> = {
+interface Recommendation {
+  id: string;
+  customerName: string;
+  vendorName: string;
+  reason: string;
+  priority: 'alta' | 'media' | 'baja';
+  value: number;
+  action: string;
+  detail: string;
+}
+
+const PRIORITY_STYLES: Record<string, string> = {
   alta: 'bg-destructive/10 text-destructive border-destructive/20',
   media: 'bg-warning/10 text-warning border-warning/20',
   baja: 'bg-muted text-muted-foreground border-border',
 };
 
-const PRIORITY_LABELS: Record<RecommendationPriority, string> = {
-  alta: 'Alta', media: 'Media', baja: 'Baja',
-};
-
 export default function DailyAssistantPage() {
-  const { currentRole } = useAppContext();
-  const navigate = useNavigate();
-  const [recs, setRecs] = useState<DailyRecommendation[]>(() => generateDailyRecommendations());
-  const [search, setSearch] = useState('');
-  const [filterPriority, setFilterPriority] = useState<RecommendationPriority | 'todas'>('todas');
-  const [filterReason, setFilterReason] = useState<RecommendationReason | 'todas'>('todas');
-  const [filterVendor, setFilterVendor] = useState('todos');
-  const [showWorked, setShowWorked] = useState(false);
+  const { data: dbQuotations = [] } = useQuotations();
+  const { data: dbActivities = [] } = useActivities();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbTeam = [] } = useTeamMembers();
 
-  const vendors = useMemo(() => {
-    const set = new Set(recs.map(r => r.vendorName));
-    return Array.from(set).sort();
-  }, [recs]);
+  const [search, setSearch] = useState('');
+  const [filterPriority, setFilterPriority] = useState<string>('');
+
+  // Generate recommendations from real data
+  const recommendations = useMemo<Recommendation[]>(() => {
+    const recs: Recommendation[] = [];
+
+    // 1. Hot quotations (seguimiento/vista status)
+    dbQuotations
+      .filter(q => q.status === 'seguimiento' || q.status === 'vista')
+      .forEach(q => {
+        recs.push({
+          id: `hot-${q.id}`,
+          customerName: q.customer_name,
+          vendorName: q.vendor_name,
+          reason: 'Cotización caliente',
+          priority: 'alta',
+          value: q.total,
+          action: 'Dar seguimiento inmediato',
+          detail: `Cotización ${q.folio} — ${fmt(q.total)}`,
+        });
+      });
+
+    // 2. Open quotations without follow-up
+    dbQuotations
+      .filter(q => q.status === 'enviada')
+      .forEach(q => {
+        recs.push({
+          id: `open-${q.id}`,
+          customerName: q.customer_name,
+          vendorName: q.vendor_name,
+          reason: 'Cotización abierta',
+          priority: 'media',
+          value: q.total,
+          action: 'Contactar cliente',
+          detail: `Cotización ${q.folio} enviada — pendiente respuesta`,
+        });
+      });
+
+    // 3. Pending activities
+    dbActivities
+      .filter(a => a.status === 'pendiente' && new Date(a.date) <= new Date())
+      .forEach(a => {
+        recs.push({
+          id: `act-${a.id}`,
+          customerName: a.customerName || a.leadName || 'Sin cliente',
+          vendorName: a.responsibleName,
+          reason: 'Actividad pendiente',
+          priority: new Date(a.date) < new Date(Date.now() - 86400000) ? 'alta' : 'media',
+          value: 0,
+          action: a.title,
+          detail: `${a.type} — ${a.notes || 'Sin notas'}`,
+        });
+      });
+
+    return recs.sort((a, b) => {
+      const pOrder = { alta: 0, media: 1, baja: 2 };
+      return (pOrder[a.priority] || 2) - (pOrder[b.priority] || 2);
+    });
+  }, [dbQuotations, dbActivities]);
 
   const filtered = useMemo(() => {
-    let list = recs;
-    if (!showWorked) list = list.filter(r => !r.worked && !r.closed);
-    if (filterPriority !== 'todas') list = list.filter(r => r.priority === filterPriority);
-    if (filterReason !== 'todas') list = list.filter(r => r.reason === filterReason);
-    if (filterVendor !== 'todos') list = list.filter(r => r.vendorName === filterVendor);
+    let data = recommendations;
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter(r =>
-        r.customerName.toLowerCase().includes(s) ||
-        r.suggestedProduct.toLowerCase().includes(s) ||
-        r.city.toLowerCase().includes(s) ||
-        r.vendorName.toLowerCase().includes(s)
-      );
+      data = data.filter(r => r.customerName.toLowerCase().includes(s) || r.vendorName.toLowerCase().includes(s) || r.reason.toLowerCase().includes(s));
     }
-    return list;
-  }, [recs, search, filterPriority, filterReason, filterVendor, showWorked]);
+    if (filterPriority) data = data.filter(r => r.priority === filterPriority);
+    return data;
+  }, [recommendations, search, filterPriority]);
 
-  const summary = useMemo(() => getAssistantSummary(recs), [recs]);
-
-  const markWorked = (id: string) => {
-    setRecs(prev => prev.map(r => r.id === id ? { ...r, worked: true } : r));
-    toast.success('Oportunidad marcada como trabajada');
-  };
-
-  const markClosed = (id: string) => {
-    setRecs(prev => prev.map(r => r.id === id ? { ...r, closed: true, worked: true } : r));
-    toast.success('¡Venta cerrada! 🎉');
-  };
-
-  const openWhatsApp = (rec: DailyRecommendation) => {
-    const customer = rec.customerName;
-    const msg = encodeURIComponent(`Hola, le contacto de REDBUCK Equipment respecto a ${rec.suggestedProduct}. ¿Tiene un momento para platicar?`);
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
-    toast.info(`WhatsApp para ${customer}`);
-  };
-
-  const handleRefresh = () => {
-    setRecs(refreshRecommendations());
-    toast.success('Recomendaciones actualizadas');
-  };
-
-  const exportData = (format: 'csv' | 'xlsx') => {
-    const rows = filtered.map(r => ({
-      Cliente: r.customerName,
-      Empresa: r.company,
-      Ciudad: r.city,
-      Vendedor: r.vendorName,
-      Motivo: r.reasonLabel,
-      'Producto Sugerido': r.suggestedProduct,
-      Prioridad: PRIORITY_LABELS[r.priority],
-      Score: r.score,
-      'Última Actividad': r.lastActivity,
-      'Acción Sugerida': r.suggestedAction,
-      'Valor Estimado': r.estimatedValue,
-      Trabajada: r.worked ? 'Sí' : 'No',
-      Cerrada: r.closed ? 'Sí' : 'No',
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Asistente');
-    if (format === 'csv') {
-      const csv = XLSX.utils.sheet_to_csv(ws);
-      saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'asistente-comercial.csv');
-    } else {
-      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      saveAs(new Blob([buf]), 'asistente-comercial.xlsx');
-    }
-    toast.success(`Exportado a ${format.toUpperCase()}`);
-  };
+  const highCount = recommendations.filter(r => r.priority === 'alta').length;
+  const totalValue = recommendations.filter(r => r.value > 0).reduce((s, r) => s + r.value, 0);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="page-header">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Brain size={20} className="text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="page-title">Asistente Comercial Diario</h1>
-            <p className="page-subtitle">Hoy puedes cerrar estas ventas — {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          </div>
-        </div>
-        <div className="flex gap-2 mt-3 sm:mt-0">
-          <button onClick={handleRefresh} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-muted transition-colors">
-            <RefreshCw size={14} /> Actualizar
-          </button>
-          <button onClick={() => exportData('xlsx')} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-muted transition-colors">
-            <Download size={14} /> Excel
-          </button>
-          <button onClick={() => exportData('csv')} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-muted transition-colors">
-            <Download size={14} /> CSV
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <MetricCard title="Oportunidades Hoy" value={summary.total} icon={Sparkles} variant="primary" />
-        <MetricCard title="Alta Prioridad" value={summary.alta} icon={Zap} variant="danger" />
-        <MetricCard title="Media Prioridad" value={summary.media} icon={Target} variant="warning" />
-        <MetricCard title="Baja Prioridad" value={summary.baja} icon={TrendingUp} />
-        <MetricCard title="Valor Total" value={fmt(summary.totalValue)} icon={Trophy} variant="success" />
-        <MetricCard title="Tasa Cumplimiento" value={`${summary.complianceRate}%`} icon={CheckCircle2} variant="info" />
-      </div>
-
-      {/* Filters */}
-      <div className="bg-card rounded-xl border p-4">
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar cliente, producto, ciudad..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as any)}
-            className="h-10 rounded-md border bg-background px-3 text-sm">
-            <option value="todas">Todas las prioridades</option>
-            <option value="alta">🔴 Alta</option>
-            <option value="media">🟡 Media</option>
-            <option value="baja">⚪ Baja</option>
-          </select>
-          <select value={filterReason} onChange={e => setFilterReason(e.target.value as any)}
-            className="h-10 rounded-md border bg-background px-3 text-sm">
-            <option value="todas">Todos los motivos</option>
-            {Object.entries(REASON_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>{REASON_ICONS[k as RecommendationReason]} {v}</option>
-            ))}
-          </select>
-          <select value={filterVendor} onChange={e => setFilterVendor(e.target.value)}
-            className="h-10 rounded-md border bg-background px-3 text-sm">
-            <option value="todos">Todos los vendedores</option>
-            {vendors.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={showWorked} onChange={e => setShowWorked(e.target.checked)}
-              className="rounded border-input" />
-            Mostrar trabajadas
-          </label>
-        </div>
-      </div>
-
-      {/* Results count */}
-      <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-3">
+          <Brain size={24} className="text-primary" />
+          Asistente Comercial Diario
+        </h1>
         <p className="text-sm text-muted-foreground">
-          {filtered.length} oportunidad{filtered.length !== 1 ? 'es' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
+          Recomendaciones priorizadas basadas en cotizaciones, actividades y clientes reales.
         </p>
       </div>
 
-      {/* Recommendations list */}
-      <div className="space-y-3">
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Brain size={48} className="mx-auto mb-4 opacity-30" />
-            <p className="text-lg font-medium">No hay oportunidades pendientes</p>
-            <p className="text-sm">¡Excelente trabajo! Todas las oportunidades han sido trabajadas.</p>
-          </div>
-        )}
-        {filtered.map(rec => (
-          <div key={rec.id}
-            className={`bg-card rounded-xl border p-4 hover:shadow-md transition-all ${rec.worked ? 'opacity-60' : ''} ${rec.closed ? 'border-success/30 bg-success/5' : ''}`}>
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-              {/* Main info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-lg">{REASON_ICONS[rec.reason]}</span>
-                  <h3 className="font-semibold truncate">{rec.customerName}</h3>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${PRIORITY_STYLES[rec.priority]}`}>
-                    {PRIORITY_LABELS[rec.priority]}
-                  </span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    Score: {rec.score}
-                  </span>
-                  {rec.quotationFolio && (
-                    <span className="text-xs text-muted-foreground">
-                      📄 {rec.quotationFolio}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {rec.city} · {rec.vendorName} · {rec.reasonLabel}
-                </p>
-                <div className="flex items-center gap-4 mt-2 text-sm">
-                  <span className="font-medium text-primary">{rec.suggestedProduct}</span>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="font-semibold">{fmt(rec.estimatedValue)}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <ArrowRight size={12} /> {rec.suggestedAction}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-1">Última actividad: {rec.lastActivity}</p>
-              </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <MetricCard title="Recomendaciones" value={String(recommendations.length)} icon={Zap} />
+        <MetricCard title="Prioridad alta" value={String(highCount)} icon={AlertTriangle} variant="danger" />
+        <MetricCard title="Valor en juego" value={fmt(totalValue)} icon={Target} variant="primary" />
+        <MetricCard title="Cotizaciones abiertas" value={String(dbQuotations.filter(q => ['enviada', 'seguimiento', 'vista'].includes(q.status)).length)} icon={FileText} />
+      </div>
 
-              {/* Quick actions */}
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <button onClick={() => toast.info(`Llamando a ${rec.customerName}...`)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-muted transition-colors"
-                  title="Llamar">
-                  <Phone size={13} /> Llamar
-                </button>
-                <button onClick={() => openWhatsApp(rec)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-success/10 hover:border-success/30 transition-colors"
-                  title="WhatsApp">
-                  <MessageCircle size={13} /> WhatsApp
-                </button>
-                <button onClick={() => toast.info('Crear cotización...')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-primary/10 hover:border-primary/30 transition-colors"
-                  title="Cotizar">
-                  <FileText size={13} /> Cotizar
-                </button>
-                <button onClick={() => navigate('/crm/agenda', { state: { newActivityForCustomer: { customerId: rec.customerId, customerName: rec.customerName, vendorName: rec.vendorName, suggestedProduct: rec.suggestedProduct } } })}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-info/10 hover:border-info/30 transition-colors"
-                  title="Registrar actividad">
-                  <CalendarPlus size={13} /> Actividad
-                </button>
-                {!rec.worked && (
-                  <button onClick={() => markWorked(rec.id)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border hover:bg-warning/10 hover:border-warning/30 transition-colors"
-                    title="Marcar como trabajada">
-                    <CheckCircle2 size={13} /> Trabajada
-                  </button>
-                )}
-                {!rec.closed && (
-                  <button onClick={() => markClosed(rec.id)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-colors font-medium"
-                    title="Marcar como venta cerrada">
-                    <Trophy size={13} /> Cerrada
-                  </button>
-                )}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative max-w-sm">
+          <Search size={14} className="absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar cliente o vendedor..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-9 text-sm"
+          />
+        </div>
+        <div className="flex gap-1">
+          {['', 'alta', 'media', 'baja'].map(p => (
+            <button
+              key={p}
+              onClick={() => setFilterPriority(p)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                filterPriority === p
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {p === '' ? 'Todas' : p.charAt(0).toUpperCase() + p.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="bg-card rounded-xl border p-12 text-center">
+          <Brain size={40} className="mx-auto text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">No hay recomendaciones pendientes.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Crea cotizaciones y registra actividades para que el asistente genere oportunidades.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(rec => (
+            <div
+              key={rec.id}
+              className={`bg-card rounded-xl border p-4 hover:shadow-md transition-all ${PRIORITY_STYLES[rec.priority]}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[rec.priority]}`}>
+                      {rec.priority.toUpperCase()}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{rec.reason}</span>
+                  </div>
+                  <h4 className="font-semibold text-sm">{rec.customerName}</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">{rec.detail}</p>
+                  <p className="text-xs font-medium text-primary mt-1">→ {rec.action}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  {rec.value > 0 && <div className="text-sm font-bold">{fmt(rec.value)}</div>}
+                  <div className="text-[10px] text-muted-foreground">{rec.vendorName}</div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
