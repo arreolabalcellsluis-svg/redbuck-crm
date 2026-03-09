@@ -448,7 +448,7 @@ export default function OperatingExpensesPage() {
               { label: 'Gastos Operativos', value: fmt(financial.gastoOperativo), sub: `${fmtPct(financial.ratioGastoOperativo)} de ventas`, positive: false },
               { label: 'Utilidad Neta', value: fmt(financial.utilidadNeta), sub: `Margen: ${fmtPct(financial.margenNeto)}`, positive: financial.utilidadNeta >= 0 },
               { label: 'Punto de Equilibrio', value: fmt(financial.puntoEquilibrio), sub: `${fmt(financial.ventasNecesariasDiarias)}/día`, positive: true },
-              { label: 'Costo por Venta', value: fmt(financial.costoOperativoPorVenta), sub: `${Math.round(financial.ventasMes / dashboardMetrics.avgTicket)} ventas/mes`, positive: false },
+              { label: 'Costo por Venta', value: fmt(financial.costoOperativoPorVenta), sub: `${numVentas} ventas/mes`, positive: false },
             ].map((kpi, i) => (
               <div key={i} className="bg-card rounded-xl border p-4">
                 <div className="text-[11px] text-muted-foreground mb-1">{kpi.label}</div>
