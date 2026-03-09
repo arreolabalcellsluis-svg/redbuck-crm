@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { demoProducts as initialProducts, demoWarehouses } from '@/data/demo-data';
+import { demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { getProductImage } from '@/lib/productImages';
@@ -11,8 +11,33 @@ import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import { useAllProductFiscalData, useSaveProductFiscalData } from '@/hooks/useInvoicing';
+import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, type DBProduct } from '@/hooks/useProducts';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
+
+// Map DB row to local Product type
+function dbToProduct(db: DBProduct): Product {
+  return {
+    id: db.id,
+    sku: db.sku,
+    name: db.name,
+    category: db.category as ProductCategory,
+    brand: db.brand,
+    model: db.model,
+    description: db.description,
+    image: db.image || undefined,
+    listPrice: db.list_price,
+    minPrice: db.min_price,
+    cost: db.cost,
+    currency: db.currency,
+    deliveryDays: db.delivery_days,
+    supplier: db.supplier,
+    warranty: db.warranty,
+    active: db.active,
+    stock: db.stock,
+    inTransit: db.in_transit,
+  };
+}
 
 const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string } => ({
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
@@ -29,10 +54,17 @@ export default function ProductsPage() {
   const saveFiscalMutation = useSaveProductFiscalData();
   const fiscalMap = useMemo(() => new Map((productFiscalData ?? []).map(f => [f.product_id, f])), [productFiscalData]);
 
+  // DB hooks
+  const { data: dbProducts, isLoading } = useProducts();
+  const addProductMut = useAddProduct();
+  const updateProductMut = useUpdateProduct();
+  const deleteProductMut = useDeleteProduct();
+
+  const products = useMemo(() => (dbProducts ?? []).map(dbToProduct), [dbProducts]);
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ProductCategory | ''>('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -40,6 +72,7 @@ export default function ProductsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  
   const filtered = products.filter(p => {
     if (!p.active) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.sku.toLowerCase().includes(search.toLowerCase())) return false;
@@ -90,16 +123,32 @@ export default function ProductsPage() {
     if (!form.sku.trim()) { toast.error('El SKU es obligatorio'); return; }
     if (form.listPrice <= 0) { toast.error('El precio de lista debe ser mayor a 0'); return; }
 
-    const newProduct: Product = { ...form, id: `p-${Date.now()}` };
-    setProducts(prev => [newProduct, ...prev]);
-    // Save fiscal data to DB
-    if (form.satProductKey || form.satUnitKey) {
-      saveFiscalData(newProduct.id);
-    }
-    toast.success(`Producto "${form.name}" creado correctamente`);
-    setShowCreate(false);
-    setForm(emptyProduct());
-    setImagePreview(null);
+    addProductMut.mutate({
+      sku: form.sku,
+      name: form.name,
+      category: form.category,
+      brand: form.brand,
+      model: form.model,
+      description: form.description,
+      image: form.image || null,
+      list_price: form.listPrice,
+      min_price: form.minPrice,
+      cost: form.cost,
+      currency: form.currency,
+      delivery_days: form.deliveryDays,
+      supplier: form.supplier,
+      warranty: form.warranty,
+      active: form.active,
+      stock: form.stock,
+      in_transit: form.inTransit,
+    }, {
+      onSuccess: () => {
+        toast.success(`Producto "${form.name}" creado correctamente`);
+        setShowCreate(false);
+        setForm(emptyProduct());
+        setImagePreview(null);
+      },
+    });
   };
 
   const openEdit = (p: Product) => {
@@ -108,9 +157,9 @@ export default function ProductsPage() {
     const taxFamily = existing ? (existing.vat_rate === 0 ? (existing.tax_object === '01' || existing.tax_object === '04' ? 'exento' : '0') : String(existing.vat_rate)) : '16';
     setForm({
       ...p,
-      satProductKey: existing?.sat_product_key || (p as any).satProductKey || '',
-      satUnitKey: existing?.sat_unit_key || (p as any).satUnitKey || '',
-      taxObject: existing?.tax_object || (p as any).taxObject || '02',
+      satProductKey: existing?.sat_product_key || '',
+      satUnitKey: existing?.sat_unit_key || '',
+      taxObject: existing?.tax_object || '02',
       taxFamily,
     });
     setImagePreview(p.image || null);
@@ -128,14 +177,29 @@ export default function ProductsPage() {
     const costChanged = original && original.cost !== form.cost;
 
     const doEdit = () => {
-      setProducts(prev => prev.map(p => p.id === editId ? { ...form, id: editId } : p));
-      // Save fiscal data to DB
-      saveFiscalData(editId);
-      toast.success(`Producto "${form.name}" actualizado correctamente`);
-      setShowEdit(false);
-      setEditId(null);
-      setForm(emptyProduct());
-      setImagePreview(null);
+      updateProductMut.mutate({
+        id: editId,
+        sku: form.sku,
+        name: form.name,
+        category: form.category,
+        brand: form.brand,
+        model: form.model,
+        cost: form.cost,
+        list_price: form.listPrice,
+        min_price: form.minPrice,
+        stock: form.stock,
+        in_transit: form.inTransit,
+        active: form.active,
+      }, {
+        onSuccess: () => {
+          saveFiscalData(editId);
+          toast.success(`Producto "${form.name}" actualizado correctamente`);
+          setShowEdit(false);
+          setEditId(null);
+          setForm(emptyProduct());
+          setImagePreview(null);
+        },
+      });
     };
 
     if (costChanged) {
@@ -155,13 +219,20 @@ export default function ProductsPage() {
     if (!deleteTarget) return;
     const doDelete = () => {
       if (type === 'logical') {
-        setProducts(prev => prev.map(p => p.id === deleteTarget ? { ...p, active: false } : p));
-        toast.success(`Producto "${productToDelete?.name}" inactivado`);
+        updateProductMut.mutate({ id: deleteTarget, active: false }, {
+          onSuccess: () => {
+            toast.success(`Producto "${productToDelete?.name}" inactivado`);
+            setDeleteTarget(null);
+          },
+        });
       } else {
-        setProducts(prev => prev.filter(p => p.id !== deleteTarget));
-        toast.success(`Producto "${productToDelete?.name}" eliminado definitivamente`);
+        deleteProductMut.mutate(deleteTarget, {
+          onSuccess: () => {
+            toast.success(`Producto "${productToDelete?.name}" eliminado definitivamente`);
+            setDeleteTarget(null);
+          },
+        });
       }
-      setDeleteTarget(null);
     };
     requestAuthorization('delete_product', 'productos', doDelete, {
       entityId: deleteTarget, entityLabel: productToDelete?.name,
@@ -313,7 +384,7 @@ export default function ProductsPage() {
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Catálogo de Productos</h1>
-          <p className="page-subtitle">{products.filter(p => p.active).length} productos activos</p>
+          <p className="page-subtitle">{isLoading ? '...' : products.filter(p => p.active).length} productos activos</p>
         </div>
         <button onClick={() => { setForm(emptyProduct()); setImagePreview(null); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
           <Plus size={16} /> Nuevo producto
@@ -331,6 +402,9 @@ export default function ProductsPage() {
         </select>
       </div>
 
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Cargando productos...</div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map(p => {
           const warehouses = getWarehouseNames(p.stock);
@@ -343,11 +417,6 @@ export default function ProductsPage() {
               <div className="p-5">
                 <h3 className="font-display font-semibold text-sm">{p.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{p.sku} · {p.brand} {p.model}</p>
-                {!(p as any).satProductKey && !(p as any).satUnitKey && (
-                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
-                    ⚠ Sin claves SAT
-                  </span>
-                )}
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">
                   <div>
@@ -363,7 +432,6 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* Warehouse breakdown */}
                 {warehouses.length > 0 && (
                   <div className="mt-3 pt-3 border-t">
                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -399,6 +467,7 @@ export default function ProductsPage() {
           );
         })}
       </div>
+      )}
 
       {/* ===================== CREATE PRODUCT DIALOG ===================== */}
       <Dialog open={showCreate} onOpenChange={(open) => { setShowCreate(open); if (!open) { setForm(emptyProduct()); setImagePreview(null); } }}>
@@ -410,8 +479,8 @@ export default function ProductsPage() {
           {productFormFields}
           <DialogFooter>
             <button onClick={() => { setShowCreate(false); setForm(emptyProduct()); setImagePreview(null); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Crear Producto
+            <button onClick={handleCreate} disabled={addProductMut.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {addProductMut.isPending ? 'Guardando...' : 'Crear Producto'}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -427,8 +496,8 @@ export default function ProductsPage() {
           {productFormFields}
           <DialogFooter>
             <button onClick={() => { setShowEdit(false); setEditId(null); setForm(emptyProduct()); setImagePreview(null); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleEdit} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Guardar Cambios
+            <button onClick={handleEdit} disabled={updateProductMut.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {updateProductMut.isPending ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </DialogFooter>
         </DialogContent>
