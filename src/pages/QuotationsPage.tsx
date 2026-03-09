@@ -194,7 +194,7 @@ export default function QuotationsPage() {
     const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
     const vendor = demoUsers.find(u => u.id === selectedVendorId);
-    const customer = demoCustomers.find(c => c.id === selectedCustomerId);
+    const customer = dbCustomers.find(c => c.id === selectedCustomerId);
     const folio = getNextFolio(selectedVendorId);
 
     const today = new Date();
