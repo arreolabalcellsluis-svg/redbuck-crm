@@ -4,7 +4,7 @@
  * Reuses dashboardMetrics and monthlySales from demo-data.
  */
 
-import { dashboardMetrics, monthlySales } from '@/data/demo-data';
+// No demo-data imports – all data comes from function parameters
 
 // ─── Types ──────────────────────────────────────────────────────
 export type ExpenseCategory =
