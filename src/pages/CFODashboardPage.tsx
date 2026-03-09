@@ -47,8 +47,8 @@ export default function CFODashboardPage() {
   const { data: dbAssets } = useAssets();
   const { data: dbPayables } = useAccountsPayable();
 
-  const expenses = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
-  const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
+  const expenses = dbExpenses ?? [];
+  const assets = dbAssets ?? [];
   const payables = dbPayables ?? [];
 
   const [bsConfig, setBsConfig] = useState({
