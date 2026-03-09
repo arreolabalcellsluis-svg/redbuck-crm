@@ -71,6 +71,7 @@ export default function InventoryPage() {
   const { data: dbProducts, isLoading } = useProducts();
   const addProductMut = useAddProduct();
   const updateProductMut = useUpdateProduct();
+  const deleteProductMut = useDeleteProduct();
 
   const products = useMemo(() => (dbProducts ?? []).map(dbToProduct), [dbProducts]);
 
