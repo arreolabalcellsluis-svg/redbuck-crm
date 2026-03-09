@@ -122,6 +122,7 @@ export default function CRMPage() {
 
     addCustomerMut.mutate({
       name: form.name,
+      contact_name: form.contactName || null,
       trade_name: form.tradeName || null,
       rfc: form.rfc || null,
       type: form.type,
