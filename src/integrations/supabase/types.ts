@@ -77,6 +77,72 @@ export type Database = {
         }
         Relationships: []
       }
+      accounts_receivable: {
+        Row: {
+          balance: number
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          days_overdue: number
+          due_date: string
+          id: string
+          order_folio: string
+          order_id: string
+          paid: number
+          status: string
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          days_overdue?: number
+          due_date?: string
+          id?: string
+          order_folio?: string
+          order_id: string
+          paid?: number
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          days_overdue?: number
+          due_date?: string
+          id?: string
+          order_folio?: string
+          order_id?: string
+          paid?: number
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           categoria: Database["public"]["Enums"]["asset_category"]
@@ -590,6 +656,53 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      order_payments: {
+        Row: {
+          amount: number
+          comment: string
+          created_at: string
+          id: string
+          method: string
+          order_id: string
+          payment_date: string
+          reference: string
+          registered_by: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          comment?: string
+          created_at?: string
+          id?: string
+          method?: string
+          order_id: string
+          payment_date?: string
+          reference?: string
+          registered_by?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          comment?: string
+          created_at?: string
+          id?: string
+          method?: string
+          order_id?: string
+          payment_date?: string
+          reference?: string
+          registered_by?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       orders: {
         Row: {

@@ -2,16 +2,18 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useOrders, useAddOrder, useUpdateOrderStatus, useUpdateOrder, type DBOrder } from '@/hooks/useOrders';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
+import { useOrderPayments, useAddOrderPayment } from '@/hooks/useOrderPayments';
+import { useAccountsReceivable, useAddAccountReceivable, useUpdateAccountReceivable } from '@/hooks/useAccountsReceivable';
 import { demoUsers } from '@/data/demo-data';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText, Loader2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { Order, OrderStatus, OrderType, AccountReceivable } from '@/types';
+import { Order, OrderStatus, OrderType } from '@/types';
 import { Payment, PaymentStatus } from '@/types/payments';
 import { addAuditLog } from '@/lib/auditLog';
 import { toast } from 'sonner';
@@ -62,7 +64,7 @@ function dbToOrder(o: DBOrder): Order {
 }
 
 export default function OrdersPage() {
-  const { currentRole, exchangeRate, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
 
@@ -73,9 +75,25 @@ export default function OrdersPage() {
   const updateOrderMutation = useUpdateOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbOrderPayments = [] } = useOrderPayments();
+  const addOrderPaymentMutation = useAddOrderPayment();
+  const { data: dbReceivables = [] } = useAccountsReceivable();
+  const addReceivableMutation = useAddAccountReceivable();
+  const updateReceivableMutation = useUpdateAccountReceivable();
 
   // Map DB orders to Order type
   const orders = useMemo(() => dbOrders.map(dbToOrder), [dbOrders]);
+
+  // Helper functions using DB data
+  const getOrderPayments = useCallback((orderId: string) => {
+    return dbOrderPayments.filter(p => p.order_id === orderId);
+  }, [dbOrderPayments]);
+
+  const getTotalPaid = useCallback((orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+    const paymentSum = dbOrderPayments.filter(p => p.order_id === orderId).reduce((s, p) => s + p.amount, 0);
+    return (order?.advance || 0) + paymentSum;
+  }, [orders, dbOrderPayments]);
 
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
 
@@ -194,21 +212,19 @@ export default function OrdersPage() {
       reserve_deadline: null,
     });
 
-    // Auto-create receivable (local for now)
-    const newReceivable: AccountReceivable = {
-      id: `ar-${Date.now()}`,
-      customerId: customer.id,
-      customerName: customer.name,
-      orderId: `temp-${Date.now()}`,
-      orderFolio: folio,
+    // Auto-create receivable in DB
+    addReceivableMutation.mutate({
+      order_id: '', // Will be filled by the order creation
+      customer_id: customer.id,
+      customer_name: customer.name,
+      order_folio: folio,
       total,
       paid: form.advance,
       balance: total - form.advance,
-      dueDate: form.promiseDate,
-      daysOverdue: 0,
+      due_date: form.promiseDate,
+      days_overdue: 0,
       status: form.advance >= total ? 'liquidado' : 'al_corriente',
-    };
-    setReceivables(prev => [newReceivable, ...prev]);
+    });
 
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'crear_pedido', entityId: folio, newValue: folio, comment: `Pedido creado para ${customer.name}` });
 
@@ -227,7 +243,9 @@ export default function OrdersPage() {
     }
     const oldFolio = editFolioOrder.folio;
     updateOrderMutation.mutate({ id: editFolioOrder.id, folio: newFolio.trim() });
-    setReceivables(prev => prev.map(r => r.orderId === editFolioOrder.id ? { ...r, orderFolio: newFolio.trim() } : r));
+    // Update receivable folio in DB
+    const ar = dbReceivables.find(r => r.order_folio === oldFolio);
+    if (ar) updateReceivableMutation.mutate({ id: ar.id, order_folio: newFolio.trim() });
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'editar_folio', entityId: editFolioOrder.id, previousValue: oldFolio, newValue: newFolio.trim() });
     toast.success(`Folio cambiado de ${oldFolio} a ${newFolio.trim()}`);
     setEditFolioOrder(null);
@@ -240,15 +258,38 @@ export default function OrdersPage() {
       return;
     }
     requestAuthorization('modify_payment', 'pedidos', () => {
-      registerPayment(paymentOrder.id, {
-        orderId: paymentOrder.id,
-        date: payForm.date,
+      addOrderPaymentMutation.mutate({
+        order_id: paymentOrder.id,
+        payment_date: payForm.date,
         amount: payForm.amount,
         method: payForm.method,
         reference: payForm.reference,
         comment: payForm.comment,
-        registeredBy: 'Usuario actual',
+        registered_by: 'Usuario actual',
       });
+
+      // Update order balance in DB
+      const currentPaid = getTotalPaid(paymentOrder.id);
+      const newPaid = currentPaid + payForm.amount;
+      const newBalance = paymentOrder.total - newPaid;
+      updateOrderMutation.mutate({ id: paymentOrder.id, balance: Math.max(0, newBalance) });
+
+      // Update receivable in DB
+      const ar = dbReceivables.find(r => r.order_folio === paymentOrder.folio);
+      if (ar) {
+        updateReceivableMutation.mutate({
+          id: ar.id,
+          paid: newPaid,
+          balance: Math.max(0, newBalance),
+          status: newBalance <= 0 ? 'liquidado' : 'pago_parcial',
+        });
+      }
+
+      addAuditLog({
+        userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'registrar_pago',
+        entityId: paymentOrder.id, newValue: `$${payForm.amount} - ${payForm.method}`, comment: payForm.comment,
+      });
+
       toast.success(`Pago de ${fmt(payForm.amount)} registrado`);
       setPayForm({ date: '', amount: 0, method: 'transferencia', reference: '', comment: '' });
       setPaymentOrder(null);
@@ -260,8 +301,8 @@ export default function OrdersPage() {
 
   // Customer history
   const customerOrders = historyCustomerId ? orders.filter(o => o.customerId === historyCustomerId) : [];
-  const customerReceivables = historyCustomerId ? receivables.filter(r => r.customerId === historyCustomerId) : [];
-  const customerPayments = historyCustomerId ? payments.filter(p => customerOrders.some(o => o.id === p.orderId)) : [];
+  const customerReceivables = historyCustomerId ? dbReceivables.filter(r => r.customer_id === historyCustomerId) : [];
+  const customerPaymentsFiltered = historyCustomerId ? dbOrderPayments.filter(p => customerOrders.some(o => o.id === p.order_id)) : [];
   const customerName = historyCustomerId ? (dbCustomers.find(c => c.id === historyCustomerId)?.name || '') : '';
   const totalComprado = customerOrders.reduce((s, o) => s + o.total, 0);
   const totalPagado = customerOrders.reduce((s, o) => s + getTotalPaid(o.id), 0);
@@ -270,8 +311,8 @@ export default function OrdersPage() {
   const handleDownloadStatement = () => {
     if (!historyCustomerId) return;
     const movements = customerOrders.map(o => {
-      const orderPayments = payments.filter(p => p.orderId === o.id);
-      const totalPaidOrder = o.advance + orderPayments.reduce((s, p) => s + p.amount, 0);
+      const orderPays = dbOrderPayments.filter(p => p.order_id === o.id);
+      const totalPaidOrder = o.advance + orderPays.reduce((s, p) => s + p.amount, 0);
       return {
         Cliente: customerName,
         Fecha: o.createdAt,
@@ -531,7 +572,7 @@ export default function OrdersPage() {
                   <div className="space-y-1">
                     {getOrderPayments(paymentOrder.id).map(p => (
                       <div key={p.id} className="flex justify-between text-xs p-2 rounded bg-muted/50">
-                        <span>{p.date} · {p.method}</span>
+                        <span>{p.payment_date} · {p.method}</span>
                         <span className="font-semibold text-success">{fmt(p.amount)}</span>
                       </div>
                     ))}
@@ -627,7 +668,7 @@ export default function OrdersPage() {
                   )}
                   {orderPays.length > 0 ? orderPays.map(p => (
                     <div key={p.id} className="flex justify-between text-xs p-2 rounded bg-success/5 mb-1">
-                      <span>{p.date} · {p.method} {p.reference && `· Ref: ${p.reference}`}</span>
+                      <span>{p.payment_date} · {p.method} {p.reference && `· Ref: ${p.reference}`}</span>
                       <span className="font-semibold text-success">{fmt(p.amount)}</span>
                     </div>
                   )) : !detailOrder.advance && <div className="text-xs text-muted-foreground">Sin pagos registrados</div>}
