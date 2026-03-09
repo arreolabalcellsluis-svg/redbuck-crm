@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 export interface DBCustomer {
   id: string;
   name: string;
+  contact_name: string | null;
   trade_name: string | null;
   rfc: string | null;
   type: string;
