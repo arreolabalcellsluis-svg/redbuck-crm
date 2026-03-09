@@ -87,8 +87,8 @@ export default function DailyAssistantPage() {
       .forEach(a => {
         recs.push({
           id: `act-${a.id}`,
-          customerName: a.customer_name || a.lead_name || 'Sin cliente',
-          vendorName: a.responsible_name,
+          customerName: a.customerName || a.leadName || 'Sin cliente',
+          vendorName: a.responsibleName,
           reason: 'Actividad pendiente',
           priority: new Date(a.date) < new Date(Date.now() - 86400000) ? 'alta' : 'media',
           value: 0,
