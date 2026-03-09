@@ -323,7 +323,7 @@ export default function QuotationsPage() {
 
   const handleStatusChange = (q: Quotation, newStatus: QuotationStatus) => {
     const oldStatus = q.status;
-    updateQuotationStatus(q.id, newStatus);
+    updateQuotationStatusMutation.mutate({ id: q.id, status: newStatus });
     addAuditLog({ userId: 'current', userName: 'Usuario actual', userRole: currentRole, module: 'cotizaciones', action: 'cambio_estatus', entityId: q.id, previousValue: oldStatus, newValue: newStatus, comment: `Cotización ${q.folio}: ${oldStatus} → ${newStatus}` });
     if (newStatus === 'aceptada') {
       openConversion(q);
