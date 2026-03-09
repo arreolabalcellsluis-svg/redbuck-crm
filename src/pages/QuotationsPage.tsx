@@ -30,7 +30,8 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, exchangeRate, getNextFolio, consumeFolio, vendorSeries, setReceivables, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, getNextFolio, consumeFolio, vendorSeries } = useAppContext();
+  const addReceivableMutation = useAddAccountReceivable();
 
   // DB hooks
   const { data: dbQuotations = [], isLoading: quotationsLoading } = useQuotations();
