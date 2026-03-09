@@ -75,7 +75,7 @@ export default function PlanningPage() {
     margenPct: number;
   }
   const defaultLine = (): SimLine => {
-    const p = demoProducts.find(pr => pr.active) ?? demoProducts[0];
+    const p = products[0];
     return { productId: p?.id ?? '', costoUnitario: p?.cost ?? 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
   };
   const [simLines, setSimLines] = useState<SimLine[]>([defaultLine()]);
