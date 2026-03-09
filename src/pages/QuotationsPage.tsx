@@ -99,6 +99,20 @@ export default function QuotationsPage() {
     }]);
   };
 
+  const addSparePart = (sparePartId: string) => {
+    const sparePart = demoSpareParts.find(sp => sp.id === sparePartId);
+    if (!sparePart) return;
+    setItems(prev => [...prev, {
+      productId: sparePart.id,
+      productName: sparePart.name,
+      productImage: '/placeholder.svg',
+      sku: sparePart.sku,
+      qty: 1,
+      unitPrice: sparePart.price,
+      discount: 0,
+    }]);
+  };
+
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
 
   const updateItem = (idx: number, field: keyof QuotationItem, value: any) => {
