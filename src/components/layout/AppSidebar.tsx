@@ -40,6 +40,7 @@ const navItems = [
   { label: 'Pronóstico Ventas', icon: TrendingUp, path: '/pronostico-ventas' },
   { label: 'Gastos Operativos', icon: Wallet, path: '/gastos' },
   { label: 'Activos / Depreciación', icon: Building2, path: '/activos' },
+  { label: 'Balance General', icon: Landmark, path: '/balance-general' },
   { label: 'Planeación', icon: Brain, path: '/planeacion' },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
   { label: 'Reportes Ejecutivos', icon: BookOpen, path: '/reportes-ejecutivos' },
