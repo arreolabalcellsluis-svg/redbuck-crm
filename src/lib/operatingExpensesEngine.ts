@@ -205,12 +205,16 @@ export function calculateExpenseSummary(expenses: OperatingExpense[]): ExpenseSu
     }))
     .sort((a, b) => b.total - a.total);
 
-  // By month (from monthlySales months as reference)
-  const byMonth = monthlySales.slice(-6).map(m => ({
-    month: m.month,
-    total: totalMensual * (0.85 + Math.random() * 0.3), // simulated variation
-  }));
-  byMonth[byMonth.length - 1] = { month: byMonth[byMonth.length - 1].month, total: totalMensual };
+  // By month – group expenses by their actual month
+  const monthMap = new Map<string, number>();
+  expenses.forEach(e => {
+    const m = e.fecha.slice(0, 7); // YYYY-MM
+    monthMap.set(m, (monthMap.get(m) || 0) + e.monto);
+  });
+  const byMonth = Array.from(monthMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([month, total]) => ({ month, total }));
 
   // Top 10
   const top10 = [...expenses].sort((a, b) => b.monto - a.monto).slice(0, 10);
