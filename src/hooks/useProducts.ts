@@ -115,6 +115,12 @@ export function useUpdateProduct() {
       if (product.stock !== undefined) updates.stock = product.stock;
       if (product.in_transit !== undefined) updates.in_transit = product.in_transit;
       if (product.active !== undefined) updates.active = product.active;
+      if (product.image !== undefined) updates.image = product.image;
+      if (product.description !== undefined) updates.description = product.description;
+      if (product.supplier !== undefined) updates.supplier = product.supplier;
+      if (product.warranty !== undefined) updates.warranty = product.warranty;
+      if (product.delivery_days !== undefined) updates.delivery_days = product.delivery_days;
+      if (product.currency !== undefined) updates.currency = product.currency;
 
       const { error } = await supabase.from('products').update(updates).eq('id', id);
       if (error) throw error;
