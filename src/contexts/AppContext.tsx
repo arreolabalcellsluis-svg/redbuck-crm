@@ -52,7 +52,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
   const [currentRole, setCurrentRole] = useState<UserRole>('director');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [quotations, setQuotations] = useState<Quotation[]>(demoQuotations);
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>(buildInitialSeries(demoUsers));
 
   // Shared state for orders, receivables, payments
