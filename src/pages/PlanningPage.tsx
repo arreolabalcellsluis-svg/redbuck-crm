@@ -2,10 +2,10 @@ import { useState, useMemo, Fragment } from 'react';
 import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import {
-  analyzeProducts, getPlanningSummary, simulateGrowth,
+  getPlanningSummary, simulateGrowth,
   type ProductAnalysis,
 } from '@/lib/planningEngine';
-import { demoProducts } from '@/data/demo-data';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import MetricCard from '@/components/shared/MetricCard';
 import {
