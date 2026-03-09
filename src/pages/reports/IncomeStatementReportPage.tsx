@@ -419,7 +419,7 @@ export default function IncomeStatementReportPage() {
             <h1 className="page-title flex items-center gap-2"><TrendingUp size={22} className="text-success" /> Estado de Resultados</h1>
             <p className="page-subtitle">
               Reporte financiero por periodo seleccionable
-              {isDbConnected && <span className="ml-2 text-xs text-success">● Datos reales</span>}
+              {ordersData.length > 0 && <span className="ml-2 text-xs text-success">● Datos reales</span>}
             </p>
           </div>
         </div>
