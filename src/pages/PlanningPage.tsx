@@ -86,8 +86,8 @@ export default function PlanningPage() {
 
   const [growthFactor, setGrowthFactor] = useState(2);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
+  const { analyses, summary: summaryFromHook, products } = usePlanningData();
+  const summary = summaryFromHook;
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
 
   // Import costing calculations
