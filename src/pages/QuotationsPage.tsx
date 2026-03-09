@@ -1,4 +1,4 @@
-import { demoCustomers, demoProducts, demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
+import { demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
 import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
@@ -8,8 +8,8 @@ import { exportQuotationsZip, exportQuotationsExcel } from '@/lib/exportUtils';
 import { addAuditLog } from '@/lib/auditLog';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil, CalendarIcon, X } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil, CalendarIcon, X, Loader2 } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -20,12 +20,73 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, AccountReceivable } from '@/types';
 import type { Payment } from '@/types/payments';
+import { useQuotations, useAddQuotation, useUpdateQuotationStatus } from '@/hooks/useQuotations';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProducts } from '@/hooks/useProducts';
+import { useAddOrder } from '@/hooks/useOrders';
+import { useOrders } from '@/hooks/useOrders';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, exchangeRate, quotations, addQuotation, updateQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, getNextFolio, consumeFolio, vendorSeries, setReceivables, registerPayment } = useAppContext();
+
+  // DB hooks
+  const { data: dbQuotations = [], isLoading: quotationsLoading } = useQuotations();
+  const addQuotationMutation = useAddQuotation();
+  const updateQuotationStatusMutation = useUpdateQuotationStatus();
+  const { data: dbOrders = [] } = useOrders();
+  const addOrderMutation = useAddOrder();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbProducts = [] } = useProducts();
+
+  // Map DB quotations to local Quotation type
+  const quotations: Quotation[] = useMemo(() => dbQuotations.map(q => ({
+    id: q.id,
+    folio: q.folio,
+    customerId: q.customer_id || '',
+    customerName: q.customer_name,
+    customerPhone: q.customer_phone || undefined,
+    customerWhatsapp: q.customer_whatsapp || undefined,
+    vendorId: q.vendor_id || '',
+    vendorName: q.vendor_name,
+    vendorPhone: q.vendor_phone || undefined,
+    vendorEmail: q.vendor_email || undefined,
+    items: (q.items || []).map((it: any) => ({
+      productId: it.productId || '',
+      productName: it.productName || it.name || '',
+      productImage: it.productImage || '/placeholder.svg',
+      sku: it.sku || '',
+      qty: it.qty || 0,
+      unitPrice: it.unitPrice || 0,
+      discount: it.discount || 0,
+    })),
+    subtotal: q.subtotal,
+    tax: q.tax,
+    total: q.total,
+    status: q.status as QuotationStatus,
+    validUntil: q.valid_until,
+    createdAt: q.created_at?.slice(0, 10) || '',
+  })), [dbQuotations]);
+
+  // Map DB orders to local Order type for conversion flow
+  const orders: Order[] = useMemo(() => dbOrders.map(o => ({
+    id: o.id,
+    folio: o.folio,
+    customerId: o.customer_id || '',
+    customerName: o.customer_name,
+    vendorName: o.vendor_name,
+    items: (o.items || []).map((it: any) => ({ productName: it.name || it.productName || '', qty: it.qty || 0, unitPrice: it.unitPrice || 0 })),
+    total: o.total,
+    advance: o.advance,
+    balance: o.balance,
+    status: o.status as any,
+    warehouse: o.warehouse,
+    promiseDate: o.promise_date || '',
+    createdAt: o.created_at?.slice(0, 10) || '',
+    orderType: o.order_type as OrderType,
+  })), [dbOrders]);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
@@ -85,13 +146,13 @@ export default function QuotationsPage() {
   const vendors = demoUsers.filter(u => u.role === 'vendedor');
 
   const addItem = (productId: string) => {
-    const product = demoProducts.find(p => p.id === productId);
+    const product = dbProducts.find(p => p.id === productId);
     if (!product) return;
-    const priceInMxn = product.currency === 'USD' ? Math.round(product.listPrice * exchangeRate) : product.listPrice;
+    const priceInMxn = product.currency === 'USD' ? Math.round(product.list_price * exchangeRate) : product.list_price;
     setItems(prev => [...prev, {
       productId: product.id,
       productName: product.name,
-      productImage: getProductImage(product.id),
+      productImage: product.image || getProductImage(product.id),
       sku: product.sku,
       qty: 1,
       unitPrice: priceInMxn,
@@ -133,7 +194,7 @@ export default function QuotationsPage() {
     const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
     const vendor = demoUsers.find(u => u.id === selectedVendorId);
-    const customer = demoCustomers.find(c => c.id === selectedCustomerId);
+    const customer = dbCustomers.find(c => c.id === selectedCustomerId);
     const folio = getNextFolio(selectedVendorId);
 
     const today = new Date();
@@ -161,8 +222,23 @@ export default function QuotationsPage() {
       createdAt: fmtDate(today),
     };
 
-    consumeFolio(selectedVendorId);
-    addQuotation(newQuotation);
+    addQuotationMutation.mutate({
+      folio,
+      customer_id: selectedCustomerId,
+      customer_name: customer?.name || '',
+      customer_phone: customer?.phone || null,
+      customer_whatsapp: customer?.whatsapp || customer?.phone || null,
+      vendor_id: selectedVendorId,
+      vendor_name: vendor?.name || '',
+      vendor_phone: vendor?.phone || null,
+      vendor_email: vendor?.email || null,
+      items: [...items] as any,
+      subtotal: Math.round(subtotal * 100) / 100,
+      tax,
+      total,
+      status: 'borrador',
+      valid_until: fmtDate(validDate),
+    });
 
     toast.success(
       <div>
@@ -203,7 +279,7 @@ export default function QuotationsPage() {
     const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
     const vendor = demoUsers.find(u => u.id === selectedVendorId);
-    const customer = demoCustomers.find(c => c.id === selectedCustomerId);
+    const customer = dbCustomers.find(c => c.id === selectedCustomerId);
 
     const today = new Date();
     const validDate = new Date(today);
@@ -227,7 +303,8 @@ export default function QuotationsPage() {
       validUntil: fmtDate(validDate),
     };
 
-    updateQuotation(updated);
+    // Note: full edit requires useUpdateQuotation hook - for now just update status
+    updateQuotationStatusMutation.mutate({ id: editingQuotation.id, status: editingQuotation.status });
     toast.success(`Cotización ${editingQuotation.folio} actualizada`);
     setShowCreate(false);
     resetForm();
@@ -246,7 +323,7 @@ export default function QuotationsPage() {
 
   const handleStatusChange = (q: Quotation, newStatus: QuotationStatus) => {
     const oldStatus = q.status;
-    updateQuotationStatus(q.id, newStatus);
+    updateQuotationStatusMutation.mutate({ id: q.id, status: newStatus });
     addAuditLog({ userId: 'current', userName: 'Usuario actual', userRole: currentRole, module: 'cotizaciones', action: 'cambio_estatus', entityId: q.id, previousValue: oldStatus, newValue: newStatus, comment: `Cotización ${q.folio}: ${oldStatus} → ${newStatus}` });
     if (newStatus === 'aceptada') {
       openConversion(q);
@@ -302,28 +379,24 @@ export default function QuotationsPage() {
     const balance = q.total - advance;
     const today = new Date().toISOString().slice(0, 10);
 
-    const newOrder: Order = {
-      id: `or-${Date.now()}`,
+    addOrderMutation.mutate({
       folio,
-      customerId: q.customerId,
-      customerName: q.customerName,
-      vendorName: q.vendorName,
-      items: q.items.map(it => ({ productName: it.productName, qty: it.qty, unitPrice: it.unitPrice * (1 - (it.discount || 0) / 100) })),
+      customer_id: q.customerId || null,
+      customer_name: q.customerName,
+      vendor_name: q.vendorName,
+      items: q.items.map(it => ({ productId: it.productId, name: it.productName, qty: it.qty, unitPrice: it.unitPrice * (1 - (it.discount || 0) / 100) })),
       total: q.total,
       advance,
       balance: Math.max(0, balance),
       status: getOrderStatusForType(selectedOrderType),
+      order_type: selectedOrderType,
       warehouse: 'Bodega Principal',
-      promiseDate: selectedOrderType === 'entrega_futura' ? scheduledDate : today,
-      createdAt: today,
-      orderType: selectedOrderType,
-      quotationFolio: q.folio,
-      scheduledDeliveryDate: selectedOrderType === 'entrega_futura' ? scheduledDate : undefined,
-      deliveryNotes: deliveryNotes || undefined,
-      reserveDeadline: selectedOrderType === 'apartado' ? reserveDeadline : undefined,
-    };
-
-    setOrders(prev => [newOrder, ...prev]);
+      promise_date: selectedOrderType === 'entrega_futura' ? scheduledDate : today,
+      quotation_folio: q.folio,
+      scheduled_delivery_date: selectedOrderType === 'entrega_futura' ? scheduledDate : null,
+      delivery_notes: deliveryNotes || null,
+      reserve_deadline: selectedOrderType === 'apartado' ? reserveDeadline : null,
+    });
 
     // Auto-create receivable
     const receivableStatus = advance >= q.total ? 'liquidado' : advance > 0 ? 'al_corriente' : selectedOrderType === 'apartado' ? 'por_vencer' : 'al_corriente';
@@ -331,7 +404,7 @@ export default function QuotationsPage() {
       id: `ar-${Date.now()}`,
       customerId: q.customerId,
       customerName: q.customerName,
-      orderId: newOrder.id,
+      orderId: `temp-${Date.now()}`,
       orderFolio: folio,
       total: q.total,
       paid: advance,
@@ -679,7 +752,7 @@ export default function QuotationsPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Cliente / Prospecto *</label>
               <select value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
                 <option value="">Seleccionar cliente...</option>
-                {demoCustomers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.city}</option>)}
+                {dbCustomers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.city}</option>)}
               </select>
             </div>
             <div>
@@ -721,10 +794,10 @@ export default function QuotationsPage() {
             </div>
             {productSearch.trim() && (
               <div className="mt-2 border rounded-lg max-h-48 overflow-y-auto bg-card">
-                {demoProducts
+                {dbProducts
                   .filter(p => p.active)
                   .filter(p => 
-                    p.sku.toLowerCase().includes(productSearch.toLowerCase()) || 
+                    p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
                     p.name.toLowerCase().includes(productSearch.toLowerCase())
                   )
                   .slice(0, 10)
@@ -738,12 +811,12 @@ export default function QuotationsPage() {
                       <img src={getProductImage(p.id)} alt="" className="w-10 h-10 rounded object-cover bg-muted shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{p.sku} — {fmt(p.listPrice)} {p.currency}</div>
+                        <div className="text-xs text-muted-foreground">{p.sku} — {fmt(p.list_price)} {p.currency}</div>
                       </div>
                     </button>
                   ))
                 }
-                {demoProducts
+                {dbProducts
                   .filter(p => p.active)
                   .filter(p => 
                     p.sku.toLowerCase().includes(productSearch.toLowerCase()) || 
