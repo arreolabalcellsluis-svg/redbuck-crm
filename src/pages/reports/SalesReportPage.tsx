@@ -2,42 +2,15 @@ import { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import ReportFilterBar from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { demoOrders, demoProducts, salesByVendor, demoUsers, demoQuotations } from '@/data/demo-data';
+import { useOrders } from '@/hooks/useOrders';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useProducts } from '@/hooks/useProducts';
 import { useAppContext } from '@/contexts/AppContext';
-import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
-
-// Generate detailed sales records from orders
-function generateSalesRecords() {
-  return demoOrders.flatMap(o =>
-    o.items.map((item, idx) => {
-      const product = demoProducts.find(p => p.name === item.productName || item.productName.includes(p.name.split(' ')[0]));
-      const subtotal = item.qty * item.unitPrice;
-      const iva = subtotal * 0.16;
-      return {
-        id: `${o.id}-${idx}`,
-        fecha: o.createdAt,
-        folio: o.folio,
-        cliente: o.customerName,
-        vendedor: o.vendorName,
-        sku: product?.sku || 'N/A',
-        producto: item.productName,
-        categoria: product?.category || 'otros',
-        cantidad: item.qty,
-        precioVenta: item.unitPrice,
-        subtotal,
-        iva,
-        total: subtotal + iva,
-        canal: 'Directo',
-        estatus: o.status,
-      };
-    })
-  );
-}
 
 export default function SalesReportPage() {
   const { currentRole } = useAppContext();
@@ -46,21 +19,47 @@ export default function SalesReportPage() {
   const vendorFilter = searchParams.get('vendedor') || '';
   const skuFilter = searchParams.get('sku') || '';
 
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbQuotations = [] } = useQuotations();
+  const { data: dbProducts = [] } = useProducts();
+
   const [filters, setFilters] = useState<Record<string, any>>({
     search: '',
-    vendedor: isVendedor ? DEMO_VENDEDOR_NAME : vendorFilter,
+    vendedor: vendorFilter,
     sku: skuFilter,
     categoria: '',
     dateFrom: undefined,
     dateTo: undefined,
   });
 
+  // Generate sales records from real orders
   const records = useMemo(() => {
-    const allRecords = generateSalesRecords();
-    // For vendedor, pre-filter at source level
-    if (isVendedor) return allRecords.filter(r => r.vendedor === DEMO_VENDEDOR_NAME);
-    return allRecords;
-  }, [isVendedor]);
+    const productMap = new Map(dbProducts.map(p => [p.name, p]));
+    return dbOrders.flatMap(o =>
+      (o.items || []).map((item: any, idx: number) => {
+        const product = productMap.get(item.productName);
+        const subtotal = (item.qty || 0) * (item.unitPrice || 0);
+        const iva = subtotal * 0.16;
+        return {
+          id: `${o.id}-${idx}`,
+          fecha: o.created_at?.split('T')[0] || '',
+          folio: o.folio,
+          cliente: o.customer_name,
+          vendedor: o.vendor_name,
+          sku: product?.sku || 'N/A',
+          producto: item.productName || '',
+          categoria: product?.category || 'otros',
+          cantidad: item.qty || 0,
+          precioVenta: item.unitPrice || 0,
+          subtotal,
+          iva,
+          total: subtotal + iva,
+          canal: 'Directo',
+          estatus: o.status,
+        };
+      })
+    );
+  }, [dbOrders, dbProducts]);
 
   const filtered = useMemo(() => {
     return records.filter(r => {
@@ -84,43 +83,35 @@ export default function SalesReportPage() {
     total: filtered.reduce((s, r) => s + r.total, 0),
   }), [filtered]);
 
-  // Count quotations matching current filters
   const totalCotizaciones = useMemo(() => {
-    const baseQuotations = isVendedor
-      ? demoQuotations.filter(q => q.vendorName === DEMO_VENDEDOR_NAME)
-      : demoQuotations;
-    return baseQuotations.filter(q => {
+    return dbQuotations.filter(q => {
       if (filters.search) {
         const s = filters.search.toLowerCase();
-        if (!q.customerName.toLowerCase().includes(s) && !q.folio.toLowerCase().includes(s)) return false;
+        if (!q.customer_name.toLowerCase().includes(s) && !q.folio.toLowerCase().includes(s)) return false;
       }
-      if (filters.vendedor && !q.vendorName.includes(filters.vendedor)) return false;
-      if (filters.dateFrom && new Date(q.createdAt) < new Date(filters.dateFrom)) return false;
-      if (filters.dateTo && new Date(q.createdAt) > new Date(filters.dateTo)) return false;
+      if (filters.vendedor && !q.vendor_name.includes(filters.vendedor)) return false;
+      if (filters.dateFrom && new Date(q.created_at) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(q.created_at) > new Date(filters.dateTo)) return false;
       return true;
     }).length;
-  }, [filters, isVendedor]);
+  }, [dbQuotations, filters]);
 
-  // Count orders matching current filters
   const totalPedidos = useMemo(() => {
-    const baseOrders = isVendedor
-      ? demoOrders.filter(o => o.vendorName === DEMO_VENDEDOR_NAME)
-      : demoOrders;
-    return baseOrders.filter(o => {
+    return dbOrders.filter(o => {
       if (filters.search) {
         const s = filters.search.toLowerCase();
-        if (!o.customerName.toLowerCase().includes(s) && !o.folio.toLowerCase().includes(s)) return false;
+        if (!o.customer_name.toLowerCase().includes(s) && !o.folio.toLowerCase().includes(s)) return false;
       }
-      if (filters.vendedor && !o.vendorName.includes(filters.vendedor)) return false;
-      if (filters.dateFrom && new Date(o.createdAt) < new Date(filters.dateFrom)) return false;
-      if (filters.dateTo && new Date(o.createdAt) > new Date(filters.dateTo)) return false;
+      if (filters.vendedor && !o.vendor_name.includes(filters.vendedor)) return false;
+      if (filters.dateFrom && new Date(o.created_at) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(o.created_at) > new Date(filters.dateTo)) return false;
       return true;
     }).length;
-  }, [filters, isVendedor]);
+  }, [dbOrders, filters]);
 
   const hasActiveFilters = !!(filters.search || filters.vendedor || filters.sku || filters.categoria || filters.dateFrom || filters.dateTo);
 
-  const vendorOptions = isVendedor ? [] : [...new Set(records.map(r => r.vendedor))].map(v => ({ value: v, label: v }));
+  const vendorOptions = [...new Set(records.map(r => r.vendedor))].filter(Boolean).map(v => ({ value: v, label: v }));
   const skuOptions = [...new Set(records.map(r => r.sku))].filter(s => s !== 'N/A').map(s => ({ value: s, label: s }));
   const catOptions = Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v }));
 
@@ -186,7 +177,7 @@ export default function SalesReportPage() {
           searchPlaceholder: 'Buscar por cliente, producto, SKU, folio...',
           dateRange: true,
           selects: [
-            ...(isVendedor ? [] : [{ key: 'vendedor', label: 'Vendedor', options: vendorOptions }]),
+            { key: 'vendedor', label: 'Vendedor', options: vendorOptions },
             { key: 'sku', label: 'SKU', options: skuOptions },
             { key: 'categoria', label: 'Categoría', options: catOptions },
           ],
@@ -195,7 +186,7 @@ export default function SalesReportPage() {
         }}
         filters={filters}
         onFilterChange={(k, v) => setFilters(prev => ({ ...prev, [k]: v }))}
-        onClear={() => setFilters({ search: '', vendedor: isVendedor ? DEMO_VENDEDOR_NAME : '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
+        onClear={() => setFilters({ search: '', vendedor: '', sku: '', categoria: '', dateFrom: undefined, dateTo: undefined })}
         onExportExcel={handleExport}
         onExportPdf={handleExportPdf}
         hasActiveFilters={hasActiveFilters}
