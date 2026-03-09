@@ -36,6 +36,7 @@ function dbToCustomer(db: DBCustomer): Customer {
   return {
     id: db.id,
     name: db.name,
+    contactName: db.contact_name || undefined,
     tradeName: db.trade_name || undefined,
     rfc: db.rfc || undefined,
     type: db.type as CustomerType,
