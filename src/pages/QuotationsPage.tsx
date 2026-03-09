@@ -816,7 +816,7 @@ export default function QuotationsPage() {
                     </button>
                   ))
                 }
-                {demoProducts
+                {dbProducts
                   .filter(p => p.active)
                   .filter(p => 
                     p.sku.toLowerCase().includes(productSearch.toLowerCase()) || 
