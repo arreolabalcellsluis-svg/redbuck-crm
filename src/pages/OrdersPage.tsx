@@ -1,8 +1,11 @@
-import { demoCustomers, demoProducts, demoUsers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
+import { useOrders, useAddOrder, useUpdateOrderStatus, useUpdateOrder, type DBOrder } from '@/hooks/useOrders';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProducts } from '@/hooks/useProducts';
+import { demoUsers } from '@/data/demo-data';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText } from 'lucide-react';
+import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText, Loader2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,7 +19,6 @@ import * as XLSX from 'xlsx';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
-import type { DBOrder } from '@/hooks/useOrders';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 const vendors = demoUsers.filter(u => u.role === 'vendedor');
@@ -36,10 +38,45 @@ const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'cancelado', label: 'Cancelado' },
 ];
 
+function dbToOrder(o: DBOrder): Order {
+  return {
+    id: o.id,
+    folio: o.folio,
+    customerId: o.customer_id || '',
+    customerName: o.customer_name,
+    vendorName: o.vendor_name,
+    items: (o.items || []).map((it: any) => ({ productName: it.name || it.productName || '', qty: it.qty || 0, unitPrice: it.unitPrice || 0 })),
+    total: o.total,
+    advance: o.advance,
+    balance: o.balance,
+    status: o.status as OrderStatus,
+    warehouse: o.warehouse,
+    promiseDate: o.promise_date || '',
+    createdAt: o.created_at?.slice(0, 10) || '',
+    orderType: o.order_type as OrderType,
+    quotationFolio: o.quotation_folio || undefined,
+    scheduledDeliveryDate: o.scheduled_delivery_date || undefined,
+    deliveryNotes: o.delivery_notes || undefined,
+    reserveDeadline: o.reserve_deadline || undefined,
+  };
+}
+
 export default function OrdersPage() {
-  const { currentRole, exchangeRate, orders, setOrders, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+
+  // DB hooks
+  const { data: dbOrders = [], isLoading: ordersLoading } = useOrders();
+  const addOrderMutation = useAddOrder();
+  const updateStatusMutation = useUpdateOrderStatus();
+  const updateOrderMutation = useUpdateOrder();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbProducts = [] } = useProducts();
+
+  // Map DB orders to Order type
+  const orders = useMemo(() => dbOrders.map(dbToOrder), [dbOrders]);
+
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
 
   // Convert local Order to DBOrder format for InvoiceCreateDialog
@@ -64,6 +101,7 @@ export default function OrdersPage() {
     created_at: invoiceOrder.createdAt,
     updated_at: invoiceOrder.createdAt,
   } : undefined;
+
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
@@ -105,9 +143,8 @@ export default function OrdersPage() {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     const oldStatus = order.status;
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    updateStatusMutation.mutate({ id: orderId, status: newStatus });
     addAuditLog({ action: 'Cambio de estatus de pedido', module: 'Pedidos', userId: '', userName: 'Usuario actual', userRole: currentRole, entityId: order.id, previousValue: oldStatus, newValue: newStatus, comment: `Pedido ${order.folio}: ${oldStatus} → ${newStatus}` });
-    toast.success(`Estatus actualizado a "${ORDER_STATUSES.find(s => s.value === newStatus)?.label}"`);
   };
 
   const addItem = () => setItems([...items, { productId: '', productName: '', qty: 1, unitPrice: 0 }]);
@@ -115,9 +152,9 @@ export default function OrdersPage() {
   const updateItem = (i: number, field: string, value: any) => {
     const updated = [...items];
     if (field === 'productId') {
-      const prod = demoProducts.find(p => p.id === value);
+      const prod = dbProducts.find(p => p.id === value);
       if (prod) {
-        const priceInMxn = prod.currency === 'USD' ? Math.round(prod.listPrice * exchangeRate) : prod.listPrice;
+        const priceInMxn = prod.currency === 'USD' ? Math.round(prod.list_price * exchangeRate) : prod.list_price;
         updated[i] = { ...updated[i], productId: value, productName: prod.name, unitPrice: priceInMxn };
       }
     } else {
@@ -131,46 +168,49 @@ export default function OrdersPage() {
   const total = subtotal + tax;
 
   const handleCreate = () => {
-    const customer = demoCustomers.find(c => c.id === form.customerId);
+    const customer = dbCustomers.find(c => c.id === form.customerId);
     if (!customer || items.length === 0 || !form.promiseDate) {
       toast.error('Completa cliente, productos y fecha promesa');
       return;
     }
-    const folio = `PED-2026-${String(orders.length + 1).padStart(3, '0')}`;
-    const newOrder: Order = {
-      id: `or-${Date.now()}`,
+    const folio = `PED-2026-${String(dbOrders.length + 1).padStart(3, '0')}`;
+
+    addOrderMutation.mutate({
       folio,
-      customerId: customer.id,
-      customerName: customer.name,
-      vendorName: form.vendorName,
-      items: items.map(it => ({ productName: it.productName, qty: it.qty, unitPrice: it.unitPrice })),
+      customer_id: customer.id,
+      customer_name: customer.name,
+      vendor_name: form.vendorName,
+      items: items.map(it => ({ productId: it.productId, name: it.productName, qty: it.qty, unitPrice: it.unitPrice })),
       total,
       advance: form.advance,
       balance: total - form.advance,
       status: 'nuevo',
+      order_type: 'directo',
       warehouse: form.warehouse,
-      promiseDate: form.promiseDate,
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    setOrders(prev => [newOrder, ...prev]);
+      promise_date: form.promiseDate,
+      quotation_folio: null,
+      scheduled_delivery_date: null,
+      delivery_notes: null,
+      reserve_deadline: null,
+    });
 
-    // Auto-create receivable
+    // Auto-create receivable (local for now)
     const newReceivable: AccountReceivable = {
       id: `ar-${Date.now()}`,
       customerId: customer.id,
       customerName: customer.name,
-      orderId: newOrder.id,
+      orderId: `temp-${Date.now()}`,
       orderFolio: folio,
       total,
       paid: form.advance,
       balance: total - form.advance,
       dueDate: form.promiseDate,
       daysOverdue: 0,
-      status: form.advance >= total ? 'liquidado' : form.advance > 0 ? 'al_corriente' : 'al_corriente',
+      status: form.advance >= total ? 'liquidado' : 'al_corriente',
     };
     setReceivables(prev => [newReceivable, ...prev]);
 
-    addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'crear_pedido', entityId: newOrder.id, newValue: folio, comment: `Pedido creado para ${customer.name}` });
+    addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'crear_pedido', entityId: folio, newValue: folio, comment: `Pedido creado para ${customer.name}` });
 
     setOpen(false);
     setForm({ customerId: '', vendorName: '', warehouse: 'Bodega Principal', promiseDate: '', advance: 0 });
@@ -186,7 +226,7 @@ export default function OrdersPage() {
       return;
     }
     const oldFolio = editFolioOrder.folio;
-    setOrders(prev => prev.map(o => o.id === editFolioOrder.id ? { ...o, folio: newFolio.trim() } : o));
+    updateOrderMutation.mutate({ id: editFolioOrder.id, folio: newFolio.trim() });
     setReceivables(prev => prev.map(r => r.orderId === editFolioOrder.id ? { ...r, orderFolio: newFolio.trim() } : r));
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'editar_folio', entityId: editFolioOrder.id, previousValue: oldFolio, newValue: newFolio.trim() });
     toast.success(`Folio cambiado de ${oldFolio} a ${newFolio.trim()}`);
@@ -222,7 +262,7 @@ export default function OrdersPage() {
   const customerOrders = historyCustomerId ? orders.filter(o => o.customerId === historyCustomerId) : [];
   const customerReceivables = historyCustomerId ? receivables.filter(r => r.customerId === historyCustomerId) : [];
   const customerPayments = historyCustomerId ? payments.filter(p => customerOrders.some(o => o.id === p.orderId)) : [];
-  const customerName = historyCustomerId ? (demoCustomers.find(c => c.id === historyCustomerId)?.name || '') : '';
+  const customerName = historyCustomerId ? (dbCustomers.find(c => c.id === historyCustomerId)?.name || '') : '';
   const totalComprado = customerOrders.reduce((s, o) => s + o.total, 0);
   const totalPagado = customerOrders.reduce((s, o) => s + getTotalPaid(o.id), 0);
   const saldoPendiente = totalComprado - totalPagado;
@@ -264,6 +304,15 @@ export default function OrdersPage() {
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'descargar_estado_cuenta', entityId: historyCustomerId, comment: `Excel descargado para ${customerName}` });
     toast.success('Estado de cuenta descargado');
   };
+
+  if (ordersLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <span className="ml-3 text-muted-foreground">Cargando pedidos...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -361,7 +410,7 @@ export default function OrdersPage() {
                 <label className="text-xs font-medium text-muted-foreground">Cliente *</label>
                 <select value={form.customerId} onChange={e => setForm({ ...form, customerId: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                   <option value="">Seleccionar...</option>
-                  {demoCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {dbCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
@@ -392,7 +441,7 @@ export default function OrdersPage() {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button type="button" className={cn("flex-1 flex items-center justify-between px-2 py-1.5 rounded border bg-background text-sm text-left", !it.productId && "text-muted-foreground")}>
-                        <span className="truncate">{it.productId ? demoProducts.find(p => p.id === it.productId)?.name || 'Producto...' : 'Seleccionar producto...'}</span>
+                        <span className="truncate">{it.productId ? dbProducts.find(p => p.id === it.productId)?.name || 'Producto...' : 'Seleccionar producto...'}</span>
                         <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
                       </button>
                     </PopoverTrigger>
@@ -402,12 +451,12 @@ export default function OrdersPage() {
                         <CommandList>
                           <CommandEmpty>No se encontró producto.</CommandEmpty>
                           <CommandGroup>
-                            {demoProducts.filter(p => p.active).map(p => (
+                            {dbProducts.filter(p => p.active).map(p => (
                               <CommandItem key={p.id} value={p.name} onSelect={() => updateItem(i, 'productId', p.id)}>
                                 <Check className={cn("mr-2 h-4 w-4", it.productId === p.id ? "opacity-100" : "opacity-0")} />
                                 <div className="flex flex-col">
                                   <span className="text-sm">{p.name}</span>
-                                  <span className="text-xs text-muted-foreground">{p.sku} — ${p.listPrice} USD {p.currency === 'USD' ? `(≈ ${fmt(p.listPrice * exchangeRate)} MXN)` : fmt(p.listPrice)}</span>
+                                  <span className="text-xs text-muted-foreground">{p.sku} — ${p.list_price} {p.currency === 'USD' ? `(≈ ${fmt(p.list_price * exchangeRate)} MXN)` : fmt(p.list_price)}</span>
                                 </div>
                               </CommandItem>
                             ))}
@@ -435,7 +484,9 @@ export default function OrdersPage() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
-              <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Crear pedido</button>
+              <button onClick={handleCreate} disabled={addOrderMutation.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+                {addOrderMutation.isPending ? 'Guardando...' : 'Crear pedido'}
+              </button>
             </div>
           </div>
         </DialogContent>
