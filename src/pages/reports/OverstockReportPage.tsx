@@ -38,8 +38,7 @@ export default function OverstockReportPage() {
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', categoria: '', overstockStatus: '', proveedor: '' });
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
+  const { analyses, summary } = usePlanningData();
 
   const records = useMemo(() => {
     return analyses

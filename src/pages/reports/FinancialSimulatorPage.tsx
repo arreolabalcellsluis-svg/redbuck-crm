@@ -31,7 +31,7 @@ export default function FinancialSimulatorPage() {
   const navigate = useNavigate();
   const [coverageTarget, setCoverageTarget] = useState(90);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
+  const { analyses } = usePlanningData();
   const fin = useMemo(() => getFinancialAnalysis(analyses), [analyses]);
 
   if (!['director', 'administracion'].includes(currentRole)) {

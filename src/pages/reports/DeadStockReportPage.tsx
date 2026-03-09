@@ -11,9 +11,8 @@ import { CATEGORY_LABELS } from '@/types';
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function DeadStockReportPage() {
-  const [filters, setFilters] = useState<Record<string, any>>({ search: '', categoria: '', bodega: '', periodo: '180' });
-
-  const analyses = useMemo(() => analyzeProducts(), []);
+  const { analyses } = usePlanningData();
+  const { data: dbWarehouses = [] } = useWarehouses();
 
   const records = useMemo(() => {
     const threshold = parseInt(filters.periodo) || 180;
