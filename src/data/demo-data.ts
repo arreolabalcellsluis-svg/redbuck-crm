@@ -71,6 +71,8 @@ export const demoServiceOrders: ServiceOrder[] = [];
 
 export const demoSpareParts: SparePart[] = [];
 
+export const demoSuppliers: Supplier[] = [];
+
 // Company info
 export const demoCompanyInfo: CompanyInfo = {
   razonSocial: 'REDBUCK EQUIPMENT S.A. DE C.V.',
