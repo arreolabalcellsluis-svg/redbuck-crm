@@ -1020,7 +1020,7 @@ export default function PlanningPage() {
                             }}
                             className="px-1.5 py-1 rounded border bg-background text-[11px] w-full min-w-[140px]"
                           >
-                            {demoProducts.filter(p => p.active).map(p => (
+                            {products.filter(p => p.active).map(p => (
                               <option key={p.id} value={p.id}>{p.sku} – {p.name}</option>
                             ))}
                           </select>
