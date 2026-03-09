@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { UserRole, Quotation, QuotationStatus, User, Order, AccountReceivable } from '@/types';
 import { Payment } from '@/types/payments';
-import { demoQuotations, demoUsers, demoOrders, demoAccountsReceivable } from '@/data/demo-data';
+import { demoUsers } from '@/data/demo-data';
 import { addAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/contexts/AuthContext';
 
