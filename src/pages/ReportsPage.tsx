@@ -1,10 +1,13 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
-import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import MetricCard from '@/components/shared/MetricCard';
 import { BarChart3, TrendingUp, Users, Package, DollarSign, Warehouse, Skull, AlertTriangle, Star, ArrowRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { monthlySales, salesByVendor, salesByCategory } from '@/data/demo-data';
+import { useOrders } from '@/hooks/useOrders';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useProducts } from '@/hooks/useProducts';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -18,20 +21,69 @@ const reportLinks = [
   { label: 'Rentabilidad por Producto', description: 'Costo, margen, utilidad anual estimada', path: '/reportes/rentabilidad', icon: Star, color: 'bg-success/10 text-success' },
 ];
 
-// Reports vendedor should NOT see (company-wide financial/admin reports)
 const VENDEDOR_HIDDEN_REPORTS = ['/reportes/inventario', '/reportes/inventario-muerto', '/reportes/rentabilidad'];
 
 export default function ReportsPage() {
   const { currentRole } = useAppContext();
   const isVendedor = currentRole === 'vendedor';
 
+  const { data: orders = [] } = useOrders();
+  const { data: quotations = [] } = useQuotations();
+  const { data: products = [] } = useProducts();
+  const { data: teamMembers = [] } = useTeamMembers();
+
   const visibleReports = isVendedor
     ? reportLinks.filter(r => !VENDEDOR_HIDDEN_REPORTS.includes(r.path))
     : reportLinks;
 
-  // For vendedor, find their sales data
-  const vendorShortName = DEMO_VENDEDOR_NAME.split(' ')[0];
-  const myVendorData = salesByVendor.find(v => v.name.startsWith(vendorShortName));
+  // Build monthly sales trend from real orders
+  const monthlySales = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach(o => {
+      const d = new Date(o.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      map[key] = (map[key] || 0) + o.total;
+    });
+    const months = Object.keys(map).sort();
+    return months.map(m => ({
+      month: m,
+      sales: map[m],
+    }));
+  }, [orders]);
+
+  // Build sales by vendor from real orders
+  const salesByVendor = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach(o => {
+      if (o.vendor_name) {
+        map[o.vendor_name] = (map[o.vendor_name] || 0) + o.total;
+      }
+    });
+    return Object.entries(map).map(([name, sales]) => ({ name, sales })).sort((a, b) => b.sales - a.sales);
+  }, [orders]);
+
+  // Build sales by category from real orders + products
+  const salesByCategory = useMemo(() => {
+    const productMap = new Map(products.map(p => [p.name, p.category]));
+    const catMap: Record<string, number> = {};
+    orders.forEach(o => {
+      (o.items || []).forEach((item: any) => {
+        const cat = productMap.get(item.productName) || 'otros';
+        const subtotal = (item.qty || 0) * (item.unitPrice || 0);
+        catMap[cat] = (catMap[cat] || 0) + subtotal;
+      });
+    });
+    return Object.entries(catMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [orders, products]);
+
+  // KPI calculations
+  const totalOrders = orders.length;
+  const totalQuotations = quotations.length;
+  const closingRate = totalQuotations > 0 ? Math.round((totalOrders / totalQuotations) * 100) : 0;
+  const totalStock = products.reduce((sum, p) => sum + Object.values(p.stock || {}).reduce((a, b) => a + b, 0), 0);
+  const inventoryRotation = totalStock > 0 && totalOrders > 0
+    ? (orders.reduce((s, o) => s + o.total, 0) / (products.reduce((s, p) => s + p.cost * Object.values(p.stock || {}).reduce((a, b) => a + b, 0), 0) || 1)).toFixed(1) + 'x'
+    : '—';
 
   return (
     <div>
@@ -43,10 +95,10 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Tasa de cierre" value="42%" icon={TrendingUp} variant="success" href="/reportes/ventas" />
-        <MetricCard title="Tiempo prom. cierre" value="28 días" icon={BarChart3} href="/reportes/ventas" />
-        <MetricCard title="Días prom. cobranza" value="18 días" icon={Users} href="/cobranza" />
-        {!isVendedor && <MetricCard title="Rotación inventario" value="3.2x" icon={Package} variant="primary" href="/reportes/inventario" />}
+        <MetricCard title="Tasa de cierre" value={`${closingRate}%`} icon={TrendingUp} variant="success" href="/reportes/ventas" />
+        <MetricCard title="Cotizaciones" value={totalQuotations} icon={BarChart3} href="/reportes/ventas" />
+        <MetricCard title="Pedidos" value={totalOrders} icon={Users} href="/pedidos" />
+        {!isVendedor && <MetricCard title="Rotación inventario" value={inventoryRotation} icon={Package} variant="primary" href="/reportes/inventario" />}
       </div>
 
       {/* Report links grid */}
@@ -74,58 +126,60 @@ export default function ReportsPage() {
           <h3 className="font-display font-semibold mb-4">
             {isVendedor ? 'Mi tendencia de ventas' : 'Tendencia de ventas'}
           </h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={monthlySales}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ fill: 'hsl(var(--primary))' }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {monthlySales.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={monthlySales}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ fill: 'hsl(var(--primary))' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
+              Sin datos de ventas registrados
+            </div>
+          )}
         </div>
 
-        {/* Ventas por vendedor chart - hide for vendedor */}
         {!isVendedor ? (
           <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => window.location.href = '/reportes/vendedor'}>
             <h3 className="font-display font-semibold mb-4">Ventas por vendedor</h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={salesByVendor} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
-                <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {salesByVendor.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={salesByVendor} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
+                Sin datos de ventas por vendedor
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-card rounded-xl border p-5">
             <h3 className="font-display font-semibold mb-4">Mi resumen</h3>
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-muted/50">
-                <div className="text-xs text-muted-foreground uppercase tracking-wider">Venta del mes</div>
-                <div className="text-2xl font-bold text-primary mt-1">{fmt(myVendorData?.sales ?? 0)}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Pedidos totales</div>
+                <div className="text-2xl font-bold text-primary mt-1">{totalOrders}</div>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
-                <div className="text-xs text-muted-foreground uppercase tracking-wider">Meta mensual</div>
-                <div className="text-2xl font-bold mt-1">{fmt(400000)}</div>
-                <div className="w-full bg-muted rounded-full h-2 mt-2">
-                  <div
-                    className={`h-2 rounded-full ${(myVendorData?.sales ?? 0) >= 400000 ? 'bg-success' : 'bg-primary'}`}
-                    style={{ width: `${Math.min(((myVendorData?.sales ?? 0) / 400000) * 100, 100)}%` }}
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {Math.round(((myVendorData?.sales ?? 0) / 400000) * 100)}% completado
-                </div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Venta total</div>
+                <div className="text-2xl font-bold mt-1">{fmt(orders.reduce((s, o) => s + o.total, 0))}</div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {!isVendedor && (
+      {!isVendedor && salesByCategory.length > 0 && (
         <div className="bg-card rounded-xl border p-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => window.location.href = '/reportes/ventas-sku'}>
           <h3 className="font-display font-semibold mb-4">Ventas por categoría</h3>
           <ResponsiveContainer width="100%" height={280}>
