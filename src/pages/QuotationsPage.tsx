@@ -400,22 +400,21 @@ export default function QuotationsPage() {
       reserve_deadline: selectedOrderType === 'apartado' ? reserveDeadline : null,
     });
 
-    // Auto-create receivable
+    // Auto-create receivable in DB
     const receivableStatus = advance >= q.total ? 'liquidado' : advance > 0 ? 'al_corriente' : selectedOrderType === 'apartado' ? 'por_vencer' : 'al_corriente';
-    const newReceivable: AccountReceivable = {
-      id: `ar-${Date.now()}`,
-      customerId: q.customerId,
-      customerName: q.customerName,
-      orderId: `temp-${Date.now()}`,
-      orderFolio: folio,
+    const dueDate = selectedOrderType === 'apartado' && reserveDeadline ? reserveDeadline : selectedOrderType === 'entrega_futura' ? scheduledDate : today;
+    addReceivableMutation.mutate({
+      order_id: '',
+      customer_id: q.customerId,
+      customer_name: q.customerName,
+      order_folio: folio,
       total: q.total,
       paid: advance,
       balance: Math.max(0, balance),
-      dueDate: selectedOrderType === 'apartado' && reserveDeadline ? reserveDeadline : selectedOrderType === 'entrega_futura' ? scheduledDate : today,
-      daysOverdue: 0,
+      due_date: dueDate,
+      days_overdue: 0,
       status: receivableStatus,
-    };
-    setReceivables(prev => [newReceivable, ...prev]);
+    });
 
     // Audit
     addAuditLog({
