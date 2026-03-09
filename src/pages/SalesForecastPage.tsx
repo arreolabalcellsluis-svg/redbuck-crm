@@ -54,7 +54,7 @@ export default function SalesForecastPage() {
   const { data: arRaw = [] } = useAccountsReceivable();
 
   const teamMembers: TeamMember[] = useMemo(() => teamMembersRaw.map(m => ({ id: m.id, name: m.name, role: m.role, active: m.active })), [teamMembersRaw]);
-  const products: ProductLookup[] = useMemo(() => productsRaw.map(p => ({ name: p.name, cost: p.cost, listPrice: p.listPrice })), [productsRaw]);
+  const products: ProductLookup[] = useMemo(() => productsRaw.map(p => ({ name: p.name, cost: p.cost, listPrice: p.list_price })), [productsRaw]);
   const accountsReceivable: ARRecord[] = useMemo(() => arRaw.map(ar => ({ id: ar.id, customerId: ar.customer_id, total: ar.total, paid: ar.paid, balance: ar.balance, status: ar.status, daysOverdue: ar.days_overdue })), [arRaw]);
   const vendors = teamMembers.filter(m => m.role === 'vendedor' && m.active);
 
