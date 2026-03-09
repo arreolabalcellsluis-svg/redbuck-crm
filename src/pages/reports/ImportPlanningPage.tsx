@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import {
-  analyzeProducts, getPlanningSummary,
   PURCHASE_URGENCY_LABELS, PURCHASE_URGENCY_COLORS,
   PLANNING_CONFIG,
 } from '@/lib/planningEngine';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import type { PurchaseUrgency } from '@/lib/planningEngine';
 import { CATEGORY_LABELS } from '@/types';
 
