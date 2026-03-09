@@ -25,6 +25,7 @@ function mapRow(row: any): DBCustomer {
   return {
     id: row.id,
     name: row.name,
+    contact_name: row.contact_name,
     trade_name: row.trade_name,
     rfc: row.rfc,
     type: row.type,
