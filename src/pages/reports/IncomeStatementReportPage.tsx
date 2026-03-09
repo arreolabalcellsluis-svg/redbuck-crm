@@ -46,11 +46,29 @@ export default function IncomeStatementReportPage() {
   // Fetch real data from DB
   const { data: dbExpenses, isLoading: loadingExpenses } = useExpenses();
   const { data: dbAssets, isLoading: loadingAssets } = useAssets();
+  const { data: ordersData = [] } = useOrders();
+  const { data: productsData = [] } = useProducts();
 
-  const expenses = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
-  const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
+  const expenses = dbExpenses ?? [];
+  const assets = dbAssets ?? [];
 
-  const isDbConnected = (dbExpenses && dbExpenses.length > 0) || (dbAssets && dbAssets.length > 0);
+  // Build monthly sales from real orders
+  const { monthlySalesMap, grossMarginPct } = useMemo(() => {
+    const map = new Map<string, { sales: number; cost: number }>();
+    ordersData.forEach(o => {
+      const d = new Date(o.created_at);
+      const key = d.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }).replace('.', '');
+      const entry = map.get(key) || { sales: 0, cost: 0 };
+      entry.sales += Number(o.total);
+      const items = Array.isArray(o.items) ? o.items : [];
+      entry.cost += items.reduce((s: number, it: any) => s + (Number(it.cost || it.unitCost || 0) * Number(it.qty || 1)), 0);
+      map.set(key, entry);
+    });
+    let totalSales = 0, totalCost = 0;
+    map.forEach(v => { totalSales += v.sales; totalCost += v.cost; });
+    const gm = totalSales > 0 ? ((totalSales - totalCost) / totalSales) * 100 : 0;
+    return { monthlySalesMap: map, grossMarginPct: gm };
+  }, [ordersData]);
 
   // Classify expenses
   const gastosVentas = useMemo(() =>
