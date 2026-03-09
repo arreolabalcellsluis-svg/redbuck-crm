@@ -146,13 +146,13 @@ export default function QuotationsPage() {
   const vendors = demoUsers.filter(u => u.role === 'vendedor');
 
   const addItem = (productId: string) => {
-    const product = demoProducts.find(p => p.id === productId);
+    const product = dbProducts.find(p => p.id === productId);
     if (!product) return;
-    const priceInMxn = product.currency === 'USD' ? Math.round(product.listPrice * exchangeRate) : product.listPrice;
+    const priceInMxn = product.currency === 'USD' ? Math.round(product.list_price * exchangeRate) : product.list_price;
     setItems(prev => [...prev, {
       productId: product.id,
       productName: product.name,
-      productImage: getProductImage(product.id),
+      productImage: product.image || getProductImage(product.id),
       sku: product.sku,
       qty: 1,
       unitPrice: priceInMxn,
