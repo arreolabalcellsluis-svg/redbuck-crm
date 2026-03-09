@@ -752,7 +752,7 @@ export default function QuotationsPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Cliente / Prospecto *</label>
               <select value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
                 <option value="">Seleccionar cliente...</option>
-                {demoCustomers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.city}</option>)}
+                {dbCustomers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.city}</option>)}
               </select>
             </div>
             <div>
