@@ -5,6 +5,8 @@ import {
   PENETRATION_LABELS, PENETRATION_DOT_COLORS, PENETRATION_BG,
   type CityMarketData, type PenetrationLevel,
 } from '@/lib/marketMapEngine';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import MetricCard from '@/components/shared/MetricCard';
 import { Input } from '@/components/ui/input';
 import {
