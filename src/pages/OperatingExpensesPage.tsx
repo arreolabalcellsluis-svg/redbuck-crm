@@ -40,9 +40,10 @@ export default function OperatingExpensesPage() {
   const { data: dbExpenses, isLoading } = useExpenses();
   const addExpenseMutation = useAddExpense();
   const deleteExpenseMutation = useDeleteExpense();
+  const { data: ordersData = [] } = useOrders();
+  const { data: productsData = [] } = useProducts();
 
-  // Use DB data if available, fallback to demo
-  const expenses: OperatingExpense[] = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
+  const expenses: OperatingExpense[] = dbExpenses ?? [];
 
   // Form state
   const [formCat, setFormCat] = useState<ExpenseCategory>('personal');
