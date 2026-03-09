@@ -243,7 +243,9 @@ export default function OrdersPage() {
     }
     const oldFolio = editFolioOrder.folio;
     updateOrderMutation.mutate({ id: editFolioOrder.id, folio: newFolio.trim() });
-    setReceivables(prev => prev.map(r => r.orderId === editFolioOrder.id ? { ...r, orderFolio: newFolio.trim() } : r));
+    // Update receivable folio in DB
+    const ar = dbReceivables.find(r => r.order_folio === oldFolio);
+    if (ar) updateReceivableMutation.mutate({ id: ar.id, order_folio: newFolio.trim() });
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'editar_folio', entityId: editFolioOrder.id, previousValue: oldFolio, newValue: newFolio.trim() });
     toast.success(`Folio cambiado de ${oldFolio} a ${newFolio.trim()}`);
     setEditFolioOrder(null);
