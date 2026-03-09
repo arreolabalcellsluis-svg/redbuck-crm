@@ -342,9 +342,18 @@ export default function InventoryPage() {
                   <td>{p.inTransit > 0 ? <span className="text-info font-medium">{p.inTransit}</span> : <span className="text-muted-foreground">—</span>}</td>
                   {isAdmin && (
                     <td>
-                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                        <Pencil size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Editar">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => {
+                          if (confirm(`¿Eliminar "${p.name}" del inventario?`)) {
+                            deleteProductMut.mutate(p.id);
+                          }
+                        }} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Eliminar">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
