@@ -31,6 +31,7 @@ export type PipelineStage = 'prospecto_nuevo' | 'contactado' | 'calificado' | 'd
 export interface Customer {
   id: string;
   name: string;
+  contactName?: string;
   tradeName?: string;
   rfc?: string;
   type: CustomerType;

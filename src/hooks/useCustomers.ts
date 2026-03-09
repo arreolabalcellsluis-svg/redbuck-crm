@@ -63,6 +63,7 @@ export function useAddCustomer() {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('customers').insert({
         name: customer.name,
+        contact_name: customer.contact_name,
         trade_name: customer.trade_name,
         rfc: customer.rfc,
         type: customer.type as any,
