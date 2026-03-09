@@ -43,6 +43,7 @@ export default function QuotationsPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedVendorId, setSelectedVendorId] = useState(currentRole === 'vendedor' ? DEMO_VENDEDOR_ID : '');
   const [items, setItems] = useState<QuotationItem[]>([]);
+  const [productSearch, setProductSearch] = useState('');
   const [validDays, setValidDays] = useState(15);
   const [showNoProspectAlert, setShowNoProspectAlert] = useState(false);
 
