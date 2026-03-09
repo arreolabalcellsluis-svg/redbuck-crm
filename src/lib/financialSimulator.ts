@@ -4,7 +4,7 @@
  * and growth scenarios tied to inventory data.
  */
 
-import { analyzeProducts, getPlanningSummary, simulateGrowth, type ProductAnalysis, type PlanningSummary } from './planningEngine';
+import { getPlanningSummary, simulateGrowth, type ProductAnalysis, type PlanningSummary } from './planningEngine';
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
