@@ -222,8 +222,23 @@ export default function QuotationsPage() {
       createdAt: fmtDate(today),
     };
 
-    consumeFolio(selectedVendorId);
-    addQuotation(newQuotation);
+    addQuotationMutation.mutate({
+      folio,
+      customer_id: selectedCustomerId,
+      customer_name: customer?.name || '',
+      customer_phone: customer?.phone || null,
+      customer_whatsapp: customer?.whatsapp || customer?.phone || null,
+      vendor_id: selectedVendorId,
+      vendor_name: vendor?.name || '',
+      vendor_phone: vendor?.phone || null,
+      vendor_email: vendor?.email || null,
+      items: [...items] as any,
+      subtotal: Math.round(subtotal * 100) / 100,
+      tax,
+      total,
+      status: 'borrador',
+      valid_until: fmtDate(validDate),
+    });
 
     toast.success(
       <div>
