@@ -7,8 +7,9 @@ import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -44,6 +45,18 @@ export default function CRMPage() {
 
   const [fiscal, setFiscal] = useState<FiscalData>(emptyFiscal());
   const [showFiscal, setShowFiscal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteCustomer = () => {
+    if (!editingCustomer) return;
+    setCustomers(prev => prev.filter(c => c.id !== editingCustomer.id));
+    toast.success(`Cliente "${editingCustomer.name}" eliminado permanentemente`);
+    setShowDeleteConfirm(false);
+    setEditingCustomer(null);
+    setForm(emptyCustomer());
+    setFiscal(emptyFiscal());
+    setShowFiscal(false);
+  };
 
   const allCustomers = isVendedor
     ? customers.filter(c => c.vendorId === vendorId)
@@ -487,14 +500,37 @@ export default function CRMPage() {
             )}
           </div>
 
-          <DialogFooter>
-            <button onClick={() => { setEditingCustomer(null); setForm(emptyCustomer()); setFiscal(emptyFiscal()); setShowFiscal(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleUpdate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Guardar Cambios
+          <DialogFooter className="flex !justify-between">
+            <button onClick={() => setShowDeleteConfirm(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+              <Trash2 size={14} /> Eliminar cliente
             </button>
+            <div className="flex gap-2">
+              <button onClick={() => { setEditingCustomer(null); setForm(emptyCustomer()); setFiscal(emptyFiscal()); setShowFiscal(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+              <button onClick={handleUpdate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+                Guardar Cambios
+              </button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===================== DELETE CONFIRM DIALOG ===================== */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar cliente permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres borrar permanentemente a <strong>{editingCustomer?.name}</strong>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sí, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
