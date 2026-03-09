@@ -476,7 +476,7 @@ export default function ExecutiveDashboardPage() {
             {dbImports.slice(0, 6).map(imp => (
               <div key={imp.id} className="p-4 rounded-xl bg-muted/50 border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-sm">{imp.order_number}</span>
+                  <span className="font-bold text-sm">{imp.orderNumber}</span>
                   <StatusBadge status={imp.status} type="import" />
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">{imp.supplier}</p>
