@@ -145,7 +145,8 @@ const defaultScenario = (name: string, vendorId: string, vendorName: string): Sc
 export default function CommissionSimulatorPage() {
   const { data: configData } = useCommissionConfig();
   const commissionConfig = configData?.config ?? DEFAULT_COMMISSION_CONFIG;
-  const vendors = getVendors();
+  const { data: teamMembersRaw = [] } = useTeamMembers();
+  const vendors = useMemo(() => teamMembersRaw.filter(m => m.role === 'vendedor' && m.active).map(m => ({ id: m.id, name: m.name })), [teamMembersRaw]);
 
   const [selectedVendor, setSelectedVendor] = useState(vendors[0]?.id ?? '');
   const selectedVendorName = vendors.find(v => v.id === selectedVendor)?.name ?? '';
