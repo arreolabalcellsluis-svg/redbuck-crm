@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { UserRole, Quotation, QuotationStatus, User, Order, AccountReceivable } from '@/types';
 import { Payment } from '@/types/payments';
-import { demoQuotations, demoUsers, demoOrders, demoAccountsReceivable } from '@/data/demo-data';
+import { demoUsers } from '@/data/demo-data';
 import { addAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -52,12 +52,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
   const [currentRole, setCurrentRole] = useState<UserRole>('director');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [quotations, setQuotations] = useState<Quotation[]>(demoQuotations);
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>(buildInitialSeries(demoUsers));
 
   // Shared state for orders, receivables, payments
-  const [orders, setOrders] = useState<Order[]>(demoOrders);
-  const [receivables, setReceivables] = useState<AccountReceivable[]>(demoAccountsReceivable);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [receivables, setReceivables] = useState<AccountReceivable[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   // Sync auth role with app context
   useEffect(() => {
