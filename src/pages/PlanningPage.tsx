@@ -74,6 +74,8 @@ export default function PlanningPage() {
     cbm: number;
     margenPct: number;
   }
+  const { analyses, summary: summaryFromHook, products } = usePlanningData();
+
   const defaultLine = (): SimLine => {
     const p = products[0];
     return { productId: p?.id ?? '', costoUnitario: p?.cost ?? 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
@@ -85,8 +87,6 @@ export default function PlanningPage() {
   const [ivaPct] = useState(16);
 
   const [growthFactor, setGrowthFactor] = useState(2);
-
-  const { analyses, summary: summaryFromHook, products } = usePlanningData();
   const summary = summaryFromHook;
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
 
