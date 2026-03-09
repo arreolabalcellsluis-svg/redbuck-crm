@@ -811,7 +811,7 @@ export default function QuotationsPage() {
                       <img src={getProductImage(p.id)} alt="" className="w-10 h-10 rounded object-cover bg-muted shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{p.sku} — {fmt(p.listPrice)} {p.currency}</div>
+                        <div className="text-xs text-muted-foreground">{p.sku} — {fmt(p.list_price)} {p.currency}</div>
                       </div>
                     </button>
                   ))
