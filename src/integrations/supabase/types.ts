@@ -143,6 +143,78 @@ export type Database = {
           },
         ]
       }
+      activities: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          customer_name: string | null
+          date: string
+          id: string
+          lead_id: string | null
+          lead_name: string | null
+          notes: string
+          priority: string
+          product_id: string | null
+          product_name: string | null
+          quotation_folio: string | null
+          quotation_id: string | null
+          responsible_id: string
+          responsible_name: string
+          status: string
+          time: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          date?: string
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          notes?: string
+          priority?: string
+          product_id?: string | null
+          product_name?: string | null
+          quotation_folio?: string | null
+          quotation_id?: string | null
+          responsible_id?: string
+          responsible_name?: string
+          status?: string
+          time?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          date?: string
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          notes?: string
+          priority?: string
+          product_id?: string | null
+          product_name?: string | null
+          quotation_folio?: string | null
+          quotation_id?: string | null
+          responsible_id?: string
+          responsible_name?: string
+          status?: string
+          time?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           categoria: Database["public"]["Enums"]["asset_category"]
@@ -386,6 +458,78 @@ export type Database = {
           pac_provider?: string
           pac_token_encrypted?: string | null
           pac_username?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      import_orders: {
+        Row: {
+          arrival_port: string
+          country: string
+          created_at: string
+          currency: string
+          customs_cost: number
+          days_in_transit: number
+          departure_port: string
+          estimated_arrival: string | null
+          estimated_departure: string | null
+          exchange_rate: number
+          freight_cost: number
+          id: string
+          items: Json
+          order_number: string
+          purchase_date: string
+          status: string
+          supplier: string
+          total_cost: number
+          total_landed: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          arrival_port?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          customs_cost?: number
+          days_in_transit?: number
+          departure_port?: string
+          estimated_arrival?: string | null
+          estimated_departure?: string | null
+          exchange_rate?: number
+          freight_cost?: number
+          id?: string
+          items?: Json
+          order_number?: string
+          purchase_date?: string
+          status?: string
+          supplier?: string
+          total_cost?: number
+          total_landed?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          arrival_port?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          customs_cost?: number
+          days_in_transit?: number
+          departure_port?: string
+          estimated_arrival?: string | null
+          estimated_departure?: string | null
+          exchange_rate?: number
+          freight_cost?: number
+          id?: string
+          items?: Json
+          order_number?: string
+          purchase_date?: string
+          status?: string
+          supplier?: string
+          total_cost?: number
+          total_landed?: number
           updated_at?: string
           user_id?: string | null
         }
@@ -990,6 +1134,51 @@ export type Database = {
         }
         Relationships: []
       }
+      purchases: {
+        Row: {
+          created_at: string
+          date: string
+          folio: string
+          id: string
+          items: Json
+          notes: string | null
+          products: string
+          status: string
+          supplier: string
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          folio?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          products?: string
+          status?: string
+          supplier?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          folio?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          products?: string
+          status?: string
+          supplier?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       quotations: {
         Row: {
           created_at: string
@@ -1115,6 +1304,168 @@ export type Database = {
           vendor_id?: string
           vendor_name?: string
           year?: number
+        }
+        Relationships: []
+      }
+      service_orders: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          customer_id: string
+          customer_name: string
+          description: string
+          diagnosis: string | null
+          folio: string
+          id: string
+          parts_used: string | null
+          photos: Json
+          product_name: string
+          report_notes: string | null
+          scheduled_date: string
+          status: string
+          technician_name: string
+          type: string
+          updated_at: string
+          user_id: string | null
+          work_performed: string | null
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          description?: string
+          diagnosis?: string | null
+          folio?: string
+          id?: string
+          parts_used?: string | null
+          photos?: Json
+          product_name?: string
+          report_notes?: string | null
+          scheduled_date?: string
+          status?: string
+          technician_name?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          work_performed?: string | null
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          description?: string
+          diagnosis?: string | null
+          folio?: string
+          id?: string
+          parts_used?: string | null
+          photos?: Json
+          product_name?: string
+          report_notes?: string | null
+          scheduled_date?: string
+          status?: string
+          technician_name?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          work_performed?: string | null
+        }
+        Relationships: []
+      }
+      spare_parts: {
+        Row: {
+          active: boolean
+          cost: number
+          created_at: string
+          id: string
+          image: string | null
+          min_stock: number
+          name: string
+          price: number
+          product_id: string
+          product_name: string
+          sku: string
+          stock: number
+          updated_at: string
+          user_id: string | null
+          warehouse: string
+        }
+        Insert: {
+          active?: boolean
+          cost?: number
+          created_at?: string
+          id?: string
+          image?: string | null
+          min_stock?: number
+          name: string
+          price?: number
+          product_id?: string
+          product_name?: string
+          sku?: string
+          stock?: number
+          updated_at?: string
+          user_id?: string | null
+          warehouse?: string
+        }
+        Update: {
+          active?: boolean
+          cost?: number
+          created_at?: string
+          id?: string
+          image?: string | null
+          min_stock?: number
+          name?: string
+          price?: number
+          product_id?: string
+          product_name?: string
+          sku?: string
+          stock?: number
+          updated_at?: string
+          user_id?: string | null
+          warehouse?: string
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          contact: string
+          country: string
+          created_at: string
+          currency: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          contact?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          email?: string
+          id?: string
+          name: string
+          phone?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          contact?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
