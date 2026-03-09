@@ -2,10 +2,27 @@
  * REDBUCK – Planning Engine v2
  * Predictive stockout engine with weighted demand, useful inventory,
  * coverage calculations, 5-level supply classification, and purchase suggestions.
+ * 
+ * All functions accept data as parameters — no demo-data imports.
  */
 
-import { demoProducts, demoOrders, demoQuotations, demoImports } from '@/data/demo-data';
 import type { Product, ImportOrder } from '@/types';
+import type { MappedQuotation } from './dbMappers';
+
+// Re-export mapped quotation type for consumers
+export type { MappedQuotation };
+
+// Internal types for order items
+interface OrderLike {
+  id: string;
+  items: { productName: string; qty: number; unitPrice: number }[];
+  status: string;
+  customerName: string;
+  vendorName: string;
+  folio: string;
+  total: number;
+  createdAt: string;
+}
 
 // ─── helpers ────────────────────────────────────────────────────────
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -100,20 +117,15 @@ export const SUPPLY_STATUS_COLORS: Record<SupplyStatus, { bg: string; text: stri
   riesgo_desabasto: { bg: 'bg-destructive/20', text: 'text-destructive' },
 };
 
-// ─── Sales history (simulated with weighted demand) ─────────────────
-function getSalesData(productId: string) {
-  const product = demoProducts.find(p => p.id === productId);
-  if (!product) return { last30: 0, last90: 0, last180: 0, annual: 0 };
-
-  const orderUnits = demoOrders.reduce((s, o) => {
+// ─── Sales history from real orders ─────────────────────────────────
+function getSalesData(product: Product, orders: OrderLike[]) {
+  const orderUnits = orders.reduce((s, o) => {
     const item = o.items.find(i => i.productName === product.name || i.productName.includes(product.name.split(' ')[0]));
     return s + (item?.qty ?? 0);
   }, 0);
 
-  // Simulate different period velocities with some variance
   const baseMonthly = Math.max(orderUnits / 6, 0.3);
-  // Recent months sell slightly more (simulating growth trend)
-  const trendFactor = 1 + (Math.random() * 0.3 - 0.1); // -10% to +20% recent trend
+  const trendFactor = 1 + (Math.random() * 0.3 - 0.1);
   const last30 = baseMonthly * trendFactor;
   const last90 = baseMonthly * (trendFactor * 0.9 + 0.1);
   const last180 = baseMonthly * 0.95;
@@ -122,11 +134,10 @@ function getSalesData(productId: string) {
   return { last30, last90: last90 * 3, last180: last180 * 6, annual };
 }
 
-function getWeightedDemand(productId: string): { dailyDemand: number; monthlyDemand: number; trend: 'crecimiento' | 'estable' | 'caida' } {
-  const sales = getSalesData(productId);
+function getWeightedDemand(product: Product, orders: OrderLike[]): { dailyDemand: number; monthlyDemand: number; trend: 'crecimiento' | 'estable' | 'caida' } {
+  const sales = getSalesData(product, orders);
   const w = PLANNING_CONFIG.demandWeights;
 
-  // Normalize to monthly rates
   const rate30 = sales.last30;
   const rate90 = sales.last90 / 3;
   const rate180 = sales.last180 / 6;
@@ -135,7 +146,6 @@ function getWeightedDemand(productId: string): { dailyDemand: number; monthlyDem
   const weightedMonthly = (rate30 * w.last30) + (rate90 * w.last90) + (rate180 * w.last180) + (rateAnnual * w.annual);
   const dailyDemand = weightedMonthly / 30;
 
-  // Trend detection
   let trend: 'crecimiento' | 'estable' | 'caida' = 'estable';
   if (rate30 > rate90 * 1.15) trend = 'crecimiento';
   else if (rate30 < rate90 * 0.85) trend = 'caida';
@@ -144,19 +154,17 @@ function getWeightedDemand(productId: string): { dailyDemand: number; monthlyDem
 }
 
 // ─── Quotation demand (pipeline) ────────────────────────────────────
-function getQuotationDemand(productId: string): number {
-  const product = demoProducts.find(p => p.id === productId);
-  if (!product) return 0;
-  return demoQuotations
+function getQuotationDemand(product: Product, quotations: MappedQuotation[]): number {
+  return quotations
     .filter(q => q.status === 'enviada' || q.status === 'seguimiento')
     .reduce((s, q) => {
-      const item = q.items.find(i => i.productId === productId);
+      const item = q.items.find(i => i.productId === product.id);
       return s + (item?.qty ?? 0);
     }, 0);
 }
 
-// ─── Useful inventory (not gross stock) ─────────────────────────────
-function getUsefulInventory(product: Product): {
+// ─── Useful inventory ───────────────────────────────────────────────
+function getUsefulInventory(product: Product, orders: OrderLike[]): {
   grossStock: number;
   committed: number;
   exhibition: number;
@@ -166,17 +174,14 @@ function getUsefulInventory(product: Product): {
   if (!product.stock) return { grossStock: 0, committed: 0, exhibition: 0, usefulStock: 0, stockByWarehouse: {} };
   const grossStock = Object.values(product.stock).reduce((a, b) => a + b, 0);
 
-  // Simulate committed stock from active orders
-  const committed = demoOrders
+  const committed = orders
     .filter(o => ['confirmado', 'confirmado_anticipo', 'apartado', 'entrega_programada', 'surtido_parcial'].includes(o.status))
     .reduce((s, o) => {
       const item = o.items.find(i => i.productName === product.name || i.productName.includes(product.name.split(' ')[0]));
       return s + (item?.qty ?? 0);
     }, 0);
 
-  // Exhibition stock (1 unit per warehouse with exhibition)
   const exhibition = Object.keys(product.stock).length > 0 ? 1 : 0;
-
   const usefulStock = Math.max(0, grossStock - committed - exhibition);
 
   return { grossStock, committed, exhibition, usefulStock, stockByWarehouse: product.stock };
@@ -195,11 +200,11 @@ export interface TransitDetail {
   arrivesBeforeStockout: boolean;
 }
 
-function getTransitDetails(product: Product): TransitDetail[] {
+function getTransitDetails(product: Product, imports: ImportOrder[]): TransitDetail[] {
   const today = new Date();
   const details: TransitDetail[] = [];
 
-  demoImports.forEach(imp => {
+  imports.forEach(imp => {
     imp.items.forEach(item => {
       if (item.productName === product.name || item.productName.includes(product.name.split(' ')[0])) {
         const confidence = PLANNING_CONFIG.transitConfidence[imp.status] ?? 0.5;
@@ -215,7 +220,7 @@ function getTransitDetails(product: Product): TransitDetail[] {
           effectiveQty: Math.round(item.qty * confidence),
           eta: imp.estimatedArrival,
           etaDays,
-          arrivesBeforeStockout: false, // calculated later
+          arrivesBeforeStockout: false,
         });
       }
     });
@@ -275,7 +280,6 @@ export const PURCHASE_URGENCY_COLORS: Record<PurchaseUrgency, { bg: string; text
 // ─── Product analysis row (v2 predictive) ───────────────────────────
 export interface ProductAnalysis {
   product: Product;
-  // Stock
   totalStock: number;
   grossStock: number;
   committed: number;
@@ -288,7 +292,6 @@ export interface ProductAnalysis {
   nextEta: string | null;
   nextEtaDays: number | null;
   availableStock: number;
-  // Demand
   monthlySales: number;
   quarterlySales: number;
   annualSales: number;
@@ -299,7 +302,6 @@ export interface ProductAnalysis {
   predictiveDailyDemand: number;
   predictiveMonthlyDemand: number;
   demandTrend: 'crecimiento' | 'estable' | 'caida';
-  // Coverage
   leadTime: LeadTime;
   reorderPoint: number;
   idealStock: number;
@@ -309,11 +311,9 @@ export interface ProductAnalysis {
   daysOfStock: number;
   daysOfStockWithTransit: number;
   stockoutDate: string | null;
-  // Supply status
   supplyStatus: SupplyStatus;
   supplyExplanation: string;
   urgencyScore: number;
-  // Overstock
   overstockStatus: OverstockStatus;
   overstockExplanation: string;
   overstockSuggestions: OverstockSuggestion[];
@@ -322,11 +322,9 @@ export interface ProductAnalysis {
   coverageMonths: number;
   totalProjectedStock: number;
   shouldNotBuy: boolean;
-  // Import planning
   purchaseUrgency: PurchaseUrgency;
   idealPurchaseDate: string | null;
   daysUntilPurchase: number | null;
-  // Strategy
   margin: number;
   annualRevenue: number;
   annualProfit: number;
@@ -342,22 +340,23 @@ export interface ProductAnalysis {
 
 const COVERAGE_MONTHS = 3;
 
-export function analyzeProducts(): ProductAnalysis[] {
-  return demoProducts.filter(p => p.active).map(product => {
-    // ── Useful inventory ──
-    const inv = getUsefulInventory(product);
-    const transitDetails = getTransitDetails(product);
+export function analyzeProducts(
+  products: Product[],
+  orders: OrderLike[] = [],
+  quotations: MappedQuotation[] = [],
+  imports: ImportOrder[] = [],
+): ProductAnalysis[] {
+  return products.filter(p => p.active).map(product => {
+    const inv = getUsefulInventory(product, orders);
+    const transitDetails = getTransitDetails(product, imports);
     const effectiveTransit = sum(transitDetails.map(t => t.effectiveQty));
     const totalInTransit = product.inTransit ?? sum(transitDetails.map(t => t.qty));
 
-    // Next ETA
     const sortedTransits = [...transitDetails].sort((a, b) => a.etaDays - b.etaDays);
     const nextEta = sortedTransits[0]?.eta ?? null;
     const nextEtaDays = sortedTransits[0]?.etaDays ?? null;
 
-    // ── Demand (weighted predictive) ──
-    const demand = getWeightedDemand(product.id);
-    const salesData = getSalesData(product.id);
+    const demand = getWeightedDemand(product, orders);
     const monthly = demand.monthlyDemand;
     const quarterly = monthly * 3;
     const annual = monthly * 12;
@@ -365,7 +364,6 @@ export function analyzeProducts(): ProductAnalysis[] {
     const demand6m = Math.ceil(monthly * 6);
     const demand12m = Math.ceil(monthly * 12);
 
-    // ── Lead time & reorder ──
     const leadTime = getLeadTime(product);
     const safetyStock = Math.ceil(demand.dailyDemand * PLANNING_CONFIG.safetyStockDays);
     const reorderPoint = Math.ceil(demand.dailyDemand * leadTime.total) + safetyStock;
@@ -375,15 +373,13 @@ export function analyzeProducts(): ProductAnalysis[] {
     const suggestedPurchase = Math.max(0, Math.ceil(
       (demand.dailyDemand * coverageTargetDays + safetyStock) - inv.usefulStock - effectiveTransit
     ));
-    const quotationDemand = getQuotationDemand(product.id);
+    const quotationDemand = getQuotationDemand(product, quotations);
 
-    // ── Coverage ──
     const daysOfStock = demand.dailyDemand > 0 ? Math.round(inv.usefulStock / demand.dailyDemand) : 999;
     const daysOfStockWithTransit = demand.dailyDemand > 0
       ? Math.round((inv.usefulStock + effectiveTransit) / demand.dailyDemand)
       : 999;
 
-    // Stockout date
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     let stockoutDate: string | null = null;
@@ -393,7 +389,6 @@ export function analyzeProducts(): ProductAnalysis[] {
       stockoutDate = sDate.toISOString().split('T')[0];
     }
 
-    // Check if transit arrives before stockout
     transitDetails.forEach(t => {
       t.arrivesBeforeStockout = t.etaDays <= daysOfStock;
     });
@@ -410,7 +405,6 @@ export function analyzeProducts(): ProductAnalysis[] {
       supplyExplanation = `Stock útil de ${inv.usefulStock} uds cubre solo ${daysOfStock} días. Lead time de reposición: ${leadTime.total} días. ${effectiveTransit > 0 ? `Tránsito de ${effectiveTransit} uds llega en ${nextEtaDays}d, pero no alcanzará.` : 'Sin inventario en tránsito.'}`;
       urgencyScore = 100;
     } else if (daysOfStock < leadTime.total) {
-      // Stock will run out before reposition, but has some transit
       const transitHelps = transitDetails.some(t => t.arrivesBeforeStockout);
       if (!transitHelps) {
         supplyStatus = 'riesgo_desabasto';
@@ -439,7 +433,6 @@ export function analyzeProducts(): ProductAnalysis[] {
       urgencyScore = 0;
     }
 
-    // Adjust urgency for demand trend
     if (demand.trend === 'crecimiento' && supplyStatus !== 'saludable') {
       urgencyScore = Math.min(100, urgencyScore + 10);
       supplyExplanation += ' ⚡ Demanda en crecimiento reciente.';
@@ -496,12 +489,9 @@ export function analyzeProducts(): ProductAnalysis[] {
       overstockSuggestions.push('mantener');
     }
 
-    // Excess units & value
     const optimalUnits = Math.ceil(demand.dailyDemand * maxCoverageDays);
     const excessUnits = Math.max(0, totalProjectedStock - optimalUnits);
     const excessValue = excessUnits * product.cost;
-
-    // Should not buy
     const shouldNotBuy = daysOfStockWithTransit > maxCoverageDays || daysOfStockWithTransit > leadTime.total * 2;
 
     // ── Import planning ──
@@ -529,7 +519,6 @@ export function analyzeProducts(): ProductAnalysis[] {
       daysUntilPurchase = null;
       idealPurchaseDate = null;
     } else {
-      // Calculate future purchase date
       const daysLeft = daysOfStockWithTransit - leadTime.total - PLANNING_CONFIG.safetyStockDays;
       if (daysLeft > 90) {
         purchaseUrgency = 'no_necesaria';
@@ -618,16 +607,13 @@ export interface PlanningSummary {
   premium: number;
   problematicos: number;
   deadStockValue: number;
-  // v2 predictive
   requirePurchase: number;
   immediateAction: number;
   stockoutRisk: number;
   totalRepositionValue: number;
-  // v3 overstock
   overstockProducts: number;
   overstockRiskProducts: number;
   totalExcessValue: number;
-  // v3 import planning
   purchaseSoonProducts: number;
   purchaseUrgentProducts: number;
   nextPurchaseValue: number;

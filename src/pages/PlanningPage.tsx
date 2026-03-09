@@ -2,10 +2,10 @@ import { useState, useMemo, Fragment } from 'react';
 import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import {
-  analyzeProducts, getPlanningSummary, simulateGrowth,
+  getPlanningSummary, simulateGrowth,
   type ProductAnalysis,
 } from '@/lib/planningEngine';
-import { demoProducts } from '@/data/demo-data';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import MetricCard from '@/components/shared/MetricCard';
 import {
@@ -75,25 +75,23 @@ export default function PlanningPage() {
     margenPct: number;
   }
   const defaultLine = (): SimLine => {
-    const p = demoProducts.find(pr => pr.active) ?? demoProducts[0];
-    return { productId: p?.id ?? '', costoUnitario: p?.cost ?? 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
+    return { productId: '', costoUnitario: 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
   };
   const [simLines, setSimLines] = useState<SimLine[]>([defaultLine()]);
-  // Shared shipment costs
   const [costoAduana, setCostoAduana] = useState(35000);
   const [costoFleteMaritimo, setCostoFleteMaritimo] = useState(50000);
   const [ivaPct] = useState(16);
 
   const [growthFactor, setGrowthFactor] = useState(2);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
+  const { products, analyses, summary: summaryData } = usePlanningData();
+  const summary = summaryData;
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
 
   // Import costing calculations
   const simCalc = useMemo(() => {
     const lines = simLines.map(line => {
-      const product = demoProducts.find(p => p.id === line.productId);
+      const product = products.find(p => p.id === line.productId);
       const valorTotal = (line.costoUnitario || 0) * (line.qty || 0);
       const volumenTotal = (line.cbm || 0) * (line.qty || 0);
       const igiMonto = valorTotal * ((line.igiPct || 0) / 100);
@@ -1008,7 +1006,7 @@ export default function PlanningPage() {
                 <tbody>
                   {simLines.map((line, i) => {
                     const calc = simCalc[i];
-                    const product = demoProducts.find(p => p.id === line.productId);
+                    const product = products.find(p => p.id === line.productId);
                     return (
                       <tr key={i}>
                         <td className="text-muted-foreground">{i + 1}</td>
@@ -1016,13 +1014,13 @@ export default function PlanningPage() {
                           <select
                             value={line.productId}
                             onChange={e => {
-                              const p = demoProducts.find(pr => pr.id === e.target.value);
+                              const p = products.find(pr => pr.id === e.target.value);
                               updateSimLine(i, 'productId', e.target.value);
                               if (p) updateSimLine(i, 'costoUnitario', p.cost);
                             }}
                             className="px-1.5 py-1 rounded border bg-background text-[11px] w-full min-w-[140px]"
                           >
-                            {demoProducts.filter(p => p.active).map(p => (
+                            {products.filter(p => p.active).map(p => (
                               <option key={p.id} value={p.id}>{p.sku} – {p.name}</option>
                             ))}
                           </select>
