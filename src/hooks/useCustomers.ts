@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 export interface DBCustomer {
   id: string;
   name: string;
+  contact_name: string | null;
   trade_name: string | null;
   rfc: string | null;
   type: string;
@@ -24,6 +25,7 @@ function mapRow(row: any): DBCustomer {
   return {
     id: row.id,
     name: row.name,
+    contact_name: row.contact_name,
     trade_name: row.trade_name,
     rfc: row.rfc,
     type: row.type,
@@ -61,6 +63,7 @@ export function useAddCustomer() {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('customers').insert({
         name: customer.name,
+        contact_name: customer.contact_name,
         trade_name: customer.trade_name,
         rfc: customer.rfc,
         type: customer.type as any,
