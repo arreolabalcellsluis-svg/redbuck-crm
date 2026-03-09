@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import {
-  analyzeProducts, getPlanningSummary,
+  getPlanningSummary,
   PURCHASE_URGENCY_LABELS, PURCHASE_URGENCY_COLORS,
   PLANNING_CONFIG,
 } from '@/lib/planningEngine';
 import type { PurchaseUrgency } from '@/lib/planningEngine';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
