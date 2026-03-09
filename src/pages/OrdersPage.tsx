@@ -258,15 +258,38 @@ export default function OrdersPage() {
       return;
     }
     requestAuthorization('modify_payment', 'pedidos', () => {
-      registerPayment(paymentOrder.id, {
-        orderId: paymentOrder.id,
-        date: payForm.date,
+      addOrderPaymentMutation.mutate({
+        order_id: paymentOrder.id,
+        payment_date: payForm.date,
         amount: payForm.amount,
         method: payForm.method,
         reference: payForm.reference,
         comment: payForm.comment,
-        registeredBy: 'Usuario actual',
+        registered_by: 'Usuario actual',
       });
+
+      // Update order balance in DB
+      const currentPaid = getTotalPaid(paymentOrder.id);
+      const newPaid = currentPaid + payForm.amount;
+      const newBalance = paymentOrder.total - newPaid;
+      updateOrderMutation.mutate({ id: paymentOrder.id, balance: Math.max(0, newBalance) });
+
+      // Update receivable in DB
+      const ar = dbReceivables.find(r => r.order_folio === paymentOrder.folio);
+      if (ar) {
+        updateReceivableMutation.mutate({
+          id: ar.id,
+          paid: newPaid,
+          balance: Math.max(0, newBalance),
+          status: newBalance <= 0 ? 'liquidado' : 'pago_parcial',
+        });
+      }
+
+      addAuditLog({
+        userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'registrar_pago',
+        entityId: paymentOrder.id, newValue: `$${payForm.amount} - ${payForm.method}`, comment: payForm.comment,
+      });
+
       toast.success(`Pago de ${fmt(payForm.amount)} registrado`);
       setPayForm({ date: '', amount: 0, method: 'transferencia', reference: '', comment: '' });
       setPaymentOrder(null);
