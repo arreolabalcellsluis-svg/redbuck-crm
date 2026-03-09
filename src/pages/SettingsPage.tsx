@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
-import { demoUsers as initialUsers, demoWarehouses as initialWarehouses, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate } from '@/data/demo-data';
+import { useState, useRef, useEffect } from 'react';
 import { ROLE_LABELS, UserRole, User, Warehouse } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
-import { Users, Warehouse as WarehouseIcon, Shield, Building2, FileText, MessageCircle, Hash, Pencil, Plus, Trash2, X, Check, Upload, Image, FileUp } from 'lucide-react';
+import { Users, Warehouse as WarehouseIcon, Shield, Building2, FileText, MessageCircle, Hash, Pencil, Plus, Trash2, X, Check, Upload, Image, FileUp, Loader2 } from 'lucide-react';
 import { useCompanyLogo } from '@/hooks/useCompanyLogo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { useTeamMembers, useAddTeamMember, useUpdateTeamMember } from '@/hooks/useTeamMembers';
+import { useWarehouses, useAddWarehouse, useUpdateWarehouse, useDeleteWarehouse } from '@/hooks/useWarehouses';
+import { useAppSettings, useSaveSetting } from '@/hooks/useAppSettings';
 
 // ─── Module-level permissions definition ────────────────────────────
 const ALL_MODULES = [
@@ -45,7 +47,6 @@ const ALL_MODULES = [
 
 type ModuleKey = typeof ALL_MODULES[number]['key'];
 
-// Default permissions per role
 const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
   director: ALL_MODULES.map(m => m.key),
   gerencia_comercial: [
@@ -77,16 +78,38 @@ const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModuleKey[]> = {
 
 export default function SettingsPage() {
   const { currentRole, vendorSeries, exchangeRate, setExchangeRate } = useAppContext();
-  const isDirector = true; // All roles with access can edit settings
+  const isDirector = true;
 
-  // ─── State ─────────────────────────────────────────────
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(initialWarehouses);
-  const [rolePermissions, setRolePermissions] = useState<Record<UserRole, ModuleKey[]>>(DEFAULT_ROLE_PERMISSIONS);
-  const [companyInfo, setCompanyInfo] = useState(demoCompanyInfo);
-  const [salesConditions, setSalesConditions] = useState(demoSalesConditions.text);
-  const [whatsappMsg, setWhatsappMsg] = useState(demoWhatsAppTemplate.message);
+  // ─── DB Hooks ──────────────────────────────────────────
+  const { data: users = [], isLoading: loadingUsers } = useTeamMembers();
+  const addUserMutation = useAddTeamMember();
+  const updateUserMutation = useUpdateTeamMember();
+
+  const { data: warehouses = [], isLoading: loadingWarehouses } = useWarehouses();
+  const addWhMutation = useAddWarehouse();
+  const updateWhMutation = useUpdateWarehouse();
+  const deleteWhMutation = useDeleteWarehouse();
+
+  const { data: settings = {}, isLoading: loadingSettings } = useAppSettings();
+  const saveSettingMutation = useSaveSetting();
+
+  // ─── Local state from DB settings ─────────────────────
+  const [companyInfo, setCompanyInfo] = useState({ razonSocial: '', nombreComercial: '', direccion: '', telefono: '', correo: '', rfc: '' });
+  const [salesConditions, setSalesConditions] = useState('');
+  const [whatsappMsg, setWhatsappMsg] = useState('');
   const [ivaRate, setIvaRate] = useState(16);
+  const [rolePermissions, setRolePermissions] = useState<Record<UserRole, ModuleKey[]>>(DEFAULT_ROLE_PERMISSIONS);
+
+  // Sync from DB settings
+  useEffect(() => {
+    if (settings.company_info) setCompanyInfo(settings.company_info);
+    if (settings.sales_conditions) setSalesConditions(settings.sales_conditions.text || '');
+    if (settings.whatsapp_template) setWhatsappMsg(settings.whatsapp_template.message || '');
+    if (settings.iva_rate) setIvaRate(settings.iva_rate.value ?? 16);
+    if (settings.role_permissions) setRolePermissions({ ...DEFAULT_ROLE_PERMISSIONS, ...settings.role_permissions });
+  }, [settings]);
+
+  // ─── Series editing state ─────────────────────────────
   const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
   const [seriesForm, setSeriesForm] = useState({ prefix: '', start: 1000, current: 1000 });
   const [showAddVendorSeries, setShowAddVendorSeries] = useState(false);
@@ -95,7 +118,6 @@ export default function SettingsPage() {
   // ─── Dialogs ───────────────────────────────────────────
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
-  const [editingRole, setEditingRole] = useState<UserRole | null>(null);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showCreateWarehouse, setShowCreateWarehouse] = useState(false);
 
@@ -121,20 +143,18 @@ export default function SettingsPage() {
     if (!userForm.name.trim()) { toast.error('El nombre es obligatorio'); return; }
     if (!userForm.email.trim()) { toast.error('El correo es obligatorio'); return; }
     if (editingUser) {
-      setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...userForm } : u));
-      toast.success(`Usuario "${userForm.name}" actualizado`);
+      updateUserMutation.mutate({ id: editingUser.id, ...userForm });
       setEditingUser(null);
     } else {
-      const newUser: User = { ...userForm, id: `u-${Date.now()}` };
-      setUsers(prev => [...prev, newUser]);
-      toast.success(`Usuario "${userForm.name}" creado`);
+      addUserMutation.mutate(userForm);
       setShowCreateUser(false);
     }
     setUserForm(emptyUserForm());
   };
 
   const handleToggleActive = (userId: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, active: !u.active } : u));
+    const user = users.find(u => u.id === userId);
+    if (user) updateUserMutation.mutate({ id: userId, active: !user.active });
   };
 
   // ─── Handlers: Warehouses ──────────────────────────────
@@ -147,21 +167,17 @@ export default function SettingsPage() {
   const handleSaveWarehouse = () => {
     if (!whForm.name.trim()) { toast.error('El nombre es obligatorio'); return; }
     if (editingWarehouse) {
-      setWarehouses(prev => prev.map(w => w.id === editingWarehouse.id ? { ...w, ...whForm } : w));
-      toast.success(`Bodega "${whForm.name}" actualizada`);
+      updateWhMutation.mutate({ id: editingWarehouse.id, ...whForm });
       setEditingWarehouse(null);
     } else {
-      const newWh: Warehouse = { ...whForm, id: `w-${Date.now()}` };
-      setWarehouses(prev => [...prev, newWh]);
-      toast.success(`Bodega "${whForm.name}" creada`);
+      addWhMutation.mutate(whForm);
       setShowCreateWarehouse(false);
     }
     setWhForm(emptyWhForm());
   };
 
   const handleDeleteWarehouse = (id: string) => {
-    setWarehouses(prev => prev.filter(w => w.id !== id));
-    toast.success('Bodega eliminada');
+    deleteWhMutation.mutate(id);
   };
 
   // ─── Handlers: Role Permissions ────────────────────────
@@ -216,13 +232,10 @@ export default function SettingsPage() {
           </div>
         </>
       )}
-      {/* ─── Dirección ─── */}
       <div className="md:col-span-2">
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Dirección</label>
         <input value={userForm.address || ''} onChange={e => setUserForm(p => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Calle, número, colonia, ciudad, estado, CP" />
       </div>
-
-      {/* ─── Contacto de emergencia ─── */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
         <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Contacto de emergencia</p>
       </div>
@@ -234,8 +247,6 @@ export default function SettingsPage() {
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono emergencia</label>
         <input value={userForm.emergencyContactPhone || ''} onChange={e => setUserForm(p => ({ ...p, emergencyContactPhone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="10 dígitos" />
       </div>
-
-      {/* ─── Foto y contrato ─── */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
         <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Documentos</p>
       </div>
@@ -291,7 +302,6 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
-
       <div className="md:col-span-2 flex items-center gap-2">
         <input type="checkbox" checked={userForm.active} onChange={e => setUserForm(p => ({ ...p, active: e.target.checked }))} id="user-active" className="rounded" />
         <label htmlFor="user-active" className="text-sm">Usuario activo</label>
@@ -315,6 +325,16 @@ export default function SettingsPage() {
       </div>
     </div>
   );
+
+  const isLoading = loadingUsers || loadingWarehouses || loadingSettings;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -353,7 +373,10 @@ export default function SettingsPage() {
               </div>
             ))}
             {isDirector && (
-              <button onClick={() => toast.success('Datos de empresa guardados')} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+              <button onClick={() => {
+                saveSettingMutation.mutate({ key: 'company_info', value: companyInfo });
+                toast.success('Datos de empresa guardados');
+              }} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
                 Guardar
               </button>
             )}
@@ -393,6 +416,9 @@ export default function SettingsPage() {
                 </div>
               </div>
             ))}
+            {users.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-6">No hay usuarios registrados. Agrega el primero.</div>
+            )}
           </div>
         </div>
 
@@ -413,7 +439,6 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {/* Add new vendor series form */}
           {showAddVendorSeries && (
             <div className="mb-3 p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
               <div className="flex items-center gap-3 flex-wrap">
@@ -441,8 +466,7 @@ export default function SettingsPage() {
                     if (users.some(u => u.seriesPrefix === newVendorForm.prefix && u.role === 'vendedor' && u.active)) {
                       toast.error('Ya existe un vendedor con ese prefijo'); return;
                     }
-                    const newUser: User = {
-                      id: `u-${Date.now()}`,
+                    addUserMutation.mutate({
                       name: newVendorForm.name,
                       email: '',
                       role: 'vendedor',
@@ -450,10 +474,8 @@ export default function SettingsPage() {
                       seriesPrefix: newVendorForm.prefix,
                       seriesStart: newVendorForm.start,
                       seriesCurrent: newVendorForm.start,
-                    };
-                    setUsers(prev => [...prev, newUser]);
+                    });
                     setShowAddVendorSeries(false);
-                    toast.success(`Vendedor "${newVendorForm.name}" agregado con serie ${newVendorForm.prefix}`);
                   }} className="p-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" title="Agregar">
                     <Check size={14} />
                   </button>
@@ -490,9 +512,8 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex items-end gap-1 ml-auto">
                         <button onClick={() => {
-                          setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, seriesPrefix: seriesForm.prefix, seriesStart: seriesForm.start, seriesCurrent: seriesForm.current } : usr));
+                          updateUserMutation.mutate({ id: u.id, seriesPrefix: seriesForm.prefix, seriesStart: seriesForm.start, seriesCurrent: seriesForm.current });
                           setEditingSeriesId(null);
-                          toast.success(`Serie de ${u.name} actualizada`);
                         }} className="p-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" title="Guardar">
                           <Check size={14} />
                         </button>
@@ -520,8 +541,7 @@ export default function SettingsPage() {
                               <Pencil size={14} />
                             </button>
                             <button onClick={() => {
-                              setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, seriesPrefix: undefined, seriesStart: undefined, seriesCurrent: undefined } : usr));
-                              toast.success(`Serie de ${u.name} eliminada`);
+                              updateUserMutation.mutate({ id: u.id, seriesPrefix: '', seriesStart: undefined, seriesCurrent: undefined });
                             }} className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Quitar de la lista">
                               <Trash2 size={14} />
                             </button>
@@ -571,6 +591,9 @@ export default function SettingsPage() {
                 )}
               </div>
             ))}
+            {warehouses.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-6">No hay bodegas registradas.</div>
+            )}
           </div>
         </div>
 
@@ -623,7 +646,10 @@ export default function SettingsPage() {
             </table>
           </div>
           {isDirector && (
-            <button onClick={() => toast.success('Permisos de roles guardados correctamente')} className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+            <button onClick={() => {
+              saveSettingMutation.mutate({ key: 'role_permissions', value: rolePermissions });
+              toast.success('Permisos de roles guardados correctamente');
+            }} className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
               Guardar permisos
             </button>
           )}
@@ -637,7 +663,10 @@ export default function SettingsPage() {
           </div>
           <textarea value={salesConditions} onChange={e => setSalesConditions(e.target.value)} rows={8} disabled={!isDirector} className="w-full px-3 py-2 rounded-lg border bg-muted/50 text-sm resize-y font-mono leading-relaxed disabled:opacity-60" />
           {isDirector && (
-            <button onClick={() => toast.success('Condiciones de venta guardadas')} className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+            <button onClick={() => {
+              saveSettingMutation.mutate({ key: 'sales_conditions', value: { text: salesConditions } });
+              toast.success('Condiciones de venta guardadas');
+            }} className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
               Guardar
             </button>
           )}
@@ -651,7 +680,10 @@ export default function SettingsPage() {
           </div>
           <textarea value={whatsappMsg} onChange={e => setWhatsappMsg(e.target.value)} rows={3} disabled={!isDirector} className="w-full px-3 py-2 rounded-lg border bg-muted/50 text-sm resize-y disabled:opacity-60" />
           {isDirector && (
-            <button onClick={() => toast.success('Plantilla WhatsApp guardada')} className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+            <button onClick={() => {
+              saveSettingMutation.mutate({ key: 'whatsapp_template', value: { message: whatsappMsg } });
+              toast.success('Plantilla WhatsApp guardada');
+            }} className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
               Guardar
             </button>
           )}
@@ -682,8 +714,12 @@ export default function SettingsPage() {
               )}
             </div>
             {currentRole === 'director' && (
-              <button onClick={() => toast.success('Tipo de cambio actualizado')} className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-                Guardar tipo de cambio
+              <button onClick={() => {
+                saveSettingMutation.mutate({ key: 'iva_rate', value: { value: ivaRate } });
+                saveSettingMutation.mutate({ key: 'exchange_rate', value: { value: exchangeRate } });
+                toast.success('Parámetros fiscales guardados');
+              }} className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
+                Guardar parámetros fiscales
               </button>
             )}
             <div className="flex items-center gap-3 mt-2">
