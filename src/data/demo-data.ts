@@ -91,53 +91,24 @@ export const demoWhatsAppTemplate: WhatsAppTemplate = {
 
 // Summary metrics
 export const dashboardMetrics = {
-  salesMonth: 1_245_000,
-  salesQuarter: 3_780_000,
-  activeOpportunities: 7,
-  quotationsSent: 12,
-  closeRate: 42,
-  avgTicket: 68500,
-  grossMargin: 38,
-  overdueReceivables: 58500,
-  pendingCollection: 109520,
-  totalInventoryValue: 4_250_000,
-  productsInTransit: 28,
-  activeImports: 3,
-  activeServiceOrders: 3,
-  activeWarranties: 1,
+  salesMonth: 0,
+  salesQuarter: 0,
+  activeOpportunities: 0,
+  quotationsSent: 0,
+  closeRate: 0,
+  avgTicket: 0,
+  grossMargin: 0,
+  overdueReceivables: 0,
+  pendingCollection: 0,
+  totalInventoryValue: 0,
+  productsInTransit: 0,
+  activeImports: 0,
+  activeServiceOrders: 0,
+  activeWarranties: 0,
 };
 
-export const salesByVendor = [
-  { name: 'Roberto J.', sales: 380000 },
-  { name: 'Miguel T.', sales: 310000 },
-  { name: 'Alejandra V.', sales: 245000 },
-  { name: 'Fernando R.', sales: 180000 },
-  { name: 'Diana C.', sales: 130000 },
-];
+export const salesByVendor: { name: string; sales: number }[] = [];
 
-export const salesByCategory = [
-  { name: 'Elevadores', value: 520000 },
-  { name: 'Balanceadoras', value: 280000 },
-  { name: 'Desmontadoras', value: 195000 },
-  { name: 'Alineadoras', value: 185000 },
-  { name: 'Hidráulico', value: 42000 },
-  { name: 'Aire', value: 23000 },
-];
+export const salesByCategory: { name: string; value: number }[] = [];
 
-export const monthlySales = [
-  { month: 'Ene 24', sales: 720000 },
-  { month: 'Feb 24', sales: 810000 },
-  { month: 'Mar 24', sales: 890000 },
-  { month: 'Abr 24', sales: 760000 },
-  { month: 'May 24', sales: 920000 },
-  { month: 'Jun 24', sales: 870000 },
-  { month: 'Jul 24', sales: 950000 },
-  { month: 'Ago 24', sales: 1010000 },
-  { month: 'Sep 24', sales: 930000 },
-  { month: 'Oct 24', sales: 980000 },
-  { month: 'Nov 24', sales: 1120000 },
-  { month: 'Dic 24', sales: 1450000 },
-  { month: 'Ene 25', sales: 1080000 },
-  { month: 'Feb 25', sales: 1350000 },
-  { month: 'Mar 25', sales: 1245000 },
-];
+export const monthlySales: { month: string; sales: number }[] = [];
