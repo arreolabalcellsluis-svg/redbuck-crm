@@ -103,8 +103,8 @@ export interface FinancialSummary {
   purchasePlanValue: number;
 }
 
-export function getFinancialAnalysis(analyses?: ProductAnalysis[]): FinancialSummary {
-  const data = analyses ?? analyzeProducts();
+export function getFinancialAnalysis(analyses: ProductAnalysis[]): FinancialSummary {
+  const data = analyses;
   const summary = getPlanningSummary(data);
 
   const totalValue = summary.totalStockValue;
