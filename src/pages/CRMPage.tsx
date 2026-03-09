@@ -28,7 +28,7 @@ type FiscalData = {
 const emptyFiscal = (): FiscalData => ({ taxRegime: '', fiscalZipCode: '', cfdiUse: 'G03', legalName: '', invoiceEmail: '' });
 
 const emptyCustomer = (): Omit<Customer, 'id' | 'createdAt'> => ({
-  name: '', type: 'taller_mecanico', phone: '', city: '', state: '', vendorId: '', source: 'llamada', priority: 'media',
+  name: '', contactName: '', type: 'taller_mecanico', phone: '', city: '', state: '', vendorId: '', source: 'llamada', priority: 'media',
 });
 
 // Map DB row to local Customer type
