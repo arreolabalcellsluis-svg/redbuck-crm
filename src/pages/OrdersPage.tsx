@@ -572,7 +572,7 @@ export default function OrdersPage() {
                   <div className="space-y-1">
                     {getOrderPayments(paymentOrder.id).map(p => (
                       <div key={p.id} className="flex justify-between text-xs p-2 rounded bg-muted/50">
-                        <span>{p.date} · {p.method}</span>
+                        <span>{p.payment_date} · {p.method}</span>
                         <span className="font-semibold text-success">{fmt(p.amount)}</span>
                       </div>
                     ))}
