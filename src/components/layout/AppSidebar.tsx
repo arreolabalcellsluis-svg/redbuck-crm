@@ -125,8 +125,8 @@ export default function AppSidebar() {
           })}
         </nav>
 
-        {/* Role Switcher (demo) */}
-        {sidebarOpen && (
+        {/* Role Switcher — only for directors */}
+        {sidebarOpen && currentRole === 'director' && (
           <div className="p-3 shrink-0" style={{ borderTop: '1px solid hsl(var(--sidebar-border))' }}>
             <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'hsl(var(--sidebar-muted))' }}>Vista como:</div>
             <select
