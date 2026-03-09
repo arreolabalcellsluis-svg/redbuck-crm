@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { analyzeProducts, getPlanningSummary, SUPPLY_STATUS_LABELS, SUPPLY_STATUS_COLORS, PLANNING_CONFIG } from '@/lib/planningEngine';
+import { SUPPLY_STATUS_LABELS, SUPPLY_STATUS_COLORS, PLANNING_CONFIG } from '@/lib/planningEngine';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import type { SupplyStatus, ProductAnalysis } from '@/lib/planningEngine';
 import { CATEGORY_LABELS } from '@/types';
 
