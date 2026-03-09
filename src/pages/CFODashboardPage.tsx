@@ -99,11 +99,14 @@ export default function CFODashboardPage() {
     return `${fromItem?.label ?? periodFrom} — ${toItem?.label ?? periodTo}`;
   }, [periodFrom, periodTo, availableMonths]);
 
-  const income = useMemo(() => calcIncomeStatement(expenses, assets, 12, period), [expenses, assets, period]);
-  const balance = useMemo(() => calcBalanceSheet(income, assets, payables, bsConfig), [income, assets, payables, bsConfig]);
-  const cashFlow = useMemo(() => calcCashFlow(income, payables, { saldoInicial: bsConfig.bancos }), [income, payables, bsConfig.bancos]);
+  const receivablesData = useMemo(() => dbReceivables.map(r => ({ paid: r.paid, balance: r.balance })), [dbReceivables]);
+  const productsData = useMemo(() => dbProducts.map(p => ({ active: p.active, stock: p.stock as Record<string, number>, cost: p.cost })), [dbProducts]);
+
+  const income = useMemo(() => calcIncomeStatement(expenses, assets, monthlySales, grossMarginPct, 12, period), [expenses, assets, monthlySales, grossMarginPct, period]);
+  const balance = useMemo(() => calcBalanceSheet(income, assets, payables, receivablesData, productsData, bsConfig), [income, assets, payables, receivablesData, productsData, bsConfig]);
+  const cashFlow = useMemo(() => calcCashFlow(income, payables, receivablesData, { saldoInicial: bsConfig.bancos }), [income, payables, receivablesData, bsConfig.bancos]);
   const kpis = useMemo(() => calcStrategicKPIs(balance, income, payables), [balance, income, payables]);
-  const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses, period), [expenses, period]);
+  const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses, monthlySales, grossMarginPct, period), [expenses, monthlySales, grossMarginPct, period]);
   const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
 
   // Leak detector data
