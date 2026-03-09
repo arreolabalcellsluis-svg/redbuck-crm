@@ -91,7 +91,7 @@ export default function PlanningPage() {
   // Import costing calculations
   const simCalc = useMemo(() => {
     const lines = simLines.map(line => {
-      const product = demoProducts.find(p => p.id === line.productId);
+      const product = products.find(p => p.id === line.productId);
       const valorTotal = (line.costoUnitario || 0) * (line.qty || 0);
       const volumenTotal = (line.cbm || 0) * (line.qty || 0);
       const igiMonto = valorTotal * ((line.igiPct || 0) / 100);

@@ -19,7 +19,7 @@ export default function ProfitabilityReportPage() {
     dateTo: new Date(),
   });
 
-  const analyses = useMemo(() => analyzeProducts(), []);
+  const { analyses } = usePlanningData();
 
   const records = useMemo(() => {
     return analyses.map(a => {

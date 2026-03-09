@@ -25,8 +25,7 @@ export default function ImportPlanningPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [coverageTarget, setCoverageTarget] = useState(PLANNING_CONFIG.defaultCoverageTargetDays);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
+  const { analyses, summary } = usePlanningData();
 
   // Sort by urgency (most urgent first)
   const urgencyOrder: Record<PurchaseUrgency, number> = {

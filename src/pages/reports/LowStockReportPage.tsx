@@ -32,8 +32,7 @@ export default function LowStockReportPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [coverageTarget, setCoverageTarget] = useState(PLANNING_CONFIG.defaultCoverageTargetDays);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
+  const { analyses, summary } = usePlanningData();
 
   // Only show products that need attention (exclude saludable by default unless filtered)
   const records = useMemo(() => {
