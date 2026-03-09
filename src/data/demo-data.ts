@@ -67,31 +67,9 @@ export const demoImports: ImportOrder[] = [];
 
 export const demoAccountsReceivable: AccountReceivable[] = [];
 
-export const demoServiceOrders: ServiceOrder[] = [
-  { id: 'so1', folio: 'SRV-2026-001', customerId: 'c1', customerName: 'Taller Los Reyes', productName: 'Balanceadora Semiautomática', technicianName: 'Jorge Pérez', type: 'instalacion', scheduledDate: '2026-03-08', status: 'programado', description: 'Instalación y capacitación de 2 balanceadoras' },
-  { id: 'so2', folio: 'SRV-2026-002', customerId: 'c3', customerName: 'Suspensiones del Norte', productName: 'Elevador 2 Postes', technicianName: 'Jorge Pérez', type: 'garantia', scheduledDate: '2026-03-10', status: 'pendiente', description: 'Revisión de fuga hidráulica en cilindro principal' },
-  { id: 'so3', folio: 'SRV-2026-003', customerId: 'c5', customerName: 'Grupo Llantas Express', productName: 'Alineadora CCD', technicianName: 'Jorge Pérez', type: 'mantenimiento', scheduledDate: '2026-03-12', status: 'programado', description: 'Mantenimiento preventivo y calibración' },
-];
+export const demoServiceOrders: ServiceOrder[] = [];
 
-export const demoSuppliers: Supplier[] = [
-  { id: 's1', name: 'Guangzhou Lift Co.', country: 'China', contact: 'Wang Li', phone: '+86-20-8888-1234', email: 'wang@gzlift.cn', currency: 'USD', type: 'internacional' },
-  { id: 's2', name: 'Zhongshan Auto Equipment', country: 'China', contact: 'Chen Wei', phone: '+86-760-8888-5678', email: 'chen@zsauto.cn', currency: 'USD', type: 'internacional' },
-  { id: 's3', name: 'Shenzhen Alignment Tech', country: 'China', contact: 'Liu Ming', phone: '+86-755-8888-9012', email: 'liu@szalign.cn', currency: 'USD', type: 'internacional' },
-  { id: 's4', name: 'Herramientas MX S.A. de C.V.', country: 'México', contact: 'Arturo Sánchez', phone: '81-1234-5678', email: 'arturo@herramientasmx.com', currency: 'MXN', type: 'nacional' },
-  { id: 's5', name: 'Logística Global MX', country: 'México', contact: 'Sandra Reyes', phone: '33-2345-6789', email: 'sandra@logisticaglobal.mx', currency: 'MXN', type: 'logistica' },
-  { id: 's6', name: 'Agencia Aduanal Torres', country: 'México', contact: 'Ing. Torres', phone: '314-345-6789', email: 'torres@aduanaltorres.mx', currency: 'MXN', type: 'aduana' },
-];
-
-export const demoSpareParts: SparePart[] = [
-  { id: 'sp1', sku: 'REF-ELV-CIL01', name: 'Cilindro hidráulico elevador', productId: 'p1', productName: 'Elevador 4 Postes', cost: 3500, price: 6800, stock: 4, minStock: 2, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp2', sku: 'REF-ELV-CAB01', name: 'Cable de acero elevador', productId: 'p2', productName: 'Elevador 2 Postes', cost: 1200, price: 2400, stock: 6, minStock: 3, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp3', sku: 'REF-BAL-SEN01', name: 'Sensor de balanceadora', productId: 'p4', productName: 'Balanceadora Automática', cost: 800, price: 1800, stock: 8, minStock: 4, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp4', sku: 'REF-DES-UÑA01', name: 'Uña desmontadora', productId: 'p6', productName: 'Desmontadora Automática', cost: 450, price: 950, stock: 12, minStock: 6, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp5', sku: 'REF-ALI-CAM01', name: 'Cámara alineadora 3D', productId: 'p8', productName: 'Alineadora 3D', cost: 8500, price: 15000, stock: 2, minStock: 1, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp6', sku: 'REF-ELV-SEL01', name: 'Sello hidráulico kit', productId: 'p1', productName: 'Elevador 4 Postes', cost: 280, price: 650, stock: 15, minStock: 5, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp7', sku: 'REF-BAL-PCB01', name: 'Tarjeta electrónica balanceadora', productId: 'p4', productName: 'Balanceadora Automática', cost: 2200, price: 4500, stock: 3, minStock: 2, warehouse: 'Bodega Principal', active: true },
-  { id: 'sp8', sku: 'REF-COM-VAL01', name: 'Válvula check compresor', productId: 'p14', productName: 'Compresor 5 HP', cost: 350, price: 750, stock: 10, minStock: 5, warehouse: 'Bodega Principal', active: true },
-];
+export const demoSpareParts: SparePart[] = [];
 
 // Company info
 export const demoCompanyInfo: CompanyInfo = {
