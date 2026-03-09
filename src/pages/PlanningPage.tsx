@@ -1006,7 +1006,7 @@ export default function PlanningPage() {
                 <tbody>
                   {simLines.map((line, i) => {
                     const calc = simCalc[i];
-                    const product = demoProducts.find(p => p.id === line.productId);
+                    const product = products.find(p => p.id === line.productId);
                     return (
                       <tr key={i}>
                         <td className="text-muted-foreground">{i + 1}</td>
