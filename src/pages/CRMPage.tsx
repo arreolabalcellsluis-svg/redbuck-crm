@@ -45,6 +45,18 @@ export default function CRMPage() {
 
   const [fiscal, setFiscal] = useState<FiscalData>(emptyFiscal());
   const [showFiscal, setShowFiscal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteCustomer = () => {
+    if (!editingCustomer) return;
+    setCustomers(prev => prev.filter(c => c.id !== editingCustomer.id));
+    toast.success(`Cliente "${editingCustomer.name}" eliminado permanentemente`);
+    setShowDeleteConfirm(false);
+    setEditingCustomer(null);
+    setForm(emptyCustomer());
+    setFiscal(emptyFiscal());
+    setShowFiscal(false);
+  };
 
   const allCustomers = isVendedor
     ? customers.filter(c => c.vendorId === vendorId)
