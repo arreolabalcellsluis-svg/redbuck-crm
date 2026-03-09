@@ -40,23 +40,42 @@ const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
 const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(280,65%,55%)', 'hsl(190,80%,45%)'];
 
-// Fallback assets
-const fallbackAssets = [
-  { id:'a1', nombre:'Camioneta Nissan NP300', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-06-15', costoAdquisicion:420000, vidaUtilMeses:60, valorRescate:120000, estatus:'activo' as const },
-  { id:'a2', nombre:'Camioneta RAM 700', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-01-10', costoAdquisicion:350000, vidaUtilMeses:60, valorRescate:100000, estatus:'activo' as const },
-  { id:'a3', nombre:'Montacargas Yale', categoria:'maquinaria' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2022-03-01', costoAdquisicion:280000, vidaUtilMeses:120, valorRescate:40000, estatus:'activo' as const },
-  { id:'a4', nombre:'MacBook Pro', categoria:'computadoras' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-06-01', costoAdquisicion:65000, vidaUtilMeses:36, valorRescate:15000, estatus:'activo' as const },
-  { id:'a5', nombre:'Licencia ERP', categoria:'software' as const, tipo:'amortizacion' as const, descripcion:'', fechaCompra:'2025-01-01', costoAdquisicion:48000, vidaUtilMeses:12, valorRescate:0, estatus:'activo' as const },
-];
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 export default function CFODashboardPage() {
   const { data: dbExpenses } = useExpenses();
   const { data: dbAssets } = useAssets();
   const { data: dbPayables } = useAccountsPayable();
+  const { data: dbProducts = [] } = useProducts();
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbReceivables = [] } = useAccountsReceivable();
 
-  const expenses = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
-  const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
+  const expenses = dbExpenses ?? [];
+  const assets = dbAssets ?? [];
   const payables = dbPayables ?? [];
+
+  // Compute monthly sales from real orders
+  const monthlySales = useMemo(() => {
+    const groups: Record<string, number> = {};
+    dbOrders.filter(o => o.status !== 'cancelado').forEach(o => {
+      const d = new Date(o.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      groups[key] = (groups[key] || 0) + o.total;
+    });
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, sales]) => {
+        const [y, m] = key.split('-');
+        return { month: `${MONTH_NAMES[parseInt(m) - 1]} ${y.slice(2)}`, sales };
+      });
+  }, [dbOrders]);
+
+  // Compute gross margin from products catalog
+  const grossMarginPct = useMemo(() => {
+    const active = dbProducts.filter(p => p.active && p.list_price > 0);
+    if (active.length === 0) return 0;
+    return active.reduce((s, p) => s + (p.list_price - p.cost) / p.list_price * 100, 0) / active.length;
+  }, [dbProducts]);
 
   const [bsConfig, setBsConfig] = useState({
     bancos: 850000,
