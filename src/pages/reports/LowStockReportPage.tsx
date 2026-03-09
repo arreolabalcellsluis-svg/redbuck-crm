@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
-import { analyzeProducts, getPlanningSummary, SUPPLY_STATUS_LABELS, SUPPLY_STATUS_COLORS, PLANNING_CONFIG } from '@/lib/planningEngine';
+import { getPlanningSummary, SUPPLY_STATUS_LABELS, SUPPLY_STATUS_COLORS, PLANNING_CONFIG } from '@/lib/planningEngine';
 import type { SupplyStatus, ProductAnalysis } from '@/lib/planningEngine';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
