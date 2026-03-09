@@ -3,15 +3,9 @@
  * Consolidates all financial data: Income Statement, Balance Sheet,
  * Cash Flow, and Strategic KPIs.
  * 
- * REUSES existing data sources:
- * - monthlySales, dashboardMetrics, demoProducts, demoAccountsReceivable (demo-data)
- * - useExpenses hook (operating_expenses table)
- * - useAssets + calcDepreciation (assets table)
- * - useAccountsPayable hook (accounts_payable table)
+ * All data is passed as parameters — no demo-data imports.
  */
 
-import { monthlySales, dashboardMetrics, demoProducts, demoAccountsReceivable } from '@/data/demo-data';
-import { demoExpenses } from '@/lib/operatingExpensesEngine';
 import type { OperatingExpense } from '@/lib/operatingExpensesEngine';
 import type { Asset } from '@/hooks/useAssets';
 import { calcDepreciation, getTotalMonthlyDepAmort } from '@/hooks/useAssets';
@@ -19,118 +13,54 @@ import type { DBAccountPayable } from '@/hooks/useAccountsPayable';
 
 // ─── Types ──────────────────────────────────────────────────────
 export interface IncomeStatement {
-  ventas: number;
-  costoVentas: number;
-  utilidadBruta: number;
-  gastosVentas: number;
-  gastosAdmin: number;
-  gastosOperativos: number;
-  ebitda: number;
-  depAmort: number;
-  ebit: number;
-  intereses: number;
-  utilidadAntesImpuestos: number;
-  impuestos: number;
-  utilidadNeta: number;
-  margenBruto: number;
-  margenEbitda: number;
-  margenNeto: number;
+  ventas: number; costoVentas: number; utilidadBruta: number;
+  gastosVentas: number; gastosAdmin: number; gastosOperativos: number;
+  ebitda: number; depAmort: number; ebit: number; intereses: number;
+  utilidadAntesImpuestos: number; impuestos: number; utilidadNeta: number;
+  margenBruto: number; margenEbitda: number; margenNeto: number;
 }
 
 export interface BalanceSheet {
-  // Activos
-  bancos: number;
-  cuentasPorCobrar: number;
-  inventario: number;
-  totalCirculantes: number;
-  activosFijosValor: number;
-  depreciacionAcumulada: number;
-  activosFijosNeto: number;
-  totalActivos: number;
-  // Pasivos
-  cuentasPorPagar: number;
-  cxpPor30: number;
-  cxpPor60: number;
-  cxpPor90: number;
-  cxpPor120: number;
-  cxpPor150: number;
-  cxpPor180: number;
-  cxpPor365: number;
-  cxpMas365: number;
-  creditosBancarios: number;
-  impuestosPorPagar: number;
-  totalPasivos: number;
-  // Capital
-  aportacionSocios: number;
-  utilidadesAcumuladas: number;
-  utilidadEjercicio: number;
-  totalCapital: number;
-  // Working capital
-  capitalDeTrabajo: number;
-  // Verificación
-  ecuacionBalanceada: boolean;
+  bancos: number; cuentasPorCobrar: number; inventario: number; totalCirculantes: number;
+  activosFijosValor: number; depreciacionAcumulada: number; activosFijosNeto: number; totalActivos: number;
+  cuentasPorPagar: number; cxpPor30: number; cxpPor60: number; cxpPor90: number;
+  cxpPor120: number; cxpPor150: number; cxpPor180: number; cxpPor365: number; cxpMas365: number;
+  creditosBancarios: number; impuestosPorPagar: number; totalPasivos: number;
+  aportacionSocios: number; utilidadesAcumuladas: number; utilidadEjercicio: number; totalCapital: number;
+  capitalDeTrabajo: number; ecuacionBalanceada: boolean;
 }
 
 export interface FinancialRadar {
-  bancos: number;
-  cuentasPorCobrar: number;
-  inventario: number;
-  cuentasPorPagar: number;
-  creditosBancarios: number;
-  utilidadNeta: number;
+  bancos: number; cuentasPorCobrar: number; inventario: number;
+  cuentasPorPagar: number; creditosBancarios: number; utilidadNeta: number;
   capitalDeTrabajo: number;
-  // Percentages
   distribution: { label: string; value: number; pct: number; color: string }[];
 }
 
 export interface CashFlow {
-  // Operativo
-  cobrosClientes: number;
-  ingresosVentas: number;
-  pagosProveedores: number;
-  gastosOperativos: number;
-  nomina: number;
-  impuestosPagados: number;
-  flujoOperativo: number;
-  // Inversión
-  compraActivos: number;
-  ventaActivos: number;
-  flujoInversion: number;
-  // Financiamiento
-  prestamosRecibidos: number;
-  pagosDeuda: number;
-  aportacionesSocios: number;
-  flujoFinanciamiento: number;
-  // Totales
-  flujoNeto: number;
-  saldoInicial: number;
-  saldoFinal: number;
+  cobrosClientes: number; ingresosVentas: number; pagosProveedores: number;
+  gastosOperativos: number; nomina: number; impuestosPagados: number; flujoOperativo: number;
+  compraActivos: number; ventaActivos: number; flujoInversion: number;
+  prestamosRecibidos: number; pagosDeuda: number; aportacionesSocios: number; flujoFinanciamiento: number;
+  flujoNeto: number; saldoInicial: number; saldoFinal: number;
 }
 
 export interface StrategicKPIs {
-  liquidez: number;
-  endeudamiento: number;
-  diasInventario: number;
-  diasCxC: number;
-  diasCxP: number;
-  cicloConversionEfectivo: number;
-  rotacionInventario: number;
-  capitalEnInventario: number;
+  liquidez: number; endeudamiento: number; diasInventario: number;
+  diasCxC: number; diasCxP: number; cicloConversionEfectivo: number;
+  rotacionInventario: number; capitalEnInventario: number;
 }
 
 export interface MonthlyFlowItem {
-  month: string;
-  entradas: number;
-  salidas: number;
-  neto: number;
-  acumulado: number;
+  month: string; entradas: number; salidas: number; neto: number; acumulado: number;
 }
+
+export interface MonthlySalesItem { month: string; sales: number; }
 
 // ─── Helpers ────────────────────────────────────────────────────
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
-/** Parse monthlySales month label to a comparable key: 'Ene 24' -> '2024-01' */
 const MONTH_MAP: Record<string, string> = {
   'Ene': '01', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'May': '05', 'Jun': '06',
   'Jul': '07', 'Ago': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dic': '12',
@@ -144,14 +74,11 @@ export function parseMonthLabel(label: string): string {
   return `${yy}-${mm}`;
 }
 
-export interface PeriodRange {
-  from: string; // 'YYYY-MM'
-  to: string;   // 'YYYY-MM'
-}
+export interface PeriodRange { from: string; to: string; }
 
-function filterSalesByPeriod(period?: PeriodRange) {
-  if (!period) return monthlySales;
-  return monthlySales.filter(m => {
+function filterSalesByPeriod(salesData: MonthlySalesItem[], period?: PeriodRange) {
+  if (!period) return salesData;
+  return salesData.filter(m => {
     const key = parseMonthLabel(m.month);
     return key >= period.from && key <= period.to;
   });
@@ -160,7 +87,7 @@ function filterSalesByPeriod(period?: PeriodRange) {
 function filterExpensesByPeriod(expenses: OperatingExpense[], period?: PeriodRange) {
   if (!period) return expenses;
   return expenses.filter(e => {
-    const d = e.fecha.slice(0, 7); // 'YYYY-MM'
+    const d = e.fecha.slice(0, 7);
     return d >= period.from && d <= period.to;
   });
 }
@@ -169,17 +96,19 @@ function filterExpensesByPeriod(expenses: OperatingExpense[], period?: PeriodRan
 export function calcIncomeStatement(
   expenses: OperatingExpense[],
   assets: Asset[],
+  salesData: MonthlySalesItem[],
+  grossMarginPct: number,
   months = 12,
   period?: PeriodRange,
 ): IncomeStatement {
-  const salesData = filterSalesByPeriod(period);
+  const filteredSales = filterSalesByPeriod(salesData, period);
   const filteredExpenses = filterExpensesByPeriod(expenses, period);
-  const effectiveMonths = period ? Math.max(salesData.length, 1) : months;
+  const effectiveMonths = period ? Math.max(filteredSales.length, 1) : months;
 
   const totalSales = period
-    ? sum(salesData.map(m => m.sales))
-    : sum(monthlySales.slice(-months).map(m => m.sales));
-  const costoVentas = totalSales * (1 - dashboardMetrics.grossMargin / 100);
+    ? sum(filteredSales.map(m => m.sales))
+    : sum(salesData.slice(-months).map(m => m.sales));
+  const costoVentas = totalSales * (1 - grossMarginPct / 100);
   const utilidadBruta = totalSales - costoVentas;
 
   const expSource = period ? filteredExpenses : expenses;
@@ -198,19 +127,9 @@ export function calcIncomeStatement(
   const utilidadNeta = utilidadAntesImpuestos - impuestos;
 
   return {
-    ventas: totalSales,
-    costoVentas,
-    utilidadBruta,
-    gastosVentas,
-    gastosAdmin,
-    gastosOperativos,
-    ebitda,
-    depAmort,
-    ebit,
-    intereses,
-    utilidadAntesImpuestos,
-    impuestos,
-    utilidadNeta,
+    ventas: totalSales, costoVentas, utilidadBruta,
+    gastosVentas, gastosAdmin, gastosOperativos,
+    ebitda, depAmort, ebit, intereses, utilidadAntesImpuestos, impuestos, utilidadNeta,
     margenBruto: safePct(utilidadBruta, totalSales),
     margenEbitda: safePct(ebitda, totalSales),
     margenNeto: safePct(utilidadNeta, totalSales),
@@ -222,37 +141,34 @@ export function calcBalanceSheet(
   income: IncomeStatement,
   assets: Asset[],
   payables: DBAccountPayable[],
+  receivablesData: { paid: number; balance: number }[],
+  productsData: { active: boolean; stock: Record<string, number>; cost: number }[],
   config: { bancos?: number; creditosBancarios?: number; aportacionSocios?: number; utilidadesAcumuladas?: number } = {},
 ): BalanceSheet {
-  // Activos circulantes
-  const bancos = config.bancos ?? 850000;
-  const cuentasPorCobrar = sum(demoAccountsReceivable.map(r => r.balance));
-  const inventario = sum(demoProducts.filter(p => p.active).map(p => {
-    const totalStock = Object.values(p.stock).reduce((a, b) => a + b, 0);
+  const bancos = config.bancos ?? 0;
+  const cuentasPorCobrar = sum(receivablesData.map(r => r.balance));
+  const inventario = sum(productsData.filter(p => p.active).map(p => {
+    const totalStock = Object.values(p.stock).reduce((a: number, b) => a + Number(b), 0);
     return totalStock * p.cost;
   }));
   const totalCirculantes = bancos + cuentasPorCobrar + inventario;
 
-  // Activos fijos
   const activeAssets = assets.filter(a => a.estatus === 'activo');
   const activosFijosValor = sum(activeAssets.map(a => a.costoAdquisicion));
   const depreciacionAcumulada = sum(activeAssets.map(a => calcDepreciation(a).depAcumulada));
   const activosFijosNeto = activosFijosValor - depreciacionAcumulada;
   const totalActivos = totalCirculantes + activosFijosNeto;
 
-  // Pasivos
   const now = new Date();
   const activePay = payables.filter(p => p.status !== 'liquidada' && p.status !== 'cancelada');
   const cuentasPorPagar = sum(activePay.map(p => p.balance));
 
-  // Aging buckets: how many days overdue
   const agingRange = (minDays: number, maxDays: number) => sum(activePay.filter(p => {
     const due = new Date(p.due_date);
     const diff = Math.floor((now.getTime() - due.getTime()) / 86400000);
     return diff >= minDays && diff < maxDays;
   }).map(p => p.balance));
 
-  // Also include not-yet-due in "0-30" bucket
   const notYetDue = sum(activePay.filter(p => new Date(p.due_date) >= now).map(p => p.balance));
   const cxpPor30 = notYetDue + agingRange(0, 30);
   const cxpPor60 = agingRange(30, 60);
@@ -264,12 +180,11 @@ export function calcBalanceSheet(
   const cxpMas365 = agingRange(365, 99999);
 
   const creditosBancarios = config.creditosBancarios ?? 0;
-  const impuestosPorPagar = income.impuestos * 0.25; // estimated quarterly
+  const impuestosPorPagar = income.impuestos * 0.25;
   const totalPasivos = cuentasPorPagar + creditosBancarios + impuestosPorPagar;
 
-  // Capital
-  const aportacionSocios = config.aportacionSocios ?? 2000000;
-  const utilidadesAcumuladas = config.utilidadesAcumuladas ?? 500000;
+  const aportacionSocios = config.aportacionSocios ?? 0;
+  const utilidadesAcumuladas = config.utilidadesAcumuladas ?? 0;
   const utilidadEjercicio = income.utilidadNeta;
   const totalCapital = aportacionSocios + utilidadesAcumuladas + utilidadEjercicio;
 
@@ -290,13 +205,14 @@ export function calcBalanceSheet(
 export function calcCashFlow(
   income: IncomeStatement,
   payables: DBAccountPayable[],
+  receivablesData: { paid: number; balance: number }[],
   config: { saldoInicial?: number; prestamosRecibidos?: number; pagosDeuda?: number; aportaciones?: number; compraActivos?: number } = {},
 ): CashFlow {
-  const cobrosClientes = sum(demoAccountsReceivable.map(r => r.paid));
+  const cobrosClientes = sum(receivablesData.map(r => r.paid));
   const ingresosVentas = income.ventas;
   const pagosProveedores = sum(payables.filter(p => p.status === 'liquidada').map(p => p.total));
   const gastosOp = income.gastosOperativos;
-  const nomina = income.gastosAdmin * 0.55; // estimated
+  const nomina = income.gastosAdmin * 0.55;
   const impuestosPagados = income.impuestos * 0.75;
 
   const flujoOperativo = (cobrosClientes + ingresosVentas) - (pagosProveedores + gastosOp + nomina + impuestosPagados);
@@ -311,7 +227,7 @@ export function calcCashFlow(
   const flujoFinanciamiento = prestamosRecibidos - pagosDeuda + aportacionesSocios;
 
   const flujoNeto = flujoOperativo + flujoInversion + flujoFinanciamiento;
-  const saldoInicial = config.saldoInicial ?? 850000;
+  const saldoInicial = config.saldoInicial ?? 0;
 
   return {
     cobrosClientes, ingresosVentas,
@@ -319,24 +235,27 @@ export function calcCashFlow(
     flujoOperativo,
     compraActivos, ventaActivos, flujoInversion,
     prestamosRecibidos, pagosDeuda, aportacionesSocios, flujoFinanciamiento,
-    flujoNeto,
-    saldoInicial,
-    saldoFinal: saldoInicial + flujoNeto,
+    flujoNeto, saldoInicial, saldoFinal: saldoInicial + flujoNeto,
   };
 }
 
 // ─── Monthly cash flow series ───────────────────────────────────
-export function calcMonthlyFlow(expenses: OperatingExpense[], period?: PeriodRange): MonthlyFlowItem[] {
+export function calcMonthlyFlow(
+  expenses: OperatingExpense[],
+  salesData: MonthlySalesItem[],
+  grossMarginPct: number,
+  period?: PeriodRange,
+): MonthlyFlowItem[] {
   const expSource = period ? filterExpensesByPeriod(expenses, period) : expenses;
   const totalExpMonthly = expSource.length > 0
-    ? sum(expSource.map(e => e.monto)) / Math.max(expSource.length / 3, 1) // rough monthly avg
-    : sum(demoExpenses.map(e => e.monto)) / 12;
+    ? sum(expSource.map(e => e.monto)) / Math.max(expSource.length / 3, 1)
+    : 0;
 
-  const salesData = filterSalesByPeriod(period);
-  let acumulado = 850000;
-  return salesData.map(m => {
+  const filtered = filterSalesByPeriod(salesData, period);
+  let acumulado = 0;
+  return filtered.map(m => {
     const entradas = m.sales;
-    const salidas = m.sales * (1 - dashboardMetrics.grossMargin / 100) + totalExpMonthly;
+    const salidas = m.sales * (1 - grossMarginPct / 100) + totalExpMonthly;
     const neto = entradas - salidas;
     acumulado += neto;
     return { month: m.month, entradas, salidas, neto, acumulado };
@@ -365,13 +284,8 @@ export function calcStrategicKPIs(
   const rotacionInventario = balance.inventario > 0 ? income.costoVentas / balance.inventario : 0;
 
   return {
-    liquidez,
-    endeudamiento,
-    diasInventario,
-    diasCxC,
-    diasCxP,
-    cicloConversionEfectivo,
-    rotacionInventario,
+    liquidez, endeudamiento, diasInventario, diasCxC, diasCxP,
+    cicloConversionEfectivo, rotacionInventario,
     capitalEnInventario: balance.inventario,
   };
 }
@@ -389,21 +303,14 @@ export function calcFinancialRadar(
     { label: 'Créditos bancarios', value: -balance.creditosBancarios, color: 'hsl(280,65%,55%)' },
     { label: 'Utilidad neta', value: income.utilidadNeta, color: 'hsl(var(--primary))' },
   ];
-
   const totalAbs = items.reduce((s, i) => s + Math.abs(i.value), 0);
   const distribution = items.map(i => ({
-    ...i,
-    pct: totalAbs > 0 ? (i.value / totalAbs) * 100 : 0,
+    ...i, pct: totalAbs > 0 ? (i.value / totalAbs) * 100 : 0,
   }));
-
   return {
-    bancos: balance.bancos,
-    cuentasPorCobrar: balance.cuentasPorCobrar,
-    inventario: balance.inventario,
-    cuentasPorPagar: balance.cuentasPorPagar,
-    creditosBancarios: balance.creditosBancarios,
-    utilidadNeta: income.utilidadNeta,
-    capitalDeTrabajo: balance.capitalDeTrabajo,
-    distribution,
+    bancos: balance.bancos, cuentasPorCobrar: balance.cuentasPorCobrar,
+    inventario: balance.inventario, cuentasPorPagar: balance.cuentasPorPagar,
+    creditosBancarios: balance.creditosBancarios, utilidadNeta: income.utilidadNeta,
+    capitalDeTrabajo: balance.capitalDeTrabajo, distribution,
   };
 }
