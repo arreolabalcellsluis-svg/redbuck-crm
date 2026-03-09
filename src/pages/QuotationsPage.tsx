@@ -379,28 +379,24 @@ export default function QuotationsPage() {
     const balance = q.total - advance;
     const today = new Date().toISOString().slice(0, 10);
 
-    const newOrder: Order = {
-      id: `or-${Date.now()}`,
+    addOrderMutation.mutate({
       folio,
-      customerId: q.customerId,
-      customerName: q.customerName,
-      vendorName: q.vendorName,
-      items: q.items.map(it => ({ productName: it.productName, qty: it.qty, unitPrice: it.unitPrice * (1 - (it.discount || 0) / 100) })),
+      customer_id: q.customerId || null,
+      customer_name: q.customerName,
+      vendor_name: q.vendorName,
+      items: q.items.map(it => ({ productId: it.productId, name: it.productName, qty: it.qty, unitPrice: it.unitPrice * (1 - (it.discount || 0) / 100) })),
       total: q.total,
       advance,
       balance: Math.max(0, balance),
       status: getOrderStatusForType(selectedOrderType),
+      order_type: selectedOrderType,
       warehouse: 'Bodega Principal',
-      promiseDate: selectedOrderType === 'entrega_futura' ? scheduledDate : today,
-      createdAt: today,
-      orderType: selectedOrderType,
-      quotationFolio: q.folio,
-      scheduledDeliveryDate: selectedOrderType === 'entrega_futura' ? scheduledDate : undefined,
-      deliveryNotes: deliveryNotes || undefined,
-      reserveDeadline: selectedOrderType === 'apartado' ? reserveDeadline : undefined,
-    };
-
-    setOrders(prev => [newOrder, ...prev]);
+      promise_date: selectedOrderType === 'entrega_futura' ? scheduledDate : today,
+      quotation_folio: q.folio,
+      scheduled_delivery_date: selectedOrderType === 'entrega_futura' ? scheduledDate : null,
+      delivery_notes: deliveryNotes || null,
+      reserve_deadline: selectedOrderType === 'apartado' ? reserveDeadline : null,
+    });
 
     // Auto-create receivable
     const receivableStatus = advance >= q.total ? 'liquidado' : advance > 0 ? 'al_corriente' : selectedOrderType === 'apartado' ? 'por_vencer' : 'al_corriente';
