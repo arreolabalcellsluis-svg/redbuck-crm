@@ -27,16 +27,6 @@ const TYPE_LABELS: Record<AssetType, string> = { depreciacion: 'Depreciación', 
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-// Demo data used as fallback when DB is empty
-const demoAssets: Asset[] = [
-  { id: 'a1', nombre: 'Camioneta Nissan NP300', categoria: 'vehiculos', tipo: 'depreciacion', descripcion: 'Camioneta de reparto principal', fechaCompra: '2023-06-15', costoAdquisicion: 420000, vidaUtilMeses: 60, valorRescate: 120000, estatus: 'activo' },
-  { id: 'a2', nombre: 'Camioneta RAM 700', categoria: 'vehiculos', tipo: 'depreciacion', descripcion: 'Vehículo de ventas', fechaCompra: '2024-01-10', costoAdquisicion: 350000, vidaUtilMeses: 60, valorRescate: 100000, estatus: 'activo' },
-  { id: 'a3', nombre: 'Montacargas Yale 2.5T', categoria: 'maquinaria', tipo: 'depreciacion', descripcion: 'Montacargas bodega principal', fechaCompra: '2022-03-01', costoAdquisicion: 280000, vidaUtilMeses: 120, valorRescate: 40000, estatus: 'activo' },
-  { id: 'a4', nombre: 'MacBook Pro 16"', categoria: 'computadoras', tipo: 'depreciacion', descripcion: 'Equipo dirección', fechaCompra: '2024-06-01', costoAdquisicion: 65000, vidaUtilMeses: 36, valorRescate: 15000, estatus: 'activo' },
-  { id: 'a5', nombre: 'Licencia ERP / CRM', categoria: 'software', tipo: 'amortizacion', descripcion: 'Licencia anual sistema', fechaCompra: '2025-01-01', costoAdquisicion: 48000, vidaUtilMeses: 12, valorRescate: 0, estatus: 'activo' },
-  { id: 'a6', nombre: 'Escritorios ejecutivos (5)', categoria: 'mobiliario', tipo: 'depreciacion', descripcion: 'Mobiliario oficina', fechaCompra: '2023-01-15', costoAdquisicion: 35000, vidaUtilMeses: 120, valorRescate: 5000, estatus: 'activo' },
-];
-
 const emptyForm: Omit<Asset, 'id'> = {
   nombre: '', categoria: 'otros', tipo: 'depreciacion', descripcion: '',
   fechaCompra: new Date().toISOString().split('T')[0], costoAdquisicion: 0,
@@ -53,8 +43,7 @@ export default function AssetsPage() {
   const updateAssetMutation = useUpdateAsset();
   const deleteAssetMutation = useDeleteAsset();
 
-  // Use DB data if available, fallback to demo
-  const assets: Asset[] = dbAssets && dbAssets.length > 0 ? dbAssets : demoAssets;
+  const assets: Asset[] = dbAssets ?? [];
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

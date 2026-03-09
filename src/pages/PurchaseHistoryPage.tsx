@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { demoProducts, demoSuppliers } from '@/data/demo-data';
-import { CATEGORY_LABELS } from '@/types';
+import { usePurchases } from '@/hooks/usePurchases';
 import MetricCard from '@/components/shared/MetricCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, Search, X, FileSpreadsheet, Download, ShoppingCart, DollarSign, Building2, Receipt, ArrowUpDown, Eye } from 'lucide-react';
-import { format, subDays, startOfMonth, startOfWeek, endOfWeek, subMonths, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { CalendarIcon, Search, X, FileSpreadsheet, Download, ShoppingCart, DollarSign, Building2, Receipt, ArrowUpDown, Eye, Loader2 } from 'lucide-react';
+import { format, startOfMonth, startOfWeek, endOfWeek, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
@@ -23,15 +22,9 @@ interface PurchaseRecord {
   date: string;
   folio: string;
   supplier: string;
-  productName: string;
-  category: string;
-  qty: number;
-  unitCost: number;
-  subtotal: number;
-  tax: number;
+  products: string;
   total: number;
   status: string;
-  responsible: string;
   notes?: string;
 }
 
@@ -45,49 +38,6 @@ const STATUSES = [
 ];
 
 const statusLabel = (s: string) => STATUSES.find(st => st.value === s)?.label || s;
-
-// Generate demo purchase history
-function generatePurchaseHistory(): PurchaseRecord[] {
-  const records: PurchaseRecord[] = [];
-  const suppliers = demoSuppliers.filter(s => ['nacional', 'internacional'].includes(s.type));
-  const products = demoProducts;
-  const statuses = ['enviada', 'confirmada', 'en_transito', 'recibida_parcial', 'recibida_total'];
-  const responsibles = ['Héctor Morales', 'Carlos Mendoza'];
-
-  const baseDates = [
-    '2025-10-05', '2025-10-18', '2025-11-02', '2025-11-15', '2025-11-28',
-    '2025-12-03', '2025-12-15', '2026-01-08', '2026-01-20', '2026-02-01',
-    '2026-02-10', '2026-02-15', '2026-02-22', '2026-02-28', '2026-03-01',
-    '2026-03-03', '2026-03-05',
-  ];
-
-  baseDates.forEach((date, i) => {
-    const supplier = suppliers[i % suppliers.length];
-    const product = products[i % products.length];
-    const qty = Math.floor(Math.random() * 5) + 1;
-    const subtotal = product.cost * qty;
-    const tax = Math.round(subtotal * 0.16);
-    records.push({
-      id: `ph-${i + 1}`,
-      date,
-      folio: `OC-${date.slice(0, 4)}-${String(i + 1).padStart(3, '0')}`,
-      supplier: supplier.name,
-      productName: product.name,
-      category: CATEGORY_LABELS[product.category] || product.category,
-      qty,
-      unitCost: product.cost,
-      subtotal,
-      tax,
-      total: subtotal + tax,
-      status: i < baseDates.length - 3 ? 'recibida_total' : statuses[i % statuses.length],
-      responsible: responsibles[i % responsibles.length],
-      notes: i % 3 === 0 ? 'Compra programada' : undefined,
-    });
-  });
-  return records;
-}
-
-const allRecords = generatePurchaseHistory();
 
 const DATE_PRESETS = [
   { label: 'Hoy', getRange: () => ({ from: new Date(), to: new Date() }) },
