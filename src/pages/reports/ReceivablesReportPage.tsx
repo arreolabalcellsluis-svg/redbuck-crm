@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, CreditCard } from 'lucide-react';
+import { ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
+import ReportFilterBar from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { demoAccountsReceivable, demoCustomers } from '@/data/demo-data';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { useAppContext } from '@/contexts/AppContext';
-import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -22,23 +21,23 @@ const AGING_LABELS: Record<string, string> = {
 
 export default function ReceivablesReportPage() {
   const { currentRole } = useAppContext();
-  const isVendedor = currentRole === 'vendedor';
+  const { data: dbReceivables = [], isLoading } = useAccountsReceivable();
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', aging: '', dateFrom: undefined, dateTo: undefined });
 
-  // For vendedor, only show receivables of their own clients
-  const myCustomerIds = isVendedor
-    ? new Set(demoCustomers.filter(c => c.vendorId === DEMO_VENDEDOR_ID).map(c => c.id))
-    : null;
-
   const records = useMemo(() => {
-    const base = myCustomerIds
-      ? demoAccountsReceivable.filter(ar => myCustomerIds.has(ar.customerId))
-      : demoAccountsReceivable;
-    return base.map(ar => ({
-      ...ar,
-      agingBucket: ar.daysOverdue > 90 ? 'vencido_90' : ar.daysOverdue > 60 ? 'vencido_60' : ar.daysOverdue > 30 ? 'vencido_30' : ar.status,
+    return dbReceivables.map(ar => ({
+      id: ar.id,
+      customerName: ar.customer_name,
+      orderFolio: ar.order_folio,
+      total: ar.total,
+      paid: ar.paid,
+      balance: ar.balance,
+      dueDate: ar.due_date,
+      daysOverdue: ar.days_overdue,
+      status: ar.status,
+      agingBucket: ar.days_overdue > 90 ? 'vencido_90' : ar.days_overdue > 60 ? 'vencido_60' : ar.days_overdue > 30 ? 'vencido_30' : ar.status,
     }));
-  }, []);
+  }, [dbReceivables]);
 
   const filtered = useMemo(() => {
     return records.filter(r => {
@@ -95,6 +94,8 @@ export default function ReceivablesReportPage() {
       sections: [{ title: 'Detalle', headers: ['Cliente', 'Folio', 'Vencimiento', 'Total', 'Pagado', 'Saldo', 'Días vencido', 'Estatus'], rows: filtered.map(r => [r.customerName, r.orderFolio, r.dueDate, fmt(r.total), fmt(r.paid), fmt(r.balance), r.daysOverdue > 0 ? `${r.daysOverdue}d` : '0', r.status]), totalsRow: ['TOTAL', '', '', fmt(totals.total), fmt(totals.pagado), fmt(totals.saldo), '', ''] }],
     });
   };
+
+  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-primary" size={32} /><span className="ml-3 text-muted-foreground">Cargando...</span></div>;
 
   return (
     <div>
