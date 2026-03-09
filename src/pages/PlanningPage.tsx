@@ -1016,7 +1016,7 @@ export default function PlanningPage() {
                           <select
                             value={line.productId}
                             onChange={e => {
-                              const p = demoProducts.find(pr => pr.id === e.target.value);
+                              const p = products.find(pr => pr.id === e.target.value);
                               updateSimLine(i, 'productId', e.target.value);
                               if (p) updateSimLine(i, 'costoUnitario', p.cost);
                             }}
