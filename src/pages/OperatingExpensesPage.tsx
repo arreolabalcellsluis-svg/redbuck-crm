@@ -16,10 +16,10 @@ import {
   EXPENSE_CATEGORIES, AREA_LABELS, TYPE_LABELS,
   calculateExpenseSummary, calculateFinancialMetrics,
   type OperatingExpense, type ExpenseCategory, type ExpenseType, type ExpenseArea,
-  demoExpenses,
 } from '@/lib/operatingExpensesEngine';
 import { useExpenses, useAddExpense, useDeleteExpense } from '@/hooks/useExpenses';
-import { dashboardMetrics } from '@/data/demo-data';
+import { useOrders } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -40,9 +40,10 @@ export default function OperatingExpensesPage() {
   const { data: dbExpenses, isLoading } = useExpenses();
   const addExpenseMutation = useAddExpense();
   const deleteExpenseMutation = useDeleteExpense();
+  const { data: ordersData = [] } = useOrders();
+  const { data: productsData = [] } = useProducts();
 
-  // Use DB data if available, fallback to demo
-  const expenses: OperatingExpense[] = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
+  const expenses: OperatingExpense[] = dbExpenses ?? [];
 
   // Form state
   const [formCat, setFormCat] = useState<ExpenseCategory>('personal');
@@ -101,7 +102,18 @@ export default function OperatingExpensesPage() {
   };
 
   const summary = useMemo(() => calculateExpenseSummary(expenses), [expenses]);
-  const financial = useMemo(() => calculateFinancialMetrics(expenses), [expenses]);
+
+  const { ventasMes, margenBruto: margenPct, numVentas } = useMemo(() => {
+    const totalVentas = ordersData.reduce((s, o) => s + Number(o.total), 0);
+    const totalCost = ordersData.reduce((s, o) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      return s + items.reduce((si: number, it: any) => si + (Number(it.cost || it.unitCost || 0) * Number(it.qty || 1)), 0);
+    }, 0);
+    const margin = totalVentas > 0 ? ((totalVentas - totalCost) / totalVentas) * 100 : 0;
+    return { ventasMes: totalVentas, margenBruto: margin, numVentas: ordersData.length || 1 };
+  }, [ordersData]);
+
+  const financial = useMemo(() => calculateFinancialMetrics(expenses, ventasMes, margenPct, numVentas), [expenses, ventasMes, margenPct, numVentas]);
 
   const filteredExpenses = useMemo(() => {
     if (filterCat === 'all') return expenses;
@@ -436,7 +448,7 @@ export default function OperatingExpensesPage() {
               { label: 'Gastos Operativos', value: fmt(financial.gastoOperativo), sub: `${fmtPct(financial.ratioGastoOperativo)} de ventas`, positive: false },
               { label: 'Utilidad Neta', value: fmt(financial.utilidadNeta), sub: `Margen: ${fmtPct(financial.margenNeto)}`, positive: financial.utilidadNeta >= 0 },
               { label: 'Punto de Equilibrio', value: fmt(financial.puntoEquilibrio), sub: `${fmt(financial.ventasNecesariasDiarias)}/día`, positive: true },
-              { label: 'Costo por Venta', value: fmt(financial.costoOperativoPorVenta), sub: `${Math.round(financial.ventasMes / dashboardMetrics.avgTicket)} ventas/mes`, positive: false },
+              { label: 'Costo por Venta', value: fmt(financial.costoOperativoPorVenta), sub: `${numVentas} ventas/mes`, positive: false },
             ].map((kpi, i) => (
               <div key={i} className="bg-card rounded-xl border p-4">
                 <div className="text-[11px] text-muted-foreground mb-1">{kpi.label}</div>

@@ -4,7 +4,7 @@
  * Reuses dashboardMetrics and monthlySales from demo-data.
  */
 
-import { dashboardMetrics, monthlySales } from '@/data/demo-data';
+// No demo-data imports – all data comes from function parameters
 
 // ─── Types ──────────────────────────────────────────────────────
 export type ExpenseCategory =
@@ -205,12 +205,16 @@ export function calculateExpenseSummary(expenses: OperatingExpense[]): ExpenseSu
     }))
     .sort((a, b) => b.total - a.total);
 
-  // By month (from monthlySales months as reference)
-  const byMonth = monthlySales.slice(-6).map(m => ({
-    month: m.month,
-    total: totalMensual * (0.85 + Math.random() * 0.3), // simulated variation
-  }));
-  byMonth[byMonth.length - 1] = { month: byMonth[byMonth.length - 1].month, total: totalMensual };
+  // By month – group expenses by their actual month
+  const monthMap = new Map<string, number>();
+  expenses.forEach(e => {
+    const m = e.fecha.slice(0, 7); // YYYY-MM
+    monthMap.set(m, (monthMap.get(m) || 0) + e.monto);
+  });
+  const byMonth = Array.from(monthMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([month, total]) => ({ month, total }));
 
   // Top 10
   const top10 = [...expenses].sort((a, b) => b.monto - a.monto).slice(0, 10);
@@ -218,18 +222,21 @@ export function calculateExpenseSummary(expenses: OperatingExpense[]): ExpenseSu
   return { totalMensual, totalAnual, promedioMensual, gastoDiario, gastosFijos, gastosVariables, byCategory, byArea, byMonth, top10 };
 }
 
-export function calculateFinancialMetrics(expenses: OperatingExpense[]): FinancialMetrics {
-  const ventasMes = dashboardMetrics.salesMonth;
-  const margenBrutoPct = dashboardMetrics.grossMargin / 100;
+export function calculateFinancialMetrics(
+  expenses: OperatingExpense[],
+  ventasMes: number = 0,
+  margenBrutoPctInput: number = 0,
+  numVentasInput: number = 0,
+): FinancialMetrics {
+  const margenBrutoPct = margenBrutoPctInput / 100;
   const costoProductos = ventasMes * (1 - margenBrutoPct);
   const utilidadBruta = ventasMes - costoProductos;
   const gastoOperativo = sum(expenses.map(e => e.monto));
   const utilidadNeta = utilidadBruta - gastoOperativo;
-  const margenBruto = margenBrutoPct * 100;
+  const margenBruto = margenBrutoPctInput;
   const margenNeto = ventasMes > 0 ? (utilidadNeta / ventasMes) * 100 : 0;
 
-  // Number of sales this month (approximate from orders data)
-  const numVentas = Math.round(ventasMes / dashboardMetrics.avgTicket) || 1;
+  const numVentas = numVentasInput || 1;
   const costoOperativoPorVenta = gastoOperativo / numVentas;
   const ratioGastoOperativo = ventasMes > 0 ? (gastoOperativo / ventasMes) * 100 : 0;
 

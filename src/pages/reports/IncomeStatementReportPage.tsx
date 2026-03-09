@@ -7,8 +7,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportToPdf } from '@/lib/pdfExport';
-import { monthlySales, dashboardMetrics } from '@/data/demo-data';
-import { demoExpenses } from '@/lib/operatingExpensesEngine';
+import { useOrders } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useAssets, getTotalMonthlyDepAmort } from '@/hooks/useAssets';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -20,15 +20,6 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 
-// Fallback demo assets for depreciation
-const fallbackAssets = [
-  { id:'a1', nombre:'Camioneta Nissan NP300', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-06-15', costoAdquisicion:420000, vidaUtilMeses:60, valorRescate:120000, estatus:'activo' as const },
-  { id:'a2', nombre:'Camioneta RAM 700', categoria:'vehiculos' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-01-10', costoAdquisicion:350000, vidaUtilMeses:60, valorRescate:100000, estatus:'activo' as const },
-  { id:'a3', nombre:'Montacargas Yale', categoria:'maquinaria' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2022-03-01', costoAdquisicion:280000, vidaUtilMeses:120, valorRescate:40000, estatus:'activo' as const },
-  { id:'a4', nombre:'MacBook Pro', categoria:'computadoras' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2024-06-01', costoAdquisicion:65000, vidaUtilMeses:36, valorRescate:15000, estatus:'activo' as const },
-  { id:'a5', nombre:'Licencia ERP', categoria:'software' as const, tipo:'amortizacion' as const, descripcion:'', fechaCompra:'2025-01-01', costoAdquisicion:48000, vidaUtilMeses:12, valorRescate:0, estatus:'activo' as const },
-  { id:'a6', nombre:'Escritorios', categoria:'mobiliario' as const, tipo:'depreciacion' as const, descripcion:'', fechaCompra:'2023-01-15', costoAdquisicion:35000, vidaUtilMeses:120, valorRescate:5000, estatus:'activo' as const },
-];
 
 function parseMonthLabel(label: string): Date {
   const monthMap: Record<string, string> = {
@@ -55,11 +46,29 @@ export default function IncomeStatementReportPage() {
   // Fetch real data from DB
   const { data: dbExpenses, isLoading: loadingExpenses } = useExpenses();
   const { data: dbAssets, isLoading: loadingAssets } = useAssets();
+  const { data: ordersData = [] } = useOrders();
+  const { data: productsData = [] } = useProducts();
 
-  const expenses = dbExpenses && dbExpenses.length > 0 ? dbExpenses : demoExpenses;
-  const assets = dbAssets && dbAssets.length > 0 ? dbAssets : fallbackAssets;
+  const expenses = dbExpenses ?? [];
+  const assets = dbAssets ?? [];
 
-  const isDbConnected = (dbExpenses && dbExpenses.length > 0) || (dbAssets && dbAssets.length > 0);
+  // Build monthly sales from real orders
+  const { monthlySalesMap, grossMarginPct } = useMemo(() => {
+    const map = new Map<string, { sales: number; cost: number }>();
+    ordersData.forEach(o => {
+      const d = new Date(o.created_at);
+      const key = d.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }).replace('.', '');
+      const entry = map.get(key) || { sales: 0, cost: 0 };
+      entry.sales += Number(o.total);
+      const items = Array.isArray(o.items) ? o.items : [];
+      entry.cost += items.reduce((s: number, it: any) => s + (Number(it.cost || it.unitCost || 0) * Number(it.qty || 1)), 0);
+      map.set(key, entry);
+    });
+    let totalSales = 0, totalCost = 0;
+    map.forEach(v => { totalSales += v.sales; totalCost += v.cost; });
+    const gm = totalSales > 0 ? ((totalSales - totalCost) / totalSales) * 100 : 0;
+    return { monthlySalesMap: map, grossMarginPct: gm };
+  }, [ordersData]);
 
   // Classify expenses
   const gastosVentas = useMemo(() =>
@@ -73,17 +82,22 @@ export default function IncomeStatementReportPage() {
 
   const depAmortMensual = useMemo(() => getTotalMonthlyDepAmort(assets), [assets]);
 
+  const totalSalesAll = useMemo(() => {
+    let t = 0;
+    monthlySalesMap.forEach(v => t += v.sales);
+    return t;
+  }, [monthlySalesMap]);
+
   const data = useMemo(() => {
-    return monthlySales
-      .filter(m => {
-        const d = parseMonthLabel(m.month);
-        return d >= startOfMonth(dateFrom) && d <= endOfMonth(dateTo);
-      })
+    return Array.from(monthlySalesMap.entries())
+      .map(([month, { sales }]) => ({ month, sales, date: parseMonthLabel(month) }))
+      .filter(m => m.date >= startOfMonth(dateFrom) && m.date <= endOfMonth(dateTo))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
       .map(m => {
         const ventas = m.sales;
-        const cogs = ventas * (1 - dashboardMetrics.grossMargin / 100);
+        const cogs = ventas * (1 - grossMarginPct / 100);
         const utilidadBruta = ventas - cogs;
-        const weight = ventas / (dashboardMetrics.salesMonth || 1);
+        const weight = totalSalesAll > 0 ? ventas / totalSalesAll : 0;
         const gVentas = gastosVentas * weight;
         const gAdmin = gastosGeneralesAdmin * weight;
         const ebitda = utilidadBruta - gVentas - gAdmin;
@@ -405,7 +419,7 @@ export default function IncomeStatementReportPage() {
             <h1 className="page-title flex items-center gap-2"><TrendingUp size={22} className="text-success" /> Estado de Resultados</h1>
             <p className="page-subtitle">
               Reporte financiero por periodo seleccionable
-              {isDbConnected && <span className="ml-2 text-xs text-success">● Datos reales</span>}
+              {ordersData.length > 0 && <span className="ml-2 text-xs text-success">● Datos reales</span>}
             </p>
           </div>
         </div>
