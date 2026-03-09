@@ -797,7 +797,7 @@ export default function QuotationsPage() {
                 {dbProducts
                   .filter(p => p.active)
                   .filter(p => 
-                    p.sku.toLowerCase().includes(productSearch.toLowerCase()) || 
+                    p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
                     p.name.toLowerCase().includes(productSearch.toLowerCase())
                   )
                   .slice(0, 10)
