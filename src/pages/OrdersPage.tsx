@@ -301,8 +301,8 @@ export default function OrdersPage() {
 
   // Customer history
   const customerOrders = historyCustomerId ? orders.filter(o => o.customerId === historyCustomerId) : [];
-  const customerReceivables = historyCustomerId ? receivables.filter(r => r.customerId === historyCustomerId) : [];
-  const customerPayments = historyCustomerId ? payments.filter(p => customerOrders.some(o => o.id === p.orderId)) : [];
+  const customerReceivables = historyCustomerId ? dbReceivables.filter(r => r.customer_id === historyCustomerId) : [];
+  const customerPaymentsFiltered = historyCustomerId ? dbOrderPayments.filter(p => customerOrders.some(o => o.id === p.order_id)) : [];
   const customerName = historyCustomerId ? (dbCustomers.find(c => c.id === historyCustomerId)?.name || '') : '';
   const totalComprado = customerOrders.reduce((s, o) => s + o.total, 0);
   const totalPagado = customerOrders.reduce((s, o) => s + getTotalPaid(o.id), 0);
@@ -311,8 +311,8 @@ export default function OrdersPage() {
   const handleDownloadStatement = () => {
     if (!historyCustomerId) return;
     const movements = customerOrders.map(o => {
-      const orderPayments = payments.filter(p => p.orderId === o.id);
-      const totalPaidOrder = o.advance + orderPayments.reduce((s, p) => s + p.amount, 0);
+      const orderPays = dbOrderPayments.filter(p => p.order_id === o.id);
+      const totalPaidOrder = o.advance + orderPays.reduce((s, p) => s + p.amount, 0);
       return {
         Cliente: customerName,
         Fecha: o.createdAt,
