@@ -18,6 +18,10 @@ const VENDEDOR_BLOCKED_PATHS = [
   '/servicio',
   '/gastos',
   '/activos',
+  '/cuentas-pagar',
+  '/facturacion',
+  '/simulador-comisiones',
+  '/reportes/simulador-financiero',
 ];
 
 export function isPathBlockedForRole(path: string, role: UserRole): boolean {
