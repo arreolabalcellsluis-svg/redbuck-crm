@@ -82,17 +82,22 @@ export default function IncomeStatementReportPage() {
 
   const depAmortMensual = useMemo(() => getTotalMonthlyDepAmort(assets), [assets]);
 
+  const totalSalesAll = useMemo(() => {
+    let t = 0;
+    monthlySalesMap.forEach(v => t += v.sales);
+    return t;
+  }, [monthlySalesMap]);
+
   const data = useMemo(() => {
-    return monthlySales
-      .filter(m => {
-        const d = parseMonthLabel(m.month);
-        return d >= startOfMonth(dateFrom) && d <= endOfMonth(dateTo);
-      })
+    return Array.from(monthlySalesMap.entries())
+      .map(([month, { sales }]) => ({ month, sales, date: parseMonthLabel(month) }))
+      .filter(m => m.date >= startOfMonth(dateFrom) && m.date <= endOfMonth(dateTo))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
       .map(m => {
         const ventas = m.sales;
-        const cogs = ventas * (1 - dashboardMetrics.grossMargin / 100);
+        const cogs = ventas * (1 - grossMarginPct / 100);
         const utilidadBruta = ventas - cogs;
-        const weight = ventas / (dashboardMetrics.salesMonth || 1);
+        const weight = totalSalesAll > 0 ? ventas / totalSalesAll : 0;
         const gVentas = gastosVentas * weight;
         const gAdmin = gastosGeneralesAdmin * weight;
         const ebitda = utilidadBruta - gVentas - gAdmin;
