@@ -16,10 +16,10 @@ import {
   EXPENSE_CATEGORIES, AREA_LABELS, TYPE_LABELS,
   calculateExpenseSummary, calculateFinancialMetrics,
   type OperatingExpense, type ExpenseCategory, type ExpenseType, type ExpenseArea,
-  demoExpenses,
 } from '@/lib/operatingExpensesEngine';
 import { useExpenses, useAddExpense, useDeleteExpense } from '@/hooks/useExpenses';
-import { dashboardMetrics } from '@/data/demo-data';
+import { useOrders } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
