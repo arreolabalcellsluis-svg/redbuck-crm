@@ -1,6 +1,7 @@
 import { demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
 import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
+import { useAddAccountReceivable } from '@/hooks/useAccountsReceivable';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { getProductImage } from '@/lib/productImages';
 import { numberToWords } from '@/lib/numberToWords';
