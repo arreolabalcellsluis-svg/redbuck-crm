@@ -52,10 +52,10 @@ export default function CFODashboardPage() {
   const payables = dbPayables ?? [];
 
   const [bsConfig, setBsConfig] = useState({
-    bancos: 850000,
+    bancos: 0,
     creditosBancarios: 0,
-    aportacionSocios: 2000000,
-    utilidadesAcumuladas: 500000,
+    aportacionSocios: 0,
+    utilidadesAcumuladas: 0,
   });
 
   // Period selector — derive available months from monthlySales
