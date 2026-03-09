@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useCommissionConfig } from '@/hooks/useSalesGoals';
-import { getVendors, DEFAULT_COMMISSION_CONFIG, type CommissionConfig } from '@/lib/vendorKPIsEngine';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { DEFAULT_COMMISSION_CONFIG, type CommissionConfig, type TeamMember } from '@/lib/vendorKPIsEngine';
 import { DEFAULT_ROLE_CONFIG } from '@/lib/roleCommissionsEngine';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -144,7 +145,8 @@ const defaultScenario = (name: string, vendorId: string, vendorName: string): Sc
 export default function CommissionSimulatorPage() {
   const { data: configData } = useCommissionConfig();
   const commissionConfig = configData?.config ?? DEFAULT_COMMISSION_CONFIG;
-  const vendors = getVendors();
+  const { data: teamMembersRaw = [] } = useTeamMembers();
+  const vendors = useMemo(() => teamMembersRaw.filter(m => m.role === 'vendedor' && m.active).map(m => ({ id: m.id, name: m.name })), [teamMembersRaw]);
 
   const [selectedVendor, setSelectedVendor] = useState(vendors[0]?.id ?? '');
   const selectedVendorName = vendors.find(v => v.id === selectedVendor)?.name ?? '';
