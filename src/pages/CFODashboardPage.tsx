@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useAssets, getTotalMonthlyDepAmort } from '@/hooks/useAssets';
 import { useAccountsPayable } from '@/hooks/useAccountsPayable';
-import { demoExpenses } from '@/lib/operatingExpensesEngine';
+import { useProducts } from '@/hooks/useProducts';
+import { useOrders } from '@/hooks/useOrders';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
   calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
   type PeriodRange, parseMonthLabel,
 } from '@/lib/cfoDashboardEngine';
-import { monthlySales } from '@/data/demo-data';
 import {
   calcLeakSummary, detectSlowInventory, detectLowMarginProducts,
   detectCapitalConsumingClients, detectExcessInventory, detectPaymentPressure,
