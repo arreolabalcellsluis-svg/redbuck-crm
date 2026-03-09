@@ -3,7 +3,7 @@ import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { getFinancialAnalysis } from '@/lib/financialSimulator';
-import { analyzeProducts } from '@/lib/planningEngine';
+import { usePlanningData } from '@/hooks/usePlanningData';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportToPdf } from '@/lib/pdfExport';
 import {
