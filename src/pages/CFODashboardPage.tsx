@@ -102,6 +102,24 @@ export default function CFODashboardPage() {
   const receivablesData = useMemo(() => dbReceivables.map(r => ({ paid: r.paid, balance: r.balance })), [dbReceivables]);
   const productsData = useMemo(() => dbProducts.map(p => ({ active: p.active, stock: p.stock as Record<string, number>, cost: p.cost })), [dbProducts]);
 
+  // Map DB data to leak detector input shapes
+  const leakProducts = useMemo(() => dbProducts.map(p => ({
+    id: p.id, name: p.name, sku: p.sku, cost: p.cost,
+    listPrice: p.list_price, minPrice: p.min_price,
+    active: p.active, stock: p.stock as Record<string, number>,
+    deliveryDays: p.delivery_days,
+  })), [dbProducts]);
+
+  const leakOrders = useMemo(() => dbOrders.map(o => ({
+    items: (o.items as any[]).map((i: any) => ({ productName: i.productName ?? '', qty: i.qty ?? 1 })),
+    createdAt: o.created_at, status: o.status,
+  })), [dbOrders]);
+
+  const leakReceivables = useMemo(() => dbReceivables.map(r => ({
+    customerId: r.customer_id ?? '', customerName: r.customer_name,
+    balance: r.balance, total: r.total, daysOverdue: r.days_overdue,
+  })), [dbReceivables]);
+
   const income = useMemo(() => calcIncomeStatement(expenses, assets, monthlySales, grossMarginPct, 12, period), [expenses, assets, monthlySales, grossMarginPct, period]);
   const balance = useMemo(() => calcBalanceSheet(income, assets, payables, receivablesData, productsData, bsConfig), [income, assets, payables, receivablesData, productsData, bsConfig]);
   const cashFlow = useMemo(() => calcCashFlow(income, payables, receivablesData, { saldoInicial: bsConfig.bancos }), [income, payables, receivablesData, bsConfig.bancos]);
@@ -109,20 +127,20 @@ export default function CFODashboardPage() {
   const monthlyFlow = useMemo(() => calcMonthlyFlow(expenses, monthlySales, grossMarginPct, period), [expenses, monthlySales, grossMarginPct, period]);
   const radar = useMemo(() => calcFinancialRadar(balance, income), [balance, income]);
 
-  // Leak detector data
-  const leakSummary = useMemo(() => calcLeakSummary(payables), [payables]);
-  const slowInv = useMemo(() => detectSlowInventory(), []);
-  const lowMargin = useMemo(() => detectLowMarginProducts(), []);
-  const capClients = useMemo(() => detectCapitalConsumingClients(), []);
-  const excessInv = useMemo(() => detectExcessInventory(), []);
+  // Leak detector data — using real DB data
+  const leakSummary = useMemo(() => calcLeakSummary(leakProducts, leakOrders, leakReceivables, payables), [leakProducts, leakOrders, leakReceivables, payables]);
+  const slowInv = useMemo(() => detectSlowInventory(leakProducts, leakOrders), [leakProducts, leakOrders]);
+  const lowMargin = useMemo(() => detectLowMarginProducts(leakProducts), [leakProducts]);
+  const capClients = useMemo(() => detectCapitalConsumingClients(leakReceivables), [leakReceivables]);
+  const excessInv = useMemo(() => detectExcessInventory(leakProducts, leakOrders), [leakProducts, leakOrders]);
   const payPressure = useMemo(() => detectPaymentPressure(payables), [payables]);
 
   // Forecast data
   const [forecastHorizon, setForecastHorizon] = useState(12);
   const [forecastScenario, setForecastScenario] = useState<ScenarioType>('base');
   const scenarioData = useMemo(
-    () => calcScenarioComparison(forecastHorizon, income, balance, payables),
-    [forecastHorizon, income, balance, payables],
+    () => calcScenarioComparison(forecastHorizon, income, balance, payables, monthlySales),
+    [forecastHorizon, income, balance, payables, monthlySales],
   );
   const activeForecast = scenarioData.forecasts[forecastScenario];
 
