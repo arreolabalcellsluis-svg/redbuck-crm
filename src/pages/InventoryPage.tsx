@@ -9,12 +9,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, CalendarIcon } from 'lucide-react';
+import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, Trash2, CalendarIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
-import { useProducts, useAddProduct, useUpdateProduct, type DBProduct } from '@/hooks/useProducts';
+import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, type DBProduct } from '@/hooks/useProducts';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -71,6 +71,7 @@ export default function InventoryPage() {
   const { data: dbProducts, isLoading } = useProducts();
   const addProductMut = useAddProduct();
   const updateProductMut = useUpdateProduct();
+  const deleteProductMut = useDeleteProduct();
 
   const products = useMemo(() => (dbProducts ?? []).map(dbToProduct), [dbProducts]);
 
@@ -341,9 +342,18 @@ export default function InventoryPage() {
                   <td>{p.inTransit > 0 ? <span className="text-info font-medium">{p.inTransit}</span> : <span className="text-muted-foreground">—</span>}</td>
                   {isAdmin && (
                     <td>
-                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                        <Pencil size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Editar">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => {
+                          if (confirm(`¿Eliminar "${p.name}" del inventario?`)) {
+                            deleteProductMut.mutate(p.id);
+                          }
+                        }} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Eliminar">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
