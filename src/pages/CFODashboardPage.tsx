@@ -40,7 +40,7 @@ const safePct = (num: number, den: number) => den !== 0 ? (num / den) * 100 : 0;
 const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl(0,78%,45%)', 'hsl(280,65%,55%)', 'hsl(190,80%,45%)'];
 
 // Fallback assets
-const fallbackAssets: typeof import('@/hooks/useAssets').useAssets extends () => { data: infer T } ? NonNullable<T> : never = [];
+const fallbackAssets: any[] = [];
 
 export default function CFODashboardPage() {
   const { data: dbExpenses } = useExpenses();
