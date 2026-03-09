@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useCommissionConfig } from '@/hooks/useSalesGoals';
-import { getVendors, DEFAULT_COMMISSION_CONFIG, type CommissionConfig } from '@/lib/vendorKPIsEngine';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { DEFAULT_COMMISSION_CONFIG, type CommissionConfig, type TeamMember } from '@/lib/vendorKPIsEngine';
 import { DEFAULT_ROLE_CONFIG } from '@/lib/roleCommissionsEngine';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

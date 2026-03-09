@@ -2,8 +2,11 @@ import { useState, useMemo } from 'react';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useOrders } from '@/hooks/useOrders';
 import { useCustomers } from '@/hooks/useCustomers';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useProducts } from '@/hooks/useProducts';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { useSalesGoals, useUpsertSalesGoal, useCommissionConfig, useUpdateCommissionConfig } from '@/hooks/useSalesGoals';
-import { calcAllVendorKPIs, getVendors, generateAlerts, type VendorKPI, type CommissionBreakdown } from '@/lib/vendorKPIsEngine';
+import { calcAllVendorKPIs, generateAlerts, type VendorKPI, type CommissionBreakdown, type TeamMember, type ProductLookup, type ARRecord } from '@/lib/vendorKPIsEngine';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -41,15 +44,22 @@ export default function VendorGoalsPage() {
   const { data: configData } = useCommissionConfig();
   const upsertGoal = useUpsertSalesGoal();
   const updateConfig = useUpdateCommissionConfig();
+  const { data: teamMembersRaw = [] } = useTeamMembers();
+  const { data: productsRaw = [] } = useProducts();
+  const { data: arRaw = [] } = useAccountsReceivable();
+
+  const teamMembers: TeamMember[] = useMemo(() => teamMembersRaw.map(m => ({ id: m.id, name: m.name, role: m.role, active: m.active })), [teamMembersRaw]);
+  const products: ProductLookup[] = useMemo(() => productsRaw.map(p => ({ name: p.name, cost: p.cost, listPrice: p.listPrice })), [productsRaw]);
+  const accountsReceivable: ARRecord[] = useMemo(() => arRaw.map(ar => ({ id: ar.id, customerId: ar.customer_id, total: ar.total, paid: ar.paid, balance: ar.balance, status: ar.status, daysOverdue: ar.days_overdue })), [arRaw]);
 
   const commissionConfig = configData?.config;
   const scoreWeights = configData?.weights;
   const scoreLevels = configData?.levels;
-  const vendors = getVendors();
+  const vendors = teamMembers.filter(m => m.role === 'vendedor' && m.active);
 
   const allKPIs = useMemo(() =>
-    calcAllVendorKPIs(quotations, orders, customers, goals, month, year, commissionConfig, scoreWeights, scoreLevels),
-    [quotations, orders, customers, goals, month, year, commissionConfig, scoreWeights, scoreLevels]
+    calcAllVendorKPIs(quotations, orders, customers, goals, teamMembers, products, accountsReceivable, month, year, commissionConfig, scoreWeights, scoreLevels),
+    [quotations, orders, customers, goals, teamMembers, products, accountsReceivable, month, year, commissionConfig, scoreWeights, scoreLevels]
   );
 
   const sortedKPIs = useMemo(() => {

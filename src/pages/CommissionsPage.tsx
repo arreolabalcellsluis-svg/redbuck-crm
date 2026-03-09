@@ -2,8 +2,11 @@ import { useState, useMemo } from 'react';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useOrders } from '@/hooks/useOrders';
 import { useCustomers } from '@/hooks/useCustomers';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useProducts } from '@/hooks/useProducts';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { useSalesGoals, useCommissionConfig } from '@/hooks/useSalesGoals';
-import { calcAllVendorKPIs, type VendorKPI } from '@/lib/vendorKPIsEngine';
+import { calcAllVendorKPIs, type VendorKPI, type TeamMember, type ProductLookup, type ARRecord } from '@/lib/vendorKPIsEngine';
 import {
   buildVendorResults, calcGerenteCommission, calcCobranzaCommission, calcAdminCommission,
   calcExecutiveSummary, DEFAULT_ROLE_CONFIG,
@@ -45,18 +48,25 @@ export default function CommissionsPage() {
   const { data: customers = [] } = useCustomers();
   const { data: goals = [] } = useSalesGoals(month, year);
   const { data: configData } = useCommissionConfig();
+  const { data: teamMembersRaw = [] } = useTeamMembers();
+  const { data: productsRaw = [] } = useProducts();
+  const { data: arRaw = [] } = useAccountsReceivable();
+
+  const teamMembers: TeamMember[] = useMemo(() => teamMembersRaw.map(m => ({ id: m.id, name: m.name, role: m.role, active: m.active })), [teamMembersRaw]);
+  const products: ProductLookup[] = useMemo(() => productsRaw.map(p => ({ name: p.name, cost: p.cost, listPrice: p.listPrice })), [productsRaw]);
+  const accountsReceivable: ARRecord[] = useMemo(() => arRaw.map(ar => ({ id: ar.id, customerId: ar.customer_id, total: ar.total, paid: ar.paid, balance: ar.balance, status: ar.status, daysOverdue: ar.days_overdue })), [arRaw]);
 
   const vendorKPIs = useMemo(() =>
-    calcAllVendorKPIs(quotations, orders, customers, goals, month, year, configData?.config, configData?.weights, configData?.levels),
-    [quotations, orders, customers, goals, month, year, configData]
+    calcAllVendorKPIs(quotations, orders, customers, goals, teamMembers, products, accountsReceivable, month, year, configData?.config, configData?.weights, configData?.levels),
+    [quotations, orders, customers, goals, teamMembers, products, accountsReceivable, month, year, configData]
   );
 
   const roleConfig = DEFAULT_ROLE_CONFIG;
 
   const vendorResults = useMemo(() => buildVendorResults(vendorKPIs, orders, roleConfig.penalties), [vendorKPIs, orders]);
-  const gerenteResult = useMemo(() => calcGerenteCommission(vendorKPIs, roleConfig.gerente), [vendorKPIs]);
-  const cobranzaResult = useMemo(() => calcCobranzaCommission(vendorKPIs, roleConfig.cobranza), [vendorKPIs]);
-  const adminResult = useMemo(() => calcAdminCommission(vendorKPIs, orders, roleConfig.administracion), [vendorKPIs, orders]);
+  const gerenteResult = useMemo(() => calcGerenteCommission(vendorKPIs, roleConfig.gerente, teamMembers), [vendorKPIs, teamMembers]);
+  const cobranzaResult = useMemo(() => calcCobranzaCommission(vendorKPIs, roleConfig.cobranza, accountsReceivable), [vendorKPIs, accountsReceivable]);
+  const adminResult = useMemo(() => calcAdminCommission(vendorKPIs, orders, roleConfig.administracion, teamMembers), [vendorKPIs, orders, teamMembers]);
   const summary = useMemo(() => calcExecutiveSummary(vendorResults, gerenteResult, cobranzaResult, adminResult, vendorKPIs), [vendorResults, gerenteResult, cobranzaResult, adminResult, vendorKPIs]);
 
   // Vendedor: only show their own
