@@ -212,21 +212,19 @@ export default function OrdersPage() {
       reserve_deadline: null,
     });
 
-    // Auto-create receivable (local for now)
-    const newReceivable: AccountReceivable = {
-      id: `ar-${Date.now()}`,
-      customerId: customer.id,
-      customerName: customer.name,
-      orderId: `temp-${Date.now()}`,
-      orderFolio: folio,
+    // Auto-create receivable in DB
+    addReceivableMutation.mutate({
+      order_id: '', // Will be filled by the order creation
+      customer_id: customer.id,
+      customer_name: customer.name,
+      order_folio: folio,
       total,
       paid: form.advance,
       balance: total - form.advance,
-      dueDate: form.promiseDate,
-      daysOverdue: 0,
+      due_date: form.promiseDate,
+      days_overdue: 0,
       status: form.advance >= total ? 'liquidado' : 'al_corriente',
-    };
-    setReceivables(prev => [newReceivable, ...prev]);
+    });
 
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'crear_pedido', entityId: folio, newValue: folio, comment: `Pedido creado para ${customer.name}` });
 
