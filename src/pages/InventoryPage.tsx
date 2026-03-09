@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { demoProducts as initialProducts, demoWarehouses } from '@/data/demo-data';
+import { demoWarehouses } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
@@ -14,8 +14,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
+import { useProducts, useAddProduct, useUpdateProduct, type DBProduct } from '@/hooks/useProducts';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+
+// Map DB row to local Product type
+function dbToProduct(db: DBProduct): Product {
+  return {
+    id: db.id,
+    sku: db.sku,
+    name: db.name,
+    category: db.category as ProductCategory,
+    brand: db.brand,
+    model: db.model,
+    description: db.description,
+    image: db.image || undefined,
+    listPrice: db.list_price,
+    minPrice: db.min_price,
+    cost: db.cost,
+    currency: db.currency,
+    deliveryDays: db.delivery_days,
+    supplier: db.supplier,
+    warranty: db.warranty,
+    active: db.active,
+    stock: db.stock,
+    inTransit: db.in_transit,
+  };
+}
 
 type InventoryForm = {
   productId: string;
@@ -37,11 +62,17 @@ export default function InventoryPage() {
   const { currentRole } = useAppContext();
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
-  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<InventoryForm>(emptyForm());
+
+  // DB hooks
+  const { data: dbProducts, isLoading } = useProducts();
+  const addProductMut = useAddProduct();
+  const updateProductMut = useUpdateProduct();
+
+  const products = useMemo(() => (dbProducts ?? []).map(dbToProduct), [dbProducts]);
 
   const isAdmin = currentRole === 'director';
   const isVendedor = currentRole === 'vendedor';
@@ -69,29 +100,31 @@ export default function InventoryPage() {
     if (!form.productName.trim()) { toast.error('El nombre del producto es obligatorio'); return; }
     if (!form.sku.trim()) { toast.error('El SKU es obligatorio'); return; }
 
-    const newProduct: Product = {
-      id: `inv-${Date.now()}`,
+    addProductMut.mutate({
       sku: form.sku,
       name: form.productName,
       category: form.category,
       brand: 'Redbuck',
       model: '',
       description: '',
-      listPrice: 0,
-      minPrice: 0,
+      image: null,
+      list_price: 0,
+      min_price: 0,
       cost: form.cost,
       currency: 'MXN',
-      deliveryDays: 5,
+      delivery_days: 5,
       supplier: '',
       warranty: '1 año',
       active: true,
-      stock: { ...form.stock },
-      inTransit: form.inTransit,
-    };
-    setProducts(prev => [newProduct, ...prev]);
-    toast.success(`Inventario "${form.productName}" creado correctamente`);
-    setShowCreate(false);
-    resetForm();
+      stock: form.stock,
+      in_transit: form.inTransit,
+    }, {
+      onSuccess: () => {
+        toast.success(`Inventario "${form.productName}" creado correctamente`);
+        setShowCreate(false);
+        resetForm();
+      },
+    });
   };
 
   const openEdit = (p: Product) => {
@@ -111,18 +144,21 @@ export default function InventoryPage() {
   const handleEdit = () => {
     if (!editId) return;
     const doEdit = () => {
-      setProducts(prev => prev.map(p => p.id === editId ? {
-        ...p,
+      updateProductMut.mutate({
+        id: editId,
         name: form.productName,
         sku: form.sku,
         category: form.category,
-        stock: { ...form.stock },
-        inTransit: form.inTransit,
+        stock: form.stock,
+        in_transit: form.inTransit,
         cost: form.cost,
-      } : p));
-      toast.success(`Inventario "${form.productName}" actualizado`);
-      setShowEdit(false);
-      resetForm();
+      }, {
+        onSuccess: () => {
+          toast.success(`Inventario "${form.productName}" actualizado`);
+          setShowEdit(false);
+          resetForm();
+        },
+      });
     };
 
     const original = products.find(p => p.id === editId);
@@ -226,13 +262,13 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Unidades totales" value={totalUnits} icon={Package} />
-        {!isVendedor && <MetricCard title="Valor inventario" value={fmt(totalValue)} icon={Warehouse} variant="primary" />}
-        <MetricCard title="En tránsito" value={inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
-        <MetricCard title="Stock bajo" value={lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
+        <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} />
+        {!isVendedor && <MetricCard title="Valor inventario" value={isLoading ? '...' : fmt(totalValue)} icon={Warehouse} variant="primary" />}
+        <MetricCard title="En tránsito" value={isLoading ? '...' : inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
+        <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
       </div>
 
-      {/* Warehouses overview - hide financial values for vendedor */}
+      {/* Warehouses overview */}
       {!isVendedor && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {demoWarehouses.map(w => {
@@ -274,6 +310,9 @@ export default function InventoryPage() {
         )}
       </div>
 
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Cargando inventario...</div>
+      ) : (
       <div className="bg-card rounded-xl border overflow-x-auto">
         <table className="data-table">
           <thead>
@@ -313,6 +352,7 @@ export default function InventoryPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* ===================== CREATE INVENTORY DIALOG ===================== */}
       <Dialog open={showCreate} onOpenChange={(open) => { setShowCreate(open); if (!open) resetForm(); }}>
@@ -324,8 +364,8 @@ export default function InventoryPage() {
           {inventoryFormFields}
           <DialogFooter>
             <button onClick={() => { setShowCreate(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Crear Inventario
+            <button onClick={handleCreate} disabled={addProductMut.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {addProductMut.isPending ? 'Guardando...' : 'Crear Inventario'}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -341,8 +381,8 @@ export default function InventoryPage() {
           {inventoryFormFields}
           <DialogFooter>
             <button onClick={() => { setShowEdit(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleEdit} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Guardar Cambios
+            <button onClick={handleEdit} disabled={updateProductMut.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {updateProductMut.isPending ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </DialogFooter>
         </DialogContent>

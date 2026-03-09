@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { demoCustomers as initialCustomers, demoOpportunities, demoUsers } from '@/data/demo-data';
+import { useState, useMemo } from 'react';
+import { demoOpportunities, demoUsers } from '@/data/demo-data';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
@@ -11,6 +11,7 @@ import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, Ch
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -30,14 +31,41 @@ const emptyCustomer = (): Omit<Customer, 'id' | 'createdAt'> => ({
   name: '', type: 'taller_mecanico', phone: '', city: '', state: '', vendorId: '', source: 'llamada', priority: 'media',
 });
 
+// Map DB row to local Customer type
+function dbToCustomer(db: DBCustomer): Customer {
+  return {
+    id: db.id,
+    name: db.name,
+    tradeName: db.trade_name || undefined,
+    rfc: db.rfc || undefined,
+    type: db.type as CustomerType,
+    phone: db.phone,
+    whatsapp: db.whatsapp || undefined,
+    email: db.email || undefined,
+    city: db.city,
+    state: db.state,
+    vendorId: db.vendor_id || '',
+    source: db.source as LeadSource,
+    priority: db.priority,
+    createdAt: db.created_at.split('T')[0],
+  };
+}
+
 export default function CRMPage() {
   const { currentRole } = useAppContext();
   const [tab, setTab] = useState<Tab>('clientes');
   const [search, setSearch] = useState('');
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [form, setForm] = useState(emptyCustomer());
+
+  // DB hooks
+  const { data: dbCustomers, isLoading } = useCustomers();
+  const addCustomerMut = useAddCustomer();
+  const updateCustomerMut = useUpdateCustomer();
+  const deleteCustomerMut = useDeleteCustomer();
+
+  const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
   const canExport = true;
   const isVendedor = currentRole === 'vendedor';
@@ -49,13 +77,16 @@ export default function CRMPage() {
 
   const handleDeleteCustomer = () => {
     if (!editingCustomer) return;
-    setCustomers(prev => prev.filter(c => c.id !== editingCustomer.id));
-    toast.success(`Cliente "${editingCustomer.name}" eliminado permanentemente`);
-    setShowDeleteConfirm(false);
-    setEditingCustomer(null);
-    setForm(emptyCustomer());
-    setFiscal(emptyFiscal());
-    setShowFiscal(false);
+    deleteCustomerMut.mutate(editingCustomer.id, {
+      onSuccess: () => {
+        toast.success(`Cliente "${editingCustomer.name}" eliminado permanentemente`);
+        setShowDeleteConfirm(false);
+        setEditingCustomer(null);
+        setForm(emptyCustomer());
+        setFiscal(emptyFiscal());
+        setShowFiscal(false);
+      },
+    });
   };
 
   const allCustomers = isVendedor
@@ -88,15 +119,26 @@ export default function CRMPage() {
     if (!form.phone.trim()) { toast.error('El teléfono es obligatorio'); return; }
     if (!form.vendorId) { toast.error('Selecciona un vendedor'); return; }
 
-    const newCustomer: Customer = {
-      ...form,
-      id: `c-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setCustomers(prev => [newCustomer, ...prev]);
-    toast.success(`Cliente "${form.name}" registrado correctamente`);
-    setShowCreate(false);
-    setForm(emptyCustomer());
+    addCustomerMut.mutate({
+      name: form.name,
+      trade_name: form.tradeName || null,
+      rfc: form.rfc || null,
+      type: form.type,
+      phone: form.phone,
+      whatsapp: form.whatsapp || null,
+      email: form.email || null,
+      city: form.city,
+      state: form.state,
+      vendor_id: form.vendorId || null,
+      source: form.source,
+      priority: form.priority,
+    }, {
+      onSuccess: () => {
+        toast.success(`Cliente "${form.name}" registrado correctamente`);
+        setShowCreate(false);
+        setForm(emptyCustomer());
+      },
+    });
   };
 
   const handleEdit = (customer: Customer) => {
@@ -111,10 +153,27 @@ export default function CRMPage() {
     if (!form.phone.trim()) { toast.error('El teléfono es obligatorio'); return; }
     if (!form.vendorId) { toast.error('Selecciona un vendedor'); return; }
 
-    setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...form } : c));
-    toast.success(`Cliente "${form.name}" actualizado correctamente`);
-    setEditingCustomer(null);
-    setForm(emptyCustomer());
+    updateCustomerMut.mutate({
+      id: editingCustomer.id,
+      name: form.name,
+      trade_name: form.tradeName || null,
+      rfc: form.rfc || null,
+      type: form.type,
+      phone: form.phone,
+      whatsapp: form.whatsapp || null,
+      email: form.email || null,
+      city: form.city,
+      state: form.state,
+      vendor_id: form.vendorId || null,
+      source: form.source,
+      priority: form.priority,
+    }, {
+      onSuccess: () => {
+        toast.success(`Cliente "${form.name}" actualizado correctamente`);
+        setEditingCustomer(null);
+        setForm(emptyCustomer());
+      },
+    });
   };
 
   return (
@@ -140,25 +199,19 @@ export default function CRMPage() {
         const pipelineTotal = allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0);
         const cierreGanado = allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0);
         const activeOps = allOpportunities.filter(o => !['cierre_ganado', 'cierre_perdido'].includes(o.stage));
-        const clickCard = (path: string) => ({
-          className: 'bg-card rounded-xl border p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 hover:scale-[1.02] transition-all duration-200 group',
-          onClick: () => {},
-        });
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {/* Clientes */}
             <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <Users size={14} /> {isVendedor ? 'Mis clientes' : 'Clientes'}
               </div>
-              <div className="text-xl font-bold">{allCustomers.length}</div>
+              <div className="text-xl font-bold">{isLoading ? '...' : allCustomers.length}</div>
               <div className="space-y-0.5 mt-2 text-[10px]">
                 <div className="flex justify-between"><span className="text-muted-foreground">Alta prioridad:</span> <span className="font-semibold">{allCustomers.filter(c => c.priority === 'alta').length}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Nuevos este mes:</span> <span className="font-semibold">{allCustomers.filter(c => c.createdAt >= new Date().toISOString().slice(0, 7)).length}</span></div>
               </div>
             </div>
 
-            {/* Oportunidades */}
             <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <Target size={14} /> {isVendedor ? 'Mis oportunidades' : 'Oportunidades'}
@@ -170,7 +223,6 @@ export default function CRMPage() {
               </div>
             </div>
 
-            {/* Pipeline activo */}
             <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <TrendingUp size={14} /> Pipeline activo
@@ -182,7 +234,6 @@ export default function CRMPage() {
               </div>
             </div>
 
-            {/* Cierre ganado */}
             <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <UserPlus size={14} /> Cierre ganado
@@ -218,6 +269,9 @@ export default function CRMPage() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
           </div>
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Cargando clientes...</div>
+          ) : (
           <div className="bg-card rounded-xl border overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -242,6 +296,7 @@ export default function CRMPage() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
 
@@ -386,8 +441,8 @@ export default function CRMPage() {
 
           <DialogFooter>
             <button onClick={() => { setShowCreate(false); setForm(emptyCustomer()); setFiscal(emptyFiscal()); setShowFiscal(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Registrar Cliente
+            <button onClick={handleCreate} disabled={addCustomerMut.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {addCustomerMut.isPending ? 'Guardando...' : 'Registrar Cliente'}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -506,8 +561,8 @@ export default function CRMPage() {
             </button>
             <div className="flex gap-2">
               <button onClick={() => { setEditingCustomer(null); setForm(emptyCustomer()); setFiscal(emptyFiscal()); setShowFiscal(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-              <button onClick={handleUpdate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-                Guardar Cambios
+              <button onClick={handleUpdate} disabled={updateCustomerMut.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+                {updateCustomerMut.isPending ? 'Guardando...' : 'Guardar Cambios'}
               </button>
             </div>
           </DialogFooter>
@@ -526,7 +581,7 @@ export default function CRMPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sí, eliminar
+              {deleteCustomerMut.isPending ? 'Eliminando...' : 'Sí, eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
