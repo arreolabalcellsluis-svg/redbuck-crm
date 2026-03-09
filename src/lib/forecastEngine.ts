@@ -1,9 +1,15 @@
 /**
  * REDBUCK – Forecast / Prediction Engine
  * Projects future financials using existing historical data.
- * All data passed as parameters — no demo-data imports.
+ *
+ * REUSES:
+ * - monthlySales, demoProducts, demoAccountsReceivable, dashboardMetrics (demo-data)
+ * - IncomeStatement, BalanceSheet from cfoDashboardEngine
+ * - OperatingExpense from operatingExpensesEngine
+ * - DBAccountPayable from useAccountsPayable
  */
 
+import { monthlySales, demoProducts, demoAccountsReceivable, dashboardMetrics } from '@/data/demo-data';
 import type { IncomeStatement, BalanceSheet } from '@/lib/cfoDashboardEngine';
 import type { DBAccountPayable } from '@/hooks/useAccountsPayable';
 
@@ -13,7 +19,7 @@ export type ScenarioType = 'conservador' | 'base' | 'agresivo';
 
 export interface ScenarioConfig {
   label: string;
-  growthFactor: number;
+  growthFactor: number; // multiplier on trend (0.5 = half growth, 1 = trend, 1.5 = aggressive)
   color: string;
 }
 
@@ -42,6 +48,7 @@ export interface MonthlyProjection {
 export interface ForecastResult {
   scenario: ScenarioType;
   months: MonthlyProjection[];
+  // Totals for the horizon
   ventasTotal: number;
   utilidadBrutaTotal: number;
   ebitdaTotal: number;
@@ -49,6 +56,7 @@ export interface ForecastResult {
   flujoNetoTotal: number;
   capitalTrabajoFinal: number;
   inventarioCapitalRequerido: number;
+  // Alerts
   alertas: ForecastAlert[];
 }
 
@@ -71,14 +79,13 @@ function getMonthLabel(baseDate: Date, offset: number): string {
   return `${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
 }
 
-// ─── Trend calculation from order-based monthly sales ──
-interface MonthlySalesPoint { month: string; sales: number }
-
-function calcTrend(monthlySalesData: MonthlySalesPoint[]): { avgMonthly: number; monthlyGrowth: number; seasonality: number[] } {
-  const sales = monthlySalesData.map(m => m.sales);
+// ─── Trend calculation using linear regression on monthlySales ──
+function calcTrend(): { avgMonthly: number; monthlyGrowth: number; seasonality: number[] } {
+  const sales = monthlySales.map(m => m.sales);
   const n = sales.length;
-  if (n < 3) return { avgMonthly: sales[n - 1] ?? 0, monthlyGrowth: 0, seasonality: Array(12).fill(1) };
+  if (n < 3) return { avgMonthly: sales[n - 1] ?? 1000000, monthlyGrowth: 0, seasonality: Array(12).fill(1) };
 
+  // Linear regression: y = a + b*x
   const xMean = (n - 1) / 2;
   const yMean = sum(sales) / n;
   let num = 0, den = 0;
@@ -89,6 +96,7 @@ function calcTrend(monthlySalesData: MonthlySalesPoint[]): { avgMonthly: number;
   const b = den !== 0 ? num / den : 0;
   const a = yMean - b * xMean;
 
+  // Seasonality index (ratio of actual to trend for each calendar month)
   const seasonality = Array(12).fill(0);
   const seasonCount = Array(12).fill(0);
   for (let i = 0; i < n; i++) {
@@ -110,20 +118,6 @@ function calcTrend(monthlySalesData: MonthlySalesPoint[]): { avgMonthly: number;
   };
 }
 
-// ─── Derive monthly sales from orders ───────────────────────────
-export function deriveMonthlyOrderSales(orders: { total: number; created_at: string }[]): MonthlySalesPoint[] {
-  if (orders.length === 0) return [];
-  const map: Record<string, number> = {};
-  orders.forEach(o => {
-    const d = new Date(o.created_at);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    map[key] = (map[key] || 0) + o.total;
-  });
-  return Object.entries(map)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, sales]) => ({ month, sales }));
-}
-
 // ─── Main forecast function ─────────────────────────────────────
 export function calcForecast(
   scenario: ScenarioType,
@@ -131,23 +125,25 @@ export function calcForecast(
   currentIncome: IncomeStatement,
   currentBalance: BalanceSheet,
   payables: DBAccountPayable[],
-  monthlySalesData: MonthlySalesPoint[] = [],
 ): ForecastResult {
   const config = SCENARIOS[scenario];
-  const trend = calcTrend(monthlySalesData);
-  const sales = monthlySalesData.map(m => m.sales);
-  const lastSales = sales[sales.length - 1] ?? 0;
+  const trend = calcTrend();
+  const salesData = monthlySales.map(m => m.sales);
+  const lastIdx = salesData.length - 1;
 
+  // Current ratios from income statement
   const costRatio = currentIncome.costoVentas / (currentIncome.ventas || 1);
   const opexRatio = currentIncome.gastosOperativos / (currentIncome.ventas || 1);
   const depAmortMonthly = currentIncome.depAmort / 12;
   const interestMonthly = currentIncome.intereses / 12;
   const taxRate = 0.30;
 
-  const collectionRate = 0.85;
-  const paymentRate = 0.80;
+  // Cash flow ratios
+  const collectionRate = 0.85; // 85% of sales collected same month
+  const paymentRate = 0.80; // 80% of COGS paid same month
   const inventoryToSalesRatio = currentBalance.inventario / (currentIncome.ventas / 12 || 1);
 
+  // Starting values
   let saldoCaja = currentBalance.bancos;
   const cxcBase = currentBalance.cuentasPorCobrar;
   const cxpBase = currentBalance.cuentasPorPagar;
@@ -162,7 +158,8 @@ export function calcForecast(
     futureDate.setMonth(futureDate.getMonth() + i);
     const calMonth = futureDate.getMonth();
 
-    const trendSales = lastSales + trend.monthlyGrowth * i * config.growthFactor;
+    // Projected sales: trend line + growth factor + seasonality
+    const trendSales = salesData[lastIdx] + trend.monthlyGrowth * i * config.growthFactor;
     const seasonIdx = trend.seasonality[calMonth] ?? 1;
     const ventas = Math.max(0, trendSales * seasonIdx);
 
@@ -174,14 +171,18 @@ export function calcForecast(
     const impuestos = Math.max(0, utilidadAntesImp * taxRate);
     const utilidadNeta = utilidadAntesImp - impuestos;
 
+    // Cash flow projection
     const flujoEntradas = ventas * collectionRate + (i === 1 ? cxcBase * 0.3 : 0);
     const pagoProveedores = costoVentas * paymentRate + (i <= 2 ? cxpBase * 0.2 : 0);
     const flujoSalidas = pagoProveedores + gastosOperativos + impuestos + interestMonthly;
     const flujoNeto = flujoEntradas - flujoSalidas;
     saldoCaja += flujoNeto;
 
+    // Inventory needed
     const inventarioNecesario = ventas * inventoryToSalesRatio;
-    const cxcProj = ventas * (1 - collectionRate) * 2;
+
+    // Working capital
+    const cxcProj = ventas * (1 - collectionRate) * 2; // ~2 months uncollected
     const cxpProj = costoVentas * (1 - paymentRate) * 1.5;
     const capitalTrabajo = (saldoCaja + cxcProj + inventarioNecesario) - cxpProj;
 
@@ -191,24 +192,51 @@ export function calcForecast(
       saldoCaja, inventarioNecesario, capitalTrabajo,
     });
 
+    // Generate alerts
     if (saldoCaja < 0) {
-      alertas.push({ tipo: 'liquidez', severity: 'critico', mes: monthLabel, titulo: 'Déficit de caja proyectado', descripcion: `El saldo de caja podría ser negativo en ${monthLabel}`, monto: Math.abs(saldoCaja) });
+      alertas.push({
+        tipo: 'liquidez', severity: 'critico', mes: monthLabel,
+        titulo: 'Déficit de caja proyectado',
+        descripcion: `El saldo de caja podría ser negativo en ${monthLabel}`,
+        monto: Math.abs(saldoCaja),
+      });
     } else if (saldoCaja < gastosOperativos) {
-      alertas.push({ tipo: 'liquidez', severity: 'alto', mes: monthLabel, titulo: 'Liquidez ajustada', descripcion: `Caja no cubre un mes de operación en ${monthLabel}`, monto: saldoCaja });
+      alertas.push({
+        tipo: 'liquidez', severity: 'alto', mes: monthLabel,
+        titulo: 'Liquidez ajustada',
+        descripcion: `Caja no cubre un mes de operación en ${monthLabel}`,
+        monto: saldoCaja,
+      });
     }
 
     if (utilidadNeta < 0) {
-      alertas.push({ tipo: 'utilidad', severity: 'alto', mes: monthLabel, titulo: 'Pérdida proyectada', descripcion: `Se proyecta pérdida neta en ${monthLabel}`, monto: Math.abs(utilidadNeta) });
+      alertas.push({
+        tipo: 'utilidad', severity: 'alto', mes: monthLabel,
+        titulo: 'Pérdida proyectada',
+        descripcion: `Se proyecta pérdida neta en ${monthLabel}`,
+        monto: Math.abs(utilidadNeta),
+      });
     }
 
     if (capitalTrabajo < 0) {
-      alertas.push({ tipo: 'capital', severity: 'critico', mes: monthLabel, titulo: 'Capital de trabajo negativo', descripcion: `Se necesitará inyección de capital en ${monthLabel}`, monto: Math.abs(capitalTrabajo) });
+      alertas.push({
+        tipo: 'capital', severity: 'critico', mes: monthLabel,
+        titulo: 'Capital de trabajo negativo',
+        descripcion: `Se necesitará inyección de capital en ${monthLabel}`,
+        monto: Math.abs(capitalTrabajo),
+      });
     }
   }
 
+  // Inventory alert: total capital needed
   const inventarioCapitalRequerido = sum(months.map(m => m.inventarioNecesario)) / horizonMonths;
   if (inventarioCapitalRequerido > currentBalance.inventario * 1.3) {
-    alertas.push({ tipo: 'inventario', severity: 'alto', mes: months[0]?.month ?? '', titulo: 'Inventario adicional requerido', descripcion: `Se necesitará ~${Math.round((inventarioCapitalRequerido / currentBalance.inventario - 1) * 100)}% más inventario para cubrir demanda`, monto: inventarioCapitalRequerido - currentBalance.inventario });
+    alertas.push({
+      tipo: 'inventario', severity: 'alto', mes: months[0]?.month ?? '',
+      titulo: 'Inventario adicional requerido',
+      descripcion: `Se necesitará ~${Math.round((inventarioCapitalRequerido / currentBalance.inventario - 1) * 100)}% más inventario para cubrir demanda`,
+      monto: inventarioCapitalRequerido - currentBalance.inventario,
+    });
   }
 
   return {
@@ -238,13 +266,12 @@ export function calcScenarioComparison(
   currentIncome: IncomeStatement,
   currentBalance: BalanceSheet,
   payables: DBAccountPayable[],
-  monthlySalesData: MonthlySalesPoint[] = [],
 ): { forecasts: Record<ScenarioType, ForecastResult>; comparison: ScenarioComparison[] } {
   const types: ScenarioType[] = ['conservador', 'base', 'agresivo'];
   const forecasts = {} as Record<ScenarioType, ForecastResult>;
 
   for (const t of types) {
-    forecasts[t] = calcForecast(t, horizonMonths, currentIncome, currentBalance, payables, monthlySalesData);
+    forecasts[t] = calcForecast(t, horizonMonths, currentIncome, currentBalance, payables);
   }
 
   const comparison: ScenarioComparison[] = [

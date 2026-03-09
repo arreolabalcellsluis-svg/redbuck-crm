@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import {
+  analyzeProducts, getPlanningSummary,
   OVERSTOCK_STATUS_LABELS, OVERSTOCK_STATUS_COLORS, OVERSTOCK_SUGGESTION_LABELS,
   PLANNING_CONFIG,
 } from '@/lib/planningEngine';
-import { usePlanningData } from '@/hooks/usePlanningData';
 import type { OverstockStatus, OverstockSuggestion } from '@/lib/planningEngine';
 import { CATEGORY_LABELS } from '@/types';
 
@@ -37,7 +37,8 @@ export default function OverstockReportPage() {
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', categoria: '', overstockStatus: '', proveedor: '' });
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  const { analyses, summary } = usePlanningData();
+  const analyses = useMemo(() => analyzeProducts(), []);
+  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
 
   const records = useMemo(() => {
     return analyses

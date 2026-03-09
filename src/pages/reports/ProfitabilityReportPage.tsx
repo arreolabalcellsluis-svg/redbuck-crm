@@ -4,7 +4,8 @@ import { ArrowLeft, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { usePlanningData } from '@/hooks/usePlanningData';
+import { analyzeProducts } from '@/lib/planningEngine';
+import { demoProducts } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
 import { subMonths } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -19,7 +20,7 @@ export default function ProfitabilityReportPage() {
     dateTo: new Date(),
   });
 
-  const { analyses } = usePlanningData();
+  const analyses = useMemo(() => analyzeProducts(), []);
 
   const records = useMemo(() => {
     return analyses.map(a => {

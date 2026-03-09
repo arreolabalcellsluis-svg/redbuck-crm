@@ -4,7 +4,8 @@ import { ArrowLeft, Skull } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { usePlanningData } from '@/hooks/usePlanningData';
+import { analyzeProducts } from '@/lib/planningEngine';
+import { demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -12,7 +13,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 export default function DeadStockReportPage() {
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', categoria: '', bodega: '', periodo: '180' });
 
-  const { analyses, warehouses: demoWarehouses } = usePlanningData();
+  const analyses = useMemo(() => analyzeProducts(), []);
 
   const records = useMemo(() => {
     const threshold = parseInt(filters.periodo) || 180;

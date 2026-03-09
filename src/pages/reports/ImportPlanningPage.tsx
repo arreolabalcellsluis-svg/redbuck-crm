@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import {
+  analyzeProducts, getPlanningSummary,
   PURCHASE_URGENCY_LABELS, PURCHASE_URGENCY_COLORS,
   PLANNING_CONFIG,
 } from '@/lib/planningEngine';
-import { usePlanningData } from '@/hooks/usePlanningData';
 import type { PurchaseUrgency } from '@/lib/planningEngine';
 import { CATEGORY_LABELS } from '@/types';
 
@@ -25,7 +25,8 @@ export default function ImportPlanningPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [coverageTarget, setCoverageTarget] = useState(PLANNING_CONFIG.defaultCoverageTargetDays);
 
-  const { analyses, summary } = usePlanningData();
+  const analyses = useMemo(() => analyzeProducts(), []);
+  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
 
   // Sort by urgency (most urgent first)
   const urgencyOrder: Record<PurchaseUrgency, number> = {

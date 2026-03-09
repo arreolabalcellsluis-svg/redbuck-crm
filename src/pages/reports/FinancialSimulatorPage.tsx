@@ -3,7 +3,7 @@ import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
 import { getFinancialAnalysis } from '@/lib/financialSimulator';
-import { usePlanningData } from '@/hooks/usePlanningData';
+import { analyzeProducts } from '@/lib/planningEngine';
 import { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportToPdf } from '@/lib/pdfExport';
 import {
@@ -31,7 +31,7 @@ export default function FinancialSimulatorPage() {
   const navigate = useNavigate();
   const [coverageTarget, setCoverageTarget] = useState(90);
 
-  const { analyses } = usePlanningData();
+  const analyses = useMemo(() => analyzeProducts(), []);
   const fin = useMemo(() => getFinancialAnalysis(analyses), [analyses]);
 
   if (!['director', 'administracion'].includes(currentRole)) {
