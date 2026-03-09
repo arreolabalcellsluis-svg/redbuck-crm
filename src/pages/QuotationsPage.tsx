@@ -1,4 +1,4 @@
-import { demoCustomers, demoProducts, demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
+import { demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
 import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
@@ -8,8 +8,8 @@ import { exportQuotationsZip, exportQuotationsExcel } from '@/lib/exportUtils';
 import { addAuditLog } from '@/lib/auditLog';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil, CalendarIcon, X } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { FileText, Send, CheckCircle, Plus, Search, MessageCircle, Download, Eye, Trash2, ShoppingCart, CalendarClock, PackageCheck, CreditCard, Pencil, CalendarIcon, X, Loader2 } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -20,12 +20,73 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, AccountReceivable } from '@/types';
 import type { Payment } from '@/types/payments';
+import { useQuotations, useAddQuotation, useUpdateQuotationStatus } from '@/hooks/useQuotations';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProducts } from '@/hooks/useProducts';
+import { useAddOrder } from '@/hooks/useOrders';
+import { useOrders } from '@/hooks/useOrders';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, exchangeRate, quotations, addQuotation, updateQuotation, updateQuotationStatus, getNextFolio, consumeFolio, vendorSeries, orders, setOrders, setReceivables, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate, getNextFolio, consumeFolio, vendorSeries, setReceivables, registerPayment } = useAppContext();
+
+  // DB hooks
+  const { data: dbQuotations = [], isLoading: quotationsLoading } = useQuotations();
+  const addQuotationMutation = useAddQuotation();
+  const updateQuotationStatusMutation = useUpdateQuotationStatus();
+  const { data: dbOrders = [] } = useOrders();
+  const addOrderMutation = useAddOrder();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbProducts = [] } = useProducts();
+
+  // Map DB quotations to local Quotation type
+  const quotations: Quotation[] = useMemo(() => dbQuotations.map(q => ({
+    id: q.id,
+    folio: q.folio,
+    customerId: q.customer_id || '',
+    customerName: q.customer_name,
+    customerPhone: q.customer_phone || undefined,
+    customerWhatsapp: q.customer_whatsapp || undefined,
+    vendorId: q.vendor_id || '',
+    vendorName: q.vendor_name,
+    vendorPhone: q.vendor_phone || undefined,
+    vendorEmail: q.vendor_email || undefined,
+    items: (q.items || []).map((it: any) => ({
+      productId: it.productId || '',
+      productName: it.productName || it.name || '',
+      productImage: it.productImage || '/placeholder.svg',
+      sku: it.sku || '',
+      qty: it.qty || 0,
+      unitPrice: it.unitPrice || 0,
+      discount: it.discount || 0,
+    })),
+    subtotal: q.subtotal,
+    tax: q.tax,
+    total: q.total,
+    status: q.status as QuotationStatus,
+    validUntil: q.valid_until,
+    createdAt: q.created_at?.slice(0, 10) || '',
+  })), [dbQuotations]);
+
+  // Map DB orders to local Order type for conversion flow
+  const orders: Order[] = useMemo(() => dbOrders.map(o => ({
+    id: o.id,
+    folio: o.folio,
+    customerId: o.customer_id || '',
+    customerName: o.customer_name,
+    vendorName: o.vendor_name,
+    items: (o.items || []).map((it: any) => ({ productName: it.name || it.productName || '', qty: it.qty || 0, unitPrice: it.unitPrice || 0 })),
+    total: o.total,
+    advance: o.advance,
+    balance: o.balance,
+    status: o.status as any,
+    warehouse: o.warehouse,
+    promiseDate: o.promise_date || '',
+    createdAt: o.created_at?.slice(0, 10) || '',
+    orderType: o.order_type as OrderType,
+  })), [dbOrders]);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
