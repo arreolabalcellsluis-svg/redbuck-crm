@@ -102,7 +102,18 @@ export default function OperatingExpensesPage() {
   };
 
   const summary = useMemo(() => calculateExpenseSummary(expenses), [expenses]);
-  const financial = useMemo(() => calculateFinancialMetrics(expenses), [expenses]);
+
+  const { ventasMes, margenBruto: margenPct, numVentas } = useMemo(() => {
+    const totalVentas = ordersData.reduce((s, o) => s + Number(o.total), 0);
+    const totalCost = ordersData.reduce((s, o) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      return s + items.reduce((si: number, it: any) => si + (Number(it.cost || it.unitCost || 0) * Number(it.qty || 1)), 0);
+    }, 0);
+    const margin = totalVentas > 0 ? ((totalVentas - totalCost) / totalVentas) * 100 : 0;
+    return { ventasMes: totalVentas, margenBruto: margin, numVentas: ordersData.length || 1 };
+  }, [ordersData]);
+
+  const financial = useMemo(() => calculateFinancialMetrics(expenses, ventasMes, margenPct, numVentas), [expenses, ventasMes, margenPct, numVentas]);
 
   const filteredExpenses = useMemo(() => {
     if (filterCat === 'all') return expenses;
