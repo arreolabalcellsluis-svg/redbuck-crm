@@ -37,7 +37,9 @@ function bubbleRadius(data: CityMarketData): number {
 }
 
 export default function MarketMapPage() {
-  const [allData] = useState(() => generateMarketData());
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
+  const [allData] = useState(() => generateMarketData(isVendedor ? DEMO_VENDEDOR_ID : undefined));
   const [search, setSearch] = useState('');
   const [filterState, setFilterState] = useState('todos');
   const [filterPenetration, setFilterPenetration] = useState<PenetrationLevel | 'todos'>('todos');
