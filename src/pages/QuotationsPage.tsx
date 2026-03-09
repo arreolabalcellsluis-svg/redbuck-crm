@@ -794,7 +794,7 @@ export default function QuotationsPage() {
             </div>
             {productSearch.trim() && (
               <div className="mt-2 border rounded-lg max-h-48 overflow-y-auto bg-card">
-                {demoProducts
+                {dbProducts
                   .filter(p => p.active)
                   .filter(p => 
                     p.sku.toLowerCase().includes(productSearch.toLowerCase()) || 
