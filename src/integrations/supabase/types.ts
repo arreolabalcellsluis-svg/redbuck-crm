@@ -293,6 +293,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          activa: boolean
+          banco: string
+          clabe: string | null
+          created_at: string
+          id: string
+          moneda: string
+          nombre: string
+          notas: string | null
+          numero_cuenta: string
+          saldo: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          activa?: boolean
+          banco?: string
+          clabe?: string | null
+          created_at?: string
+          id?: string
+          moneda?: string
+          nombre: string
+          notas?: string | null
+          numero_cuenta?: string
+          saldo?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          activa?: boolean
+          banco?: string
+          clabe?: string | null
+          created_at?: string
+          id?: string
+          moneda?: string
+          nombre?: string
+          notas?: string | null
+          numero_cuenta?: string
+          saldo?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       commission_config: {
         Row: {
           config_key: string
@@ -421,6 +466,45 @@ export type Database = {
           user_id?: string | null
           vendor_id?: string | null
           whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      equity_entries: {
+        Row: {
+          concepto: string
+          created_at: string
+          fecha_fin: string | null
+          fecha_inicio: string | null
+          id: string
+          monto: number
+          notas: string | null
+          tipo: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          concepto?: string
+          created_at?: string
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          monto?: number
+          notas?: string | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          concepto?: string
+          created_at?: string
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          monto?: number
+          notas?: string | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
