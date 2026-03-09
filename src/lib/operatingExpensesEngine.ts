@@ -222,18 +222,21 @@ export function calculateExpenseSummary(expenses: OperatingExpense[]): ExpenseSu
   return { totalMensual, totalAnual, promedioMensual, gastoDiario, gastosFijos, gastosVariables, byCategory, byArea, byMonth, top10 };
 }
 
-export function calculateFinancialMetrics(expenses: OperatingExpense[]): FinancialMetrics {
-  const ventasMes = dashboardMetrics.salesMonth;
-  const margenBrutoPct = dashboardMetrics.grossMargin / 100;
+export function calculateFinancialMetrics(
+  expenses: OperatingExpense[],
+  ventasMes: number = 0,
+  margenBrutoPctInput: number = 0,
+  numVentasInput: number = 0,
+): FinancialMetrics {
+  const margenBrutoPct = margenBrutoPctInput / 100;
   const costoProductos = ventasMes * (1 - margenBrutoPct);
   const utilidadBruta = ventasMes - costoProductos;
   const gastoOperativo = sum(expenses.map(e => e.monto));
   const utilidadNeta = utilidadBruta - gastoOperativo;
-  const margenBruto = margenBrutoPct * 100;
+  const margenBruto = margenBrutoPctInput;
   const margenNeto = ventasMes > 0 ? (utilidadNeta / ventasMes) * 100 : 0;
 
-  // Number of sales this month (approximate from orders data)
-  const numVentas = Math.round(ventasMes / dashboardMetrics.avgTicket) || 1;
+  const numVentas = numVentasInput || 1;
   const costoOperativoPorVenta = gastoOperativo / numVentas;
   const ratioGastoOperativo = ventasMes > 0 ? (gastoOperativo / ventasMes) * 100 : 0;
 
