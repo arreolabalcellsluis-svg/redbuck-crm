@@ -75,19 +75,17 @@ export default function PlanningPage() {
     margenPct: number;
   }
   const defaultLine = (): SimLine => {
-    const p = demoProducts.find(pr => pr.active) ?? demoProducts[0];
-    return { productId: p?.id ?? '', costoUnitario: p?.cost ?? 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
+    return { productId: '', costoUnitario: 0, qty: 10, fleteLocal: 0, igiPct: 5, cbm: 0.5, margenPct: 35 };
   };
   const [simLines, setSimLines] = useState<SimLine[]>([defaultLine()]);
-  // Shared shipment costs
   const [costoAduana, setCostoAduana] = useState(35000);
   const [costoFleteMaritimo, setCostoFleteMaritimo] = useState(50000);
   const [ivaPct] = useState(16);
 
   const [growthFactor, setGrowthFactor] = useState(2);
 
-  const analyses = useMemo(() => analyzeProducts(), []);
-  const summary = useMemo(() => getPlanningSummary(analyses), [analyses]);
+  const { products, analyses, summary: summaryData } = usePlanningData();
+  const summary = summaryData;
   const growth = useMemo(() => simulateGrowth(analyses, growthFactor), [analyses, growthFactor]);
 
   // Import costing calculations
