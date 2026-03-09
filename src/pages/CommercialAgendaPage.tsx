@@ -9,13 +9,17 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import {
-  demoActivities, ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_ICONS,
+  ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_ICONS,
   ACTIVITY_STATUS_LABELS, ACTIVITY_STATUS_COLORS,
   getActivitiesForDate, getActivitiesForWeek, getActivitiesForMonth,
   getPendingActivities, getOverdueActivities,
   type Activity, type ActivityType, type ActivityStatus,
 } from '@/lib/agendaEngine';
-import { demoCustomers, demoQuotations, demoProducts, demoUsers } from '@/data/demo-data';
+import { demoUsers } from '@/data/demo-data';
+import { useActivities, useAddActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/useActivities';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useProducts } from '@/hooks/useProducts';
 import MetricCard from '@/components/shared/MetricCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
@@ -30,7 +34,7 @@ const fmt = (n: number) =>
 
 type ViewMode = 'daily' | 'weekly' | 'monthly' | 'pending';
 
-const TODAY = '2026-03-07';
+const TODAY = new Date().toISOString().split('T')[0];
 
 const ALL_TYPES: ActivityType[] = [
   'llamada', 'whatsapp', 'enviar_cotizacion', 'reenviar_cotizacion',
@@ -53,7 +57,6 @@ function emptyActivity(): Omit<Activity, 'id'> {
 export default function CommercialAgendaPage() {
   const location = useLocation();
   const [view, setView] = useState<ViewMode>('daily');
-  const [activities, setActivities] = useState<Activity[]>([...demoActivities]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -63,6 +66,15 @@ export default function CommercialAgendaPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [form, setForm] = useState<Omit<Activity, 'id'>>(emptyActivity());
+
+  // DB hooks
+  const { data: dbActivities = [], isLoading } = useActivities();
+  const addMutation = useAddActivity();
+  const updateMutation = useUpdateActivity();
+  const deleteMutation = useDeleteActivity();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbQuotations = [] } = useQuotations();
+  const { data: dbProducts = [] } = useProducts();
 
   // Open create dialog pre-filled when navigated from DailyAssistant
   useEffect(() => {
@@ -79,7 +91,6 @@ export default function CommercialAgendaPage() {
         notes: suggestedProduct ? `Producto sugerido: ${suggestedProduct}` : '',
       });
       setShowCreate(true);
-      // Clear the state so it doesn't re-trigger
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -88,7 +99,7 @@ export default function CommercialAgendaPage() {
 
   // ─── Filtering ───────────────────────────────────────────
   const filtered = useMemo(() => {
-    let data = [...activities];
+    let data = [...dbActivities];
     if (search) {
       const q = search.toLowerCase();
       data = data.filter(a =>
@@ -101,7 +112,7 @@ export default function CommercialAgendaPage() {
     if (filterStatus) data = data.filter(a => a.status === filterStatus);
     if (filterVendor) data = data.filter(a => a.responsibleName === filterVendor);
     return data;
-  }, [activities, search, filterType, filterStatus, filterVendor]);
+  }, [dbActivities, search, filterType, filterStatus, filterVendor]);
 
   // ─── Date navigation ────────────────────────────────────
   const currentDateObj = new Date(currentDate + 'T12:00:00');
@@ -129,13 +140,7 @@ export default function CommercialAgendaPage() {
     if (!form.title.trim()) { toast.error('El título es obligatorio'); return; }
     if (!form.responsibleId) { toast.error('Selecciona un responsable'); return; }
     const vendor = vendors.find(v => v.id === form.responsibleId);
-    const newAct: Activity = {
-      ...form,
-      id: `act-${Date.now()}`,
-      responsibleName: vendor?.name ?? '',
-    };
-    setActivities(prev => [...prev, newAct]);
-    toast.success(`Actividad "${form.title}" creada`);
+    addMutation.mutate({ ...form, responsibleName: vendor?.name ?? '' });
     setShowCreate(false);
     setForm(emptyActivity());
   };
@@ -144,24 +149,22 @@ export default function CommercialAgendaPage() {
     if (!editingActivity) return;
     if (!form.title.trim()) { toast.error('El título es obligatorio'); return; }
     const vendor = vendors.find(v => v.id === form.responsibleId);
-    setActivities(prev => prev.map(a =>
-      a.id === editingActivity.id ? { ...a, ...form, responsibleName: vendor?.name ?? form.responsibleName } : a
-    ));
-    toast.success(`Actividad actualizada`);
+    updateMutation.mutate({ id: editingActivity.id, ...form, responsibleName: vendor?.name ?? form.responsibleName });
+    toast.success('Actividad actualizada');
     setEditingActivity(null);
     setForm(emptyActivity());
   };
 
   const handleToggleDone = (id: string) => {
-    setActivities(prev => prev.map(a =>
-      a.id === id ? { ...a, status: a.status === 'realizada' ? 'pendiente' : 'realizada' } : a
-    ));
+    const act = dbActivities.find(a => a.id === id);
+    if (!act) return;
+    updateMutation.mutate({ id, status: act.status === 'realizada' ? 'pendiente' : 'realizada' });
   };
 
   const handleDuplicate = (act: Activity) => {
-    const dup: Activity = { ...act, id: `act-${Date.now()}`, status: 'pendiente' };
-    setActivities(prev => [...prev, dup]);
-    toast.success(`Actividad duplicada`);
+    const { id, ...rest } = act;
+    addMutation.mutate({ ...rest, status: 'pendiente' });
+    toast.success('Actividad duplicada');
   };
 
   const handleReschedule = (act: Activity) => {
@@ -177,8 +180,7 @@ export default function CommercialAgendaPage() {
   };
 
   const handleDelete = (id: string) => {
-    setActivities(prev => prev.filter(a => a.id !== id));
-    toast.success('Actividad eliminada');
+    deleteMutation.mutate(id);
   };
 
   // ─── Export ──────────────────────────────────────────────
@@ -354,31 +356,31 @@ export default function CommercialAgendaPage() {
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Cliente</label>
           <select value={form.customerId ?? ''} onChange={e => {
-            const c = demoCustomers.find(cc => cc.id === e.target.value);
+            const c = dbCustomers.find(cc => cc.id === e.target.value);
             setForm(p => ({ ...p, customerId: e.target.value || undefined, customerName: c?.name }));
           }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
             <option value="">Ninguno</option>
-            {demoCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {dbCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Cotización</label>
           <select value={form.quotationId ?? ''} onChange={e => {
-            const q = demoQuotations.find(qq => qq.id === e.target.value);
+            const q = dbQuotations.find(qq => qq.id === e.target.value);
             setForm(p => ({ ...p, quotationId: e.target.value || undefined, quotationFolio: q?.folio }));
           }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
             <option value="">Ninguna</option>
-            {demoQuotations.map(q => <option key={q.id} value={q.id}>{q.folio} — {q.customerName}</option>)}
+            {dbQuotations.map(q => <option key={q.id} value={q.id}>{q.folio} — {q.customer_name}</option>)}
           </select>
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Producto</label>
           <select value={form.productId ?? ''} onChange={e => {
-            const p = demoProducts.find(pp => pp.id === e.target.value);
+            const p = dbProducts.find(pp => pp.id === e.target.value);
             setForm(prev => ({ ...prev, productId: e.target.value || undefined, productName: p?.name }));
           }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
             <option value="">Ninguno</option>
-            {demoProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {dbProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
@@ -404,6 +406,10 @@ export default function CommercialAgendaPage() {
         </div>
       </div>
     );
+  }
+
+  if (isLoading) {
+    return <div className="py-12 text-center text-muted-foreground">Cargando agenda...</div>;
   }
 
   return (

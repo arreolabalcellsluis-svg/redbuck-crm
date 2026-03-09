@@ -1,15 +1,17 @@
-import { demoServiceOrders, demoCustomers, demoProducts, demoUsers } from '@/data/demo-data';
+import { demoUsers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { Wrench, Calendar, CheckCircle, Clock, Plus, Edit2, ImagePlus, X, ZoomIn, FileDown, MessageCircle, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ServiceOrder, ServiceType, ServiceStatus } from '@/types';
-import { addAuditLog } from '@/lib/auditLog';
+import { ServiceType, ServiceStatus } from '@/types';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useServiceOrders, useAddServiceOrder, useUpdateServiceOrder, type ExtendedServiceOrder } from '@/hooks/useServiceOrders';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useProducts } from '@/hooks/useProducts';
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   instalacion: 'Instalación', garantia: 'Garantía', mantenimiento: 'Mantenimiento',
@@ -37,124 +39,56 @@ function generateServiceReportPDF(so: ExtendedServiceOrder) {
       .value { color: #555; }
       .desc-box { background: #f9f9f9; border: 1px solid #eee; border-radius: 6px; padding: 10px; font-size: 13px; white-space: pre-wrap; min-height: 30px; }
       .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 12px; }
-      .images-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-      .images-grid img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
-      @media print { body { padding: 20px; } .images-grid img { break-inside: avoid; } }
+      @media print { body { padding: 20px; } }
     </style></head><body>
-    <div class="header">
-      <h1>REDBUCK EQUIPMENT</h1>
-      <p>Reporte de Servicio Técnico</p>
-    </div>
+    <div class="header"><h1>REDBUCK EQUIPMENT</h1><p>Reporte de Servicio Técnico</p></div>
     <div class="section">
       <div class="section-title">Datos Generales</div>
       <div class="row"><span class="label">Folio:</span><span class="value">${so.folio}</span></div>
       <div class="row"><span class="label">Cliente:</span><span class="value">${so.customerName}</span></div>
       <div class="row"><span class="label">Equipo:</span><span class="value">${so.productName}</span></div>
-      <div class="row"><span class="label">Tipo de servicio:</span><span class="value">${SERVICE_TYPE_LABELS[so.type] || so.type}</span></div>
+      <div class="row"><span class="label">Tipo:</span><span class="value">${SERVICE_TYPE_LABELS[so.type] || so.type}</span></div>
       <div class="row"><span class="label">Fecha programada:</span><span class="value">${so.scheduledDate}</span></div>
       ${so.completedDate ? `<div class="row"><span class="label">Fecha realizada:</span><span class="value">${so.completedDate}</span></div>` : ''}
       <div class="row"><span class="label">Estatus:</span><span class="value">${SERVICE_STATUS_LABELS[so.status] || so.status}</span></div>
     </div>
-    <div class="section">
-      <div class="section-title">Técnico Responsable</div>
-      <div class="row"><span class="label">Nombre:</span><span class="value">${so.technicianName}</span></div>
-      ${tech?.phone ? `<div class="row"><span class="label">Teléfono:</span><span class="value">${tech.phone}</span></div>` : ''}
-      ${tech?.whatsapp ? `<div class="row"><span class="label">WhatsApp:</span><span class="value">${tech.whatsapp}</span></div>` : ''}
-      ${tech?.email ? `<div class="row"><span class="label">Correo:</span><span class="value">${tech.email}</span></div>` : ''}
-    </div>
-    <div class="section">
-      <div class="section-title">Descripción del servicio</div>
-      <div class="desc-box">${so.description || 'Sin descripción'}</div>
-    </div>
-    <div class="section">
-      <div class="section-title">Diagnóstico</div>
-      <div class="desc-box">${so.diagnosis || 'Sin diagnóstico'}</div>
-    </div>
-    <div class="section">
-      <div class="section-title">Acciones realizadas</div>
-      <div class="desc-box">${so.actionsPerformed || 'Sin acciones registradas'}</div>
-    </div>
-    <div class="section">
-      <div class="section-title">Observaciones</div>
-      <div class="desc-box">${so.observations || 'Sin observaciones'}</div>
-    </div>
-    ${(so.images && so.images.length > 0) ? `
-    <div class="section">
-      <div class="section-title">Evidencia Fotográfica (${so.images.length} imagen${so.images.length > 1 ? 'es' : ''})</div>
-      <div class="images-grid">
-        ${so.images.map((img, i) => `<img src="${img}" alt="Evidencia ${i + 1}" />`).join('')}
-      </div>
-    </div>` : ''}
-    <div class="footer">
-      REDBUCK EQUIPMENT — Reporte generado el ${new Date().toLocaleDateString('es-MX')}
-    </div>
+    <div class="section"><div class="section-title">Descripción</div><div class="desc-box">${so.description || 'Sin descripción'}</div></div>
+    <div class="section"><div class="section-title">Diagnóstico</div><div class="desc-box">${so.diagnosis || 'Sin diagnóstico'}</div></div>
+    <div class="section"><div class="section-title">Acciones realizadas</div><div class="desc-box">${so.actionsPerformed || 'Sin acciones'}</div></div>
+    <div class="section"><div class="section-title">Observaciones</div><div class="desc-box">${so.observations || 'Sin observaciones'}</div></div>
+    <div class="footer">REDBUCK EQUIPMENT — Reporte generado el ${new Date().toLocaleDateString('es-MX')}</div>
     </body></html>
   `;
   const w = window.open('', '_blank');
-  if (w) {
-    w.document.write(html);
-    w.document.close();
-    w.setTimeout(() => w.print(), 400);
-  } else {
-    toast.error('Habilita las ventanas emergentes para descargar el PDF');
-  }
+  if (w) { w.document.write(html); w.document.close(); w.setTimeout(() => w.print(), 400); }
+  else toast.error('Habilita las ventanas emergentes');
 }
 
 function sendServiceReportWhatsApp(so: ExtendedServiceOrder) {
-  const customer = demoCustomers.find(c => c.id === so.customerId);
-  const tech = demoUsers.find(u => u.name === so.technicianName);
-  const phone = customer?.whatsapp || customer?.phone || '';
-  const cleanPhone = phone.replace(/\D/g, '');
-
   const text = [
-    `📋 *REPORTE DE SERVICIO TÉCNICO*`,
-    `━━━━━━━━━━━━━━━━━━`,
-    `*Folio:* ${so.folio}`,
-    `*Cliente:* ${so.customerName}`,
-    `*Equipo:* ${so.productName}`,
-    `*Tipo:* ${SERVICE_TYPE_LABELS[so.type] || so.type}`,
-    `*Fecha:* ${so.scheduledDate}`,
-    so.completedDate ? `*Fecha realizada:* ${so.completedDate}` : '',
+    `📋 *REPORTE DE SERVICIO TÉCNICO*`, `━━━━━━━━━━━━━━━━━━`,
+    `*Folio:* ${so.folio}`, `*Cliente:* ${so.customerName}`, `*Equipo:* ${so.productName}`,
+    `*Tipo:* ${SERVICE_TYPE_LABELS[so.type] || so.type}`, `*Fecha:* ${so.scheduledDate}`,
     `*Estatus:* ${SERVICE_STATUS_LABELS[so.status] || so.status}`,
-    ``,
-    `👷 *Técnico Responsable*`,
-    `*Nombre:* ${so.technicianName}`,
-    tech?.phone ? `*Tel:* ${tech.phone}` : '',
-    tech?.email ? `*Email:* ${tech.email}` : '',
-    ``,
-    `📝 *Descripción:* ${so.description || 'N/A'}`,
+    so.description ? `\n📝 *Descripción:* ${so.description}` : '',
     so.diagnosis ? `🔍 *Diagnóstico:* ${so.diagnosis}` : '',
-    so.actionsPerformed ? `🔧 *Acciones realizadas:* ${so.actionsPerformed}` : '',
-    so.observations ? `📌 *Observaciones:* ${so.observations}` : '',
-    ``,
-    `_REDBUCK EQUIPMENT_`,
+    `\n_REDBUCK EQUIPMENT_`,
   ].filter(Boolean).join('\n');
-
-  const url = cleanPhone
-    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
-    : `https://wa.me/?text=${encodeURIComponent(text)}`;
-
-  window.open(url, '_blank');
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
 
 const technicians = demoUsers.filter(u => u.role === 'tecnico');
-
-// Extended service order with images
-interface ExtendedServiceOrder extends ServiceOrder {
-  images?: string[];
-  diagnosis?: string;
-  actionsPerformed?: string;
-  completedDate?: string;
-  observations?: string;
-}
 
 export default function ServicePage() {
   const { currentRole } = useAppContext();
   const canEdit = currentRole === 'director' || currentRole === 'tecnico' || currentRole === 'administracion';
 
-  const [services, setServices] = useState<ExtendedServiceOrder[]>(
-    demoServiceOrders.map(s => ({ ...s, images: [], diagnosis: '', actionsPerformed: '', observations: '' }))
-  );
+  const { data: services = [], isLoading } = useServiceOrders();
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbProducts = [] } = useProducts();
+  const addMutation = useAddServiceOrder();
+  const updateMutation = useUpdateServiceOrder();
+
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -167,11 +101,7 @@ export default function ServicePage() {
   const [showDownload, setShowDownload] = useState(false);
   const [dlDateFrom, setDlDateFrom] = useState('');
   const [dlDateTo, setDlDateTo] = useState('');
-
-  // Image viewer
   const [viewImage, setViewImage] = useState<string | null>(null);
-
-  // Images dialog for existing order
   const [imageOrderId, setImageOrderId] = useState<string | null>(null);
 
   const openEdit = (so: ExtendedServiceOrder) => {
@@ -203,49 +133,24 @@ export default function ServicePage() {
     if (!files) return;
     Array.from(files).forEach(file => {
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setFormImages(prev => [...prev, result]);
-      };
+      reader.onload = (ev) => setFormImages(prev => [...prev, ev.target?.result as string]);
       reader.readAsDataURL(file);
     });
     e.target.value = '';
-  };
-
-  const handleAddImageToOrder = (orderId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setServices(prev => prev.map(s => s.id === orderId ? { ...s, images: [...(s.images || []), result] } : s));
-        addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'servicio', action: 'subir_imagen', entityId: orderId, comment: 'Imagen agregada a orden de servicio' });
-      };
-      reader.readAsDataURL(file);
-    });
-    e.target.value = '';
-    toast.success('Imagen(es) agregada(s)');
-  };
-
-  const removeImageFromOrder = (orderId: string, imgIdx: number) => {
-    setServices(prev => prev.map(s => s.id === orderId ? { ...s, images: (s.images || []).filter((_, i) => i !== imgIdx) } : s));
-    addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'servicio', action: 'eliminar_imagen', entityId: orderId, comment: 'Imagen eliminada de orden' });
-    toast.success('Imagen eliminada');
   };
 
   const handleSave = () => {
-    const customer = demoCustomers.find(c => c.id === form.customerId);
+    const customer = dbCustomers.find(c => c.id === form.customerId);
     if ((!customer && !editId) || !form.productName || !form.scheduledDate) {
       toast.error('Completa cliente, equipo y fecha');
       return;
     }
 
     if (editId) {
-      setServices(prev => prev.map(s => s.id === editId ? {
-        ...s,
-        customerId: form.customerId || s.customerId,
-        customerName: customer?.name || s.customerName,
+      updateMutation.mutate({
+        id: editId,
+        customerId: form.customerId,
+        customerName: customer?.name,
         productName: form.productName,
         technicianName: form.technicianName,
         type: form.type,
@@ -257,24 +162,25 @@ export default function ServicePage() {
         completedDate: form.completedDate,
         observations: form.observations,
         images: formImages,
-      } : s));
-      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'servicio', action: 'editar_orden', entityId: editId, newValue: `Status: ${form.status}`, comment: `Orden editada` });
-      toast.success('Orden de servicio actualizada');
+      });
     } else {
       const folio = `SRV-2026-${String(services.length + 1).padStart(3, '0')}`;
-      const newService: ExtendedServiceOrder = {
-        id: `so-${Date.now()}`, folio,
-        customerId: customer!.id, customerName: customer!.name,
-        productName: form.productName, technicianName: form.technicianName,
-        type: form.type, scheduledDate: form.scheduledDate,
-        status: form.status, description: form.description,
-        diagnosis: form.diagnosis, actionsPerformed: form.actionsPerformed,
-        completedDate: form.completedDate, observations: form.observations,
+      addMutation.mutate({
+        folio,
+        customerId: customer!.id,
+        customerName: customer!.name,
+        productName: form.productName,
+        technicianName: form.technicianName,
+        type: form.type,
+        scheduledDate: form.scheduledDate,
+        status: form.status,
+        description: form.description,
+        diagnosis: form.diagnosis,
+        actionsPerformed: form.actionsPerformed,
+        completedDate: form.completedDate,
+        observations: form.observations,
         images: formImages,
-      };
-      setServices(prev => [newService, ...prev]);
-      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'servicio', action: 'crear_orden', entityId: newService.id, newValue: folio });
-      toast.success(`Orden ${folio} creada`);
+      });
     }
     setOpen(false);
     resetForm();
@@ -282,43 +188,27 @@ export default function ServicePage() {
 
   const handleServiceExcel = () => {
     if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
-    if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
-
     const data = services.filter(s => s.scheduledDate >= dlDateFrom && s.scheduledDate <= dlDateTo);
-    if (data.length === 0) { toast.error('No hay órdenes en el rango seleccionado'); return; }
-
+    if (data.length === 0) { toast.error('No hay órdenes en el rango'); return; }
     const rows = data.map(s => ({
-      'Folio': s.folio,
-      'Cliente': s.customerName,
-      'Equipo': s.productName,
-      'Técnico': s.technicianName,
-      'Tipo': SERVICE_TYPE_LABELS[s.type] || s.type,
-      'Fecha Programada': s.scheduledDate,
-      'Fecha Realizada': s.completedDate || '',
+      'Folio': s.folio, 'Cliente': s.customerName, 'Equipo': s.productName,
+      'Técnico': s.technicianName, 'Tipo': SERVICE_TYPE_LABELS[s.type] || s.type,
+      'Fecha Programada': s.scheduledDate, 'Fecha Realizada': s.completedDate || '',
       'Estatus': SERVICE_STATUS_LABELS[s.status] || s.status,
-      'Descripción': s.description || '',
-      'Diagnóstico': s.diagnosis || '',
-      'Acciones Realizadas': s.actionsPerformed || '',
-      'Observaciones': s.observations || '',
+      'Descripción': s.description || '', 'Diagnóstico': s.diagnosis || '',
+      'Acciones': s.actionsPerformed || '', 'Observaciones': s.observations || '',
       'Fotos': s.images?.length || 0,
     }));
-
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 20 }));
     XLSX.utils.book_append_sheet(wb, ws, 'Servicio Técnico');
-
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Servicio_Tecnico_${dlDateFrom}_a_${dlDateTo}.xlsx`);
+    saveAs(new Blob([buf]), `Servicio_Tecnico_${dlDateFrom}_a_${dlDateTo}.xlsx`);
     toast.success(`Excel generado con ${data.length} órdenes`);
     setShowDownload(false);
   };
 
-  const dlFilteredCount = services.filter(s => {
-    if (dlDateFrom && s.scheduledDate < dlDateFrom) return false;
-    if (dlDateTo && s.scheduledDate > dlDateTo) return false;
-    return true;
-  }).length;
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Cargando servicio técnico...</div>;
 
   return (
     <div>
@@ -367,7 +257,20 @@ export default function ServicePage() {
                     {canEdit && (
                       <label className="p-1 rounded-md hover:bg-muted cursor-pointer" title="Agregar imagen">
                         <ImagePlus size={14} className="text-muted-foreground" />
-                        <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleAddImageToOrder(so.id, e)} />
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={e => {
+                          const files = e.target.files;
+                          if (!files) return;
+                          Array.from(files).forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const result = ev.target?.result as string;
+                              updateMutation.mutate({ id: so.id, images: [...(so.images || []), result] });
+                            };
+                            reader.readAsDataURL(file);
+                          });
+                          e.target.value = '';
+                          toast.success('Imagen(es) agregada(s)');
+                        }} />
                       </label>
                     )}
                   </div>
@@ -405,14 +308,14 @@ export default function ServicePage() {
               <label className="text-xs font-medium text-muted-foreground">Cliente *</label>
               <select value={form.customerId} onChange={e => setForm({ ...form, customerId: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                 <option value="">Seleccionar...</option>
-                {demoCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {dbCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Equipo *</label>
               <select value={form.productName} onChange={e => setForm({ ...form, productName: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                 <option value="">Seleccionar...</option>
-                {demoProducts.filter(p => p.active).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                {dbProducts.filter(p => p.active).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -428,7 +331,7 @@ export default function ServicePage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Fecha programada *</label>
+                <label className="text-xs font-medium text-muted-foreground">Fecha *</label>
                 <input type="date" value={form.scheduledDate} onChange={e => setForm({ ...form, scheduledDate: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
             </div>
@@ -450,28 +353,11 @@ export default function ServicePage() {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Descripción</label>
-              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Diagnóstico</label>
-              <textarea value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Acciones realizadas</label>
-              <textarea value={form.actionsPerformed} onChange={e => setForm({ ...form, actionsPerformed: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Observaciones</label>
-              <textarea value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Fecha realizada</label>
-              <input type="date" value={form.completedDate} onChange={e => setForm({ ...form, completedDate: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
-            </div>
-
-            {/* Images */}
+            <div><label className="text-xs font-medium text-muted-foreground">Descripción</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Diagnóstico</label><textarea value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Acciones realizadas</label><textarea value={form.actionsPerformed} onChange={e => setForm({ ...form, actionsPerformed: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Observaciones</label><textarea value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Fecha realizada</label><input type="date" value={form.completedDate} onChange={e => setForm({ ...form, completedDate: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" /></div>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Imágenes</label>
@@ -493,7 +379,6 @@ export default function ServicePage() {
                 </div>
               )}
             </div>
-
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => { setOpen(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
               <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
@@ -504,13 +389,10 @@ export default function ServicePage() {
         </DialogContent>
       </Dialog>
 
-      {/* IMAGE GALLERY for existing order */}
+      {/* IMAGE GALLERY */}
       <Dialog open={!!imageOrderId} onOpenChange={() => setImageOrderId(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Galería de imágenes</DialogTitle>
-            <DialogDescription>Fotos de la orden de servicio</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Galería de imágenes</DialogTitle><DialogDescription>Fotos de la orden de servicio</DialogDescription></DialogHeader>
           {imageOrderId && (() => {
             const order = services.find(s => s.id === imageOrderId);
             if (!order?.images?.length) return <div className="text-sm text-muted-foreground">Sin imágenes</div>;
@@ -519,11 +401,6 @@ export default function ServicePage() {
                 {order.images.map((img, i) => (
                   <div key={i} className="relative group">
                     <img src={img} alt="" className="w-full h-24 object-cover rounded-lg cursor-pointer" onClick={() => setViewImage(img)} />
-                    {canEdit && (
-                      <button onClick={() => removeImageFromOrder(order.id, i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X size={10} />
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -532,36 +409,23 @@ export default function ServicePage() {
         </DialogContent>
       </Dialog>
 
-      {/* FULL IMAGE VIEW */}
       <Dialog open={!!viewImage} onOpenChange={() => setViewImage(null)}>
         <DialogContent className="max-w-3xl p-2">
           {viewImage && <img src={viewImage} alt="" className="w-full max-h-[80vh] object-contain rounded-lg" />}
         </DialogContent>
       </Dialog>
 
-      {/* DOWNLOAD EXCEL DIALOG */}
       <Dialog open={showDownload} onOpenChange={setShowDownload}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Servicio Técnico</DialogTitle>
-            <DialogDescription>Selecciona el rango de fechas programadas para descargar.</DialogDescription>
+            <DialogDescription>Selecciona el rango de fechas programadas.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicial *</label>
-                <input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha final *</label>
-                <input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
-              </div>
+              <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha inicial *</label><input type="date" value={dlDateFrom} onChange={e => setDlDateFrom(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" /></div>
+              <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Fecha final *</label><input type="date" value={dlDateTo} onChange={e => setDlDateTo(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" /></div>
             </div>
-            {dlDateFrom && dlDateTo && (
-              <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
-                <span className="font-semibold text-primary">{dlFilteredCount}</span> orden{dlFilteredCount !== 1 ? 'es' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
-              </div>
-            )}
           </div>
           <DialogFooter>
             <button onClick={() => setShowDownload(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
