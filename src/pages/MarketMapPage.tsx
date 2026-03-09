@@ -5,6 +5,8 @@ import {
   PENETRATION_LABELS, PENETRATION_DOT_COLORS, PENETRATION_BG,
   type CityMarketData, type PenetrationLevel,
 } from '@/lib/marketMapEngine';
+import { useAppContext } from '@/contexts/AppContext';
+import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import MetricCard from '@/components/shared/MetricCard';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,7 +37,9 @@ function bubbleRadius(data: CityMarketData): number {
 }
 
 export default function MarketMapPage() {
-  const [allData] = useState(() => generateMarketData());
+  const { currentRole } = useAppContext();
+  const isVendedor = currentRole === 'vendedor';
+  const [allData] = useState(() => generateMarketData(isVendedor ? DEMO_VENDEDOR_ID : undefined));
   const [search, setSearch] = useState('');
   const [filterState, setFilterState] = useState('todos');
   const [filterPenetration, setFilterPenetration] = useState<PenetrationLevel | 'todos'>('todos');

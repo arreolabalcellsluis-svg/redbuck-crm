@@ -123,12 +123,17 @@ function classifyPenetration(customers: number, sales: number, quotations: numbe
   return 'sin_presencia';
 }
 
-export function generateMarketData(): CityMarketData[] {
+export function generateMarketData(filterVendorId?: string): CityMarketData[] {
   // Collect all cities from customers
   const cityMap = new Map<string, CityMarketData>();
 
+  // Filter customers by vendor if provided
+  const customers = filterVendorId
+    ? demoCustomers.filter(c => c.vendorId === filterVendorId)
+    : demoCustomers;
+
   // Initialize with customer cities
-  demoCustomers.forEach(c => {
+  customers.forEach(c => {
     if (!cityMap.has(c.city)) {
       const coords = CITY_COORDS[c.city] ?? { lat: 23, lng: -102 };
       cityMap.set(c.city, {
