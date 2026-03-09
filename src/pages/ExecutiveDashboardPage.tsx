@@ -489,8 +489,8 @@ export default function ExecutiveDashboardPage() {
                   ))}
                 </div>
                 <div className="flex justify-between mt-3 pt-2 border-t text-xs">
-                  <span className="text-muted-foreground">ETA: {imp.estimated_arrival || '—'}</span>
-                  <span className="font-semibold">{imp.days_in_transit}d tránsito</span>
+                  <span className="text-muted-foreground">ETA: {imp.estimatedArrival || '—'}</span>
+                  <span className="font-semibold">{imp.daysInTransit}d tránsito</span>
                 </div>
               </div>
             ))}
