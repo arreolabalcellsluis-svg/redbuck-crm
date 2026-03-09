@@ -215,6 +215,33 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           categoria: Database["public"]["Enums"]["asset_category"]
@@ -1469,6 +1496,72 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          active: boolean
+          address: string | null
+          commission_rate: number | null
+          contract_url: string | null
+          created_at: string
+          email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          id: string
+          name: string
+          phone: string | null
+          photo_url: string | null
+          role: string
+          series_current: number | null
+          series_prefix: string | null
+          series_start: number | null
+          updated_at: string
+          user_id: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          commission_rate?: number | null
+          contract_url?: string | null
+          created_at?: string
+          email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          role?: string
+          series_current?: number | null
+          series_prefix?: string | null
+          series_start?: number | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          commission_rate?: number | null
+          contract_url?: string | null
+          created_at?: string
+          email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          role?: string
+          series_current?: number | null
+          series_prefix?: string | null
+          series_start?: number | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1487,6 +1580,36 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      warehouses: {
+        Row: {
+          created_at: string
+          has_exhibition: boolean
+          id: string
+          location: string
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          has_exhibition?: boolean
+          id?: string
+          location?: string
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          has_exhibition?: boolean
+          id?: string
+          location?: string
+          name?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
