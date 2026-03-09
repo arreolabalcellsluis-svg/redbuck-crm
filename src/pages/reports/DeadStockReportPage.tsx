@@ -4,8 +4,8 @@ import { ArrowLeft, Skull } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { analyzeProducts } from '@/lib/planningEngine';
-import { demoWarehouses } from '@/data/demo-data';
+import { usePlanningData } from '@/hooks/usePlanningData';
+import { useWarehouses } from '@/hooks/useWarehouses';
 import { CATEGORY_LABELS } from '@/types';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
