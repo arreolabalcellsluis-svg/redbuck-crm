@@ -404,7 +404,7 @@ export default function QuotationsPage() {
       id: `ar-${Date.now()}`,
       customerId: q.customerId,
       customerName: q.customerName,
-      orderId: newOrder.id,
+      orderId: `temp-${Date.now()}`,
       orderFolio: folio,
       total: q.total,
       paid: advance,
