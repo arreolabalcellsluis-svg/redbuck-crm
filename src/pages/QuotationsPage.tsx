@@ -807,6 +807,7 @@ export default function QuotationsPage() {
             )}
           </div>
 
+          {items.length > 0 && (
             <div className="border rounded-lg overflow-hidden mb-4">
               <table className="data-table">
                 <thead><tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Desc. %</th><th>Subtotal</th><th></th></tr></thead>
