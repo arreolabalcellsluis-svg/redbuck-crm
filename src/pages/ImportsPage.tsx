@@ -1,4 +1,3 @@
-import { demoImports, demoSuppliers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
@@ -6,11 +5,12 @@ import MetricCard from '@/components/shared/MetricCard';
 import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ImportOrder, ImportStatus, IMPORT_STATUS_LABELS, IMPORT_STATUS_ORDER } from '@/types';
-import { addAuditLog } from '@/lib/auditLog';
+import { ImportStatus, IMPORT_STATUS_LABELS, IMPORT_STATUS_ORDER } from '@/types';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useImportOrders, useAddImportOrder, useUpdateImportOrder } from '@/hooks/useImportOrders';
+import { useSuppliers } from '@/hooks/useSuppliers';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
@@ -18,7 +18,11 @@ export default function ImportsPage() {
   const { currentRole } = useAppContext();
   const canEdit = currentRole === 'director' || currentRole === 'compras';
 
-  const [imports, setImports] = useState<ImportOrder[]>(demoImports);
+  const { data: imports = [], isLoading } = useImportOrders();
+  const { data: suppliers = [] } = useSuppliers();
+  const addMutation = useAddImportOrder();
+  const updateMutation = useUpdateImportOrder();
+
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [showDownload, setShowDownload] = useState(false);
@@ -33,7 +37,7 @@ export default function ImportsPage() {
   const [items, setItems] = useState<{ productName: string; qty: number; unitCost: number }[]>([]);
 
   const totalValue = imports.reduce((s, i) => s + i.totalLanded, 0);
-  const totalItems = imports.reduce((s, i) => s + i.items.reduce((a, it) => a + it.qty, 0), 0);
+  const totalItems = imports.reduce((s, i) => s + i.items.reduce((a: number, it: any) => a + it.qty, 0), 0);
 
   const addItem = () => setItems([...items, { productName: '', qty: 1, unitCost: 0 }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
@@ -46,7 +50,7 @@ export default function ImportsPage() {
   const totalCost = items.reduce((s, it) => s + it.qty * it.unitCost, 0);
   const totalLanded = totalCost + form.freightCost + form.customsCost;
 
-  const openEdit = (imp: ImportOrder) => {
+  const openEdit = (imp: any) => {
     setEditId(imp.id);
     setForm({
       supplier: imp.supplier, country: imp.country, departurePort: imp.departurePort,
@@ -72,39 +76,27 @@ export default function ImportsPage() {
     }
 
     if (editId) {
-      const prev = imports.find(i => i.id === editId);
-      setImports(p => p.map(i => i.id === editId ? {
-        ...i,
+      updateMutation.mutate({
+        id: editId,
         supplier: form.supplier, country: form.country, departurePort: form.departurePort,
         arrivalPort: form.arrivalPort, purchaseDate: form.purchaseDate,
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
         freightCost: form.freightCost, customsCost: form.customsCost, status: form.status,
         exchangeRate: form.exchangeRate,
         items, totalCost, totalLanded,
-        daysInTransit: form.estimatedDeparture ? Math.max(0, Math.floor((Date.now() - new Date(form.estimatedDeparture).getTime()) / 86400000)) : i.daysInTransit,
-      } : i));
-      addAuditLog({
-        userId: 'current', userName: 'Usuario actual', module: 'importaciones',
-        action: 'editar_importacion', entityId: editId,
-        previousValue: prev ? `Status: ${prev.status}` : '',
-        newValue: `Status: ${form.status}`,
-        comment: `Importación ${prev?.orderNumber} editada`,
+        daysInTransit: form.estimatedDeparture ? Math.max(0, Math.floor((Date.now() - new Date(form.estimatedDeparture).getTime()) / 86400000)) : 0,
       });
-      toast.success('Importación actualizada');
     } else {
       const orderNumber = `IMP-2026-${String(imports.length + 1).padStart(3, '0')}`;
-      const newImport: ImportOrder = {
-        id: `imp-${Date.now()}`, orderNumber, supplier: form.supplier, country: form.country,
+      addMutation.mutate({
+        orderNumber, supplier: form.supplier, country: form.country,
         departurePort: form.departurePort, arrivalPort: form.arrivalPort,
         currency: 'USD', exchangeRate: form.exchangeRate,
         purchaseDate: form.purchaseDate, estimatedDeparture: form.estimatedDeparture,
         estimatedArrival: form.estimatedArrival, status: form.status,
         items, totalCost, freightCost: form.freightCost, customsCost: form.customsCost,
         totalLanded, daysInTransit: 0,
-      };
-      setImports(p => [newImport, ...p]);
-      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'importaciones', action: 'crear_importacion', entityId: newImport.id, newValue: orderNumber });
-      toast.success(`Importación ${orderNumber} creada`);
+      });
     }
     setOpen(false);
     resetForm();
@@ -118,49 +110,20 @@ export default function ImportsPage() {
     if (data.length === 0) { toast.error('No hay importaciones en el rango seleccionado'); return; }
 
     const rows = data.map(i => ({
-      'No. Orden': i.orderNumber,
-      'Proveedor': i.supplier,
-      'País': i.country,
-      'Puerto Salida': i.departurePort,
-      'Puerto Llegada': i.arrivalPort,
-      'Fecha Compra': i.purchaseDate,
-      'Salida Estimada': i.estimatedDeparture,
-      'Llegada Estimada': i.estimatedArrival,
-      'Costo Productos (USD)': i.totalCost,
-      'Flete (USD)': i.freightCost,
-      'Aduanas (USD)': i.customsCost,
-      'Total Landed (USD)': i.totalLanded,
-      'Tipo Cambio': i.exchangeRate,
+      'No. Orden': i.orderNumber, 'Proveedor': i.supplier, 'País': i.country,
+      'Puerto Salida': i.departurePort, 'Puerto Llegada': i.arrivalPort,
+      'Fecha Compra': i.purchaseDate, 'Salida Estimada': i.estimatedDeparture,
+      'Llegada Estimada': i.estimatedArrival, 'Costo Productos (USD)': i.totalCost,
+      'Flete (USD)': i.freightCost, 'Aduanas (USD)': i.customsCost,
+      'Total Landed (USD)': i.totalLanded, 'Tipo Cambio': i.exchangeRate,
       'Total MXN': Math.round(i.totalLanded * i.exchangeRate),
-      'Estatus': IMPORT_STATUS_LABELS[i.status] || i.status,
-      'Días Tránsito': i.daysInTransit,
+      'Estatus': IMPORT_STATUS_LABELS[i.status] || i.status, 'Días Tránsito': i.daysInTransit,
     }));
-
-    const detailRows: Record<string, unknown>[] = [];
-    data.forEach(i => {
-      i.items.forEach(it => {
-        detailRows.push({
-          'No. Orden': i.orderNumber,
-          'Proveedor': i.supplier,
-          'Fecha Compra': i.purchaseDate,
-          'Producto': it.productName,
-          'Cantidad': it.qty,
-          'Costo Unitario (USD)': it.unitCost,
-          'Subtotal (USD)': it.qty * it.unitCost,
-        });
-      });
-    });
 
     const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.json_to_sheet(rows);
     ws1['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 18 }));
     XLSX.utils.book_append_sheet(wb, ws1, 'Importaciones');
-    if (detailRows.length > 0) {
-      const ws2 = XLSX.utils.json_to_sheet(detailRows);
-      ws2['!cols'] = Object.keys(detailRows[0]).map(() => ({ wch: 20 }));
-      XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Productos');
-    }
-
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Importaciones_${dlDateFrom}_a_${dlDateTo}.xlsx`);
     toast.success(`Excel generado con ${data.length} importaciones`);
@@ -172,6 +135,8 @@ export default function ImportsPage() {
     if (dlDateTo && i.purchaseDate > dlDateTo) return false;
     return true;
   }).length;
+
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Cargando importaciones...</div>;
 
   return (
     <div>
@@ -227,7 +192,7 @@ export default function ImportsPage() {
                 <table className="data-table">
                   <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
                   <tbody>
-                    {imp.items.map((item, i) => (
+                    {imp.items.map((item: any, i: number) => (
                       <tr key={i}>
                         <td className="font-medium">{item.productName}</td>
                         <td>{item.qty}</td>
@@ -270,7 +235,7 @@ export default function ImportsPage() {
                 <label className="text-xs font-medium text-muted-foreground">Proveedor *</label>
                 <select value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                   <option value="">Seleccionar...</option>
-                  {demoSuppliers.filter(s => s.type === 'internacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {suppliers.filter(s => s.type === 'internacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
               <div>
@@ -302,15 +267,12 @@ export default function ImportsPage() {
                 <input type="number" step="0.1" value={form.exchangeRate} onChange={e => setForm({ ...form, exchangeRate: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
             </div>
-
-            {/* Status selector */}
             <div>
               <label className="text-xs font-medium text-muted-foreground">Estado logístico</label>
               <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as ImportStatus })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                 {IMPORT_STATUS_ORDER.map(s => <option key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</option>)}
               </select>
             </div>
-
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Productos *</label>
@@ -325,21 +287,20 @@ export default function ImportsPage() {
                 </div>
               ))}
             </div>
-
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Flete USD</label>
+                <label className="text-xs font-medium text-muted-foreground">Flete (USD)</label>
                 <input type="number" value={form.freightCost} onChange={e => setForm({ ...form, freightCost: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Aduana USD</label>
+                <label className="text-xs font-medium text-muted-foreground">Aduana (USD)</label>
                 <input type="number" value={form.customsCost} onChange={e => setForm({ ...form, customsCost: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
-              <div className="flex items-end">
-                <div className="text-sm font-bold">Total: {fmt(totalLanded)}</div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Total landed</label>
+                <div className="mt-1 px-3 py-2 rounded-lg border bg-muted text-sm font-bold">{fmt(totalLanded)}</div>
               </div>
             </div>
-
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => { setOpen(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
               <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
@@ -350,12 +311,12 @@ export default function ImportsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DOWNLOAD EXCEL DIALOG */}
+      {/* DOWNLOAD DIALOG */}
       <Dialog open={showDownload} onOpenChange={setShowDownload}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Download size={20} /> Descargar Importaciones</DialogTitle>
-            <DialogDescription>Selecciona el rango de fechas de compra para descargar.</DialogDescription>
+            <DialogDescription>Selecciona un rango de fechas de compra para descargar.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -370,7 +331,7 @@ export default function ImportsPage() {
             </div>
             {dlDateFrom && dlDateTo && (
               <div className="rounded-lg bg-muted/50 p-3 text-sm text-center">
-                <span className="font-semibold text-primary">{dlFilteredCount}</span> importación{dlFilteredCount !== 1 ? 'es' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
+                <span className="font-semibold text-primary">{dlFilteredCount}</span> importacion{dlFilteredCount !== 1 ? 'es' : ''} encontrada{dlFilteredCount !== 1 ? 's' : ''}
               </div>
             )}
           </div>

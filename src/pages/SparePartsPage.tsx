@@ -1,4 +1,3 @@
-import { demoSpareParts as initialSpareParts, demoProducts } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { Search, Plus, AlertTriangle, Trash2, Pencil, Upload, X } from 'lucide-react';
 import { useState, useRef } from 'react';
@@ -7,6 +6,8 @@ import { toast } from 'sonner';
 import type { SparePart } from '@/types';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
+import { useSpareParts, useAddSparePart, useUpdateSparePart, useDeleteSparePart } from '@/hooks/useSpareParts';
+import { useProducts } from '@/hooks/useProducts';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -22,7 +23,6 @@ export default function SparePartsPage() {
   const isVendedor = currentRole === 'vendedor';
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [spareParts, setSpareParts] = useState<SparePart[]>(initialSpareParts);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -30,6 +30,12 @@ export default function SparePartsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [viewImage, setViewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: spareParts = [], isLoading } = useSpareParts();
+  const { data: dbProducts = [] } = useProducts();
+  const addMutation = useAddSparePart();
+  const updateMutation = useUpdateSparePart();
+  const deleteMutation = useDeleteSparePart();
 
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
@@ -67,14 +73,11 @@ export default function SparePartsPage() {
     if (!form.sku.trim()) { toast.error('El SKU es obligatorio'); return; }
     if (form.price <= 0) { toast.error('El precio debe ser mayor a 0'); return; }
 
-    const product = demoProducts.find(p => p.id === form.productId);
-    const newPart: SparePart = {
+    const product = dbProducts.find(p => p.id === form.productId);
+    addMutation.mutate({
       ...form,
-      id: `sp-${Date.now()}`,
       productName: product?.name || form.productName || 'Sin equipo',
-    };
-    setSpareParts(prev => [newPart, ...prev]);
-    toast.success(`Refacción "${form.name}" creada correctamente`);
+    });
     setShowCreate(false);
     resetForm();
   };
@@ -92,20 +95,18 @@ export default function SparePartsPage() {
     if (!form.sku.trim()) { toast.error('El SKU es obligatorio'); return; }
     if (form.price <= 0) { toast.error('El precio debe ser mayor a 0'); return; }
 
-    const product = demoProducts.find(p => p.id === form.productId);
-    setSpareParts(prev => prev.map(s => s.id === editId ? {
-      ...form,
+    const product = dbProducts.find(p => p.id === form.productId);
+    updateMutation.mutate({
       id: editId,
+      ...form,
       productName: product?.name || form.productName || 'Sin equipo',
-    } : s));
-    toast.success(`Refacción "${form.name}" actualizada correctamente`);
+    });
     setShowEdit(false);
     resetForm();
   };
 
   const formFields = (
     <div className="space-y-4">
-      {/* Image upload */}
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Imagen de la refacción</label>
         <div className="flex items-center gap-4">
@@ -117,19 +118,14 @@ export default function SparePartsPage() {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-sm hover:border-primary/50 hover:text-primary transition-colors"
-            >
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-sm hover:border-primary/50 hover:text-primary transition-colors">
               <Upload size={16} /> Adjuntar imagen
             </button>
           )}
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
           {imagePreview && (
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">
-              Cambiar imagen
-            </button>
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">Cambiar imagen</button>
           )}
         </div>
       </div>
@@ -143,9 +139,9 @@ export default function SparePartsPage() {
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Equipo relacionado</label>
-        <select value={form.productId} onChange={e => { const prod = demoProducts.find(p => p.id === e.target.value); setForm(p => ({ ...p, productId: e.target.value, productName: prod?.name || '' })); }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+        <select value={form.productId} onChange={e => { const prod = dbProducts.find(p => p.id === e.target.value); setForm(p => ({ ...p, productId: e.target.value, productName: prod?.name || '' })); }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
           <option value="">Seleccionar equipo...</option>
-          {demoProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {dbProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
       {!isVendedor && (
@@ -178,6 +174,8 @@ export default function SparePartsPage() {
       </div>
     </div>
   );
+
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Cargando refacciones...</div>;
 
   return (
     <div>
@@ -242,7 +240,6 @@ export default function SparePartsPage() {
         </table>
       </div>
 
-      {/* ===================== CREATE DIALOG ===================== */}
       <Dialog open={showCreate} onOpenChange={(open) => { setShowCreate(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -252,14 +249,11 @@ export default function SparePartsPage() {
           {formFields}
           <DialogFooter>
             <button onClick={() => { setShowCreate(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Crear Refacción
-            </button>
+            <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Crear Refacción</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ===================== EDIT DIALOG ===================== */}
       <Dialog open={showEdit} onOpenChange={(open) => { setShowEdit(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -269,53 +263,39 @@ export default function SparePartsPage() {
           {formFields}
           <DialogFooter>
             <button onClick={() => { setShowEdit(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
-            <button onClick={handleEdit} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
-              Guardar Cambios
-            </button>
+            <button onClick={handleEdit} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Guardar Cambios</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>¿Eliminar refacción?</DialogTitle>
-            <DialogDescription>
-              Estás a punto de eliminar <strong>{spareToDelete?.name}</strong>.
-            </DialogDescription>
+            <DialogDescription>Estás a punto de eliminar <strong>{spareToDelete?.name}</strong>.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button
               onClick={() => {
                 requestAuthorization('delete_spare_part', 'refacciones', () => {
-                  setSpareParts(prev => prev.map(s => s.id === deleteTarget ? { ...s, active: false } : s));
-                  toast.success(`Refacción "${spareToDelete?.name}" inactivada`);
+                  if (deleteTarget) updateMutation.mutate({ id: deleteTarget, active: false });
                   setDeleteTarget(null);
                 }, { entityId: deleteTarget!, entityLabel: spareToDelete?.name, onCancelled: () => setDeleteTarget(null) });
               }}
-              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium"
-            >
-              Inactivar
-            </button>
+              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium">Inactivar</button>
             <button
               onClick={() => {
                 requestAuthorization('delete_spare_part', 'refacciones', () => {
-                  setSpareParts(prev => prev.filter(s => s.id !== deleteTarget));
-                  toast.success(`Refacción "${spareToDelete?.name}" eliminada`);
+                  if (deleteTarget) deleteMutation.mutate(deleteTarget);
                   setDeleteTarget(null);
                 }, { entityId: deleteTarget!, entityLabel: spareToDelete?.name, onCancelled: () => setDeleteTarget(null) });
               }}
-              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium"
-            >
-              Eliminar definitivamente
-            </button>
+              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium">Eliminar definitivamente</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* FULL IMAGE VIEW */}
       <Dialog open={!!viewImage} onOpenChange={() => setViewImage(null)}>
         <DialogContent className="max-w-3xl p-2">
           {viewImage && <img src={viewImage} alt="Refacción" className="w-full max-h-[80vh] object-contain rounded-lg" />}

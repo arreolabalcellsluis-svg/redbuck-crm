@@ -1,19 +1,9 @@
 import { Plus, X, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { demoSuppliers } from '@/data/demo-data';
 import { toast } from '@/hooks/use-toast';
-
-interface Purchase {
-  id: number;
-  folio: string;
-  supplier: string;
-  products: string;
-  total: number;
-  status: string;
-  date: string;
-  notes?: string;
-}
+import { usePurchases, useAddPurchase, useUpdatePurchase } from '@/hooks/usePurchases';
+import { useSuppliers } from '@/hooks/useSuppliers';
 
 const PURCHASE_STATUSES = [
   { value: 'enviada', label: 'Enviada' },
@@ -26,21 +16,18 @@ const PURCHASE_STATUSES = [
 
 const statusLabel = (s: string) => PURCHASE_STATUSES.find(st => st.value === s)?.label || s.replace('_', ' ');
 
-const initialPurchases: Purchase[] = [
-  { id: 1, folio: 'OC-2026-001', supplier: 'Herramientas MX', products: 'Prensas, Gatos', total: 125000, status: 'recibida_total', date: '2026-02-10' },
-  { id: 2, folio: 'OC-2026-002', supplier: 'Herramientas MX', products: 'Compresores', total: 78000, status: 'confirmada', date: '2026-02-28' },
-  { id: 3, folio: 'OC-2026-003', supplier: 'Herramientas MX', products: 'Lubricación', total: 34500, status: 'enviada', date: '2026-03-03' },
-];
-
 export default function PurchasesPage() {
-  const [purchases, setPurchases] = useState<Purchase[]>(initialPurchases);
+  const { data: purchases = [], isLoading } = usePurchases();
+  const { data: suppliers = [] } = useSuppliers();
+  const addMutation = useAddPurchase();
+  const updateMutation = useUpdatePurchase();
+
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ supplier: '', date: '' });
   const [items, setItems] = useState<{ name: string; qty: number; cost: number }[]>([]);
 
-  // Edit form state
   const [editForm, setEditForm] = useState({ folio: '', supplier: '', products: '', total: 0, status: '', date: '', notes: '' });
 
   const addItem = () => setItems([...items, { name: '', qty: 1, cost: 0 }]);
@@ -59,62 +46,51 @@ export default function PurchasesPage() {
       return;
     }
     const folio = `OC-2026-${String(purchases.length + 1).padStart(3, '0')}`;
-    const newPurchase: Purchase = {
-      id: Date.now(),
+    addMutation.mutate({
       folio,
       supplier: form.supplier,
       products: items.map(it => it.name).filter(Boolean).join(', '),
       total,
       status: 'enviada',
       date: form.date || new Date().toISOString().slice(0, 10),
-    };
-    setPurchases(prev => [newPurchase, ...prev]);
+      items: items as any,
+      notes: null,
+    });
     setOpen(false);
     setForm({ supplier: '', date: '' });
     setItems([]);
-    toast({ title: 'Orden creada', description: `Folio ${folio}` });
   };
 
-  const openEdit = (p: Purchase) => {
-    setEditingPurchase(p);
+  const openEdit = (p: any) => {
+    setEditingId(p.id);
     setEditForm({
-      folio: p.folio,
-      supplier: p.supplier,
-      products: p.products,
-      total: p.total,
-      status: p.status,
-      date: p.date,
-      notes: p.notes || '',
+      folio: p.folio, supplier: p.supplier, products: p.products,
+      total: p.total, status: p.status, date: p.date, notes: p.notes || '',
     });
     setEditOpen(true);
   };
 
   const handleSaveEdit = () => {
-    if (!editingPurchase) return;
+    if (!editingId) return;
     if (!editForm.folio.trim()) {
       toast({ title: 'Error', description: 'El folio no puede estar vacío', variant: 'destructive' });
       return;
     }
-    // Check duplicate folio
-    const duplicate = purchases.find(p => p.folio === editForm.folio.trim() && p.id !== editingPurchase.id);
-    if (duplicate) {
-      toast({ title: 'Error', description: 'Ya existe una orden con ese folio', variant: 'destructive' });
-      return;
-    }
-    setPurchases(prev => prev.map(p => p.id === editingPurchase.id ? {
-      ...p,
+    updateMutation.mutate({
+      id: editingId,
       folio: editForm.folio.trim(),
       supplier: editForm.supplier,
       products: editForm.products,
       total: editForm.total,
       status: editForm.status,
       date: editForm.date,
-      notes: editForm.notes,
-    } : p));
+      notes: editForm.notes || null,
+    });
     setEditOpen(false);
-    setEditingPurchase(null);
-    toast({ title: 'Orden actualizada', description: `Folio ${editForm.folio.trim()}` });
+    setEditingId(null);
   };
+
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Cargando compras...</div>;
 
   return (
     <div>
@@ -166,7 +142,7 @@ export default function PurchasesPage() {
                 <label className="text-xs font-medium text-muted-foreground">Proveedor *</label>
                 <select value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                   <option value="">Seleccionar...</option>
-                  {demoSuppliers.filter(s => s.type === 'nacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {suppliers.filter(s => s.type === 'nacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
               <div>
@@ -174,7 +150,6 @@ export default function PurchasesPage() {
                 <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
             </div>
-
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Productos *</label>
@@ -189,9 +164,7 @@ export default function PurchasesPage() {
                 </div>
               ))}
             </div>
-
             <div className="text-right font-bold text-sm">Total: ${total.toLocaleString()}</div>
-
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
               <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Crear orden</button>
@@ -220,13 +193,12 @@ export default function PurchasesPage() {
                 </select>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Proveedor</label>
                 <select value={editForm.supplier} onChange={e => setEditForm({ ...editForm, supplier: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
                   <option value="">Seleccionar...</option>
-                  {demoSuppliers.filter(s => s.type === 'nacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {suppliers.filter(s => s.type === 'nacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
               <div>
@@ -234,22 +206,18 @@ export default function PurchasesPage() {
                 <input type="date" value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
             </div>
-
             <div>
               <label className="text-xs font-medium text-muted-foreground">Productos</label>
               <input value={editForm.products} onChange={e => setEditForm({ ...editForm, products: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
             </div>
-
             <div>
               <label className="text-xs font-medium text-muted-foreground">Total ($)</label>
               <input type="number" value={editForm.total} onChange={e => setEditForm({ ...editForm, total: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
             </div>
-
             <div>
               <label className="text-xs font-medium text-muted-foreground">Notas</label>
               <textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm resize-none" placeholder="Observaciones..." />
             </div>
-
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setEditOpen(false)} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
               <button onClick={handleSaveEdit} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Guardar cambios</button>

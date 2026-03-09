@@ -1,18 +1,20 @@
-import { demoSuppliers } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { Building2, Plus, Search, Edit2 } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Supplier } from '@/types';
-import { addAuditLog } from '@/lib/auditLog';
 import { toast } from 'sonner';
+import { useSuppliers, useAddSupplier, useUpdateSupplier } from '@/hooks/useSuppliers';
 
 export default function SuppliersPage() {
   const { currentRole } = useAppContext();
   const canEdit = currentRole === 'director' || currentRole === 'compras';
 
+  const { data: suppliers = [], isLoading } = useSuppliers();
+  const addMutation = useAddSupplier();
+  const updateMutation = useUpdateSupplier();
+
   const [search, setSearch] = useState('');
-  const [suppliers, setSuppliers] = useState<Supplier[]>(demoSuppliers);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN' as 'MXN' | 'USD' | 'CNY', type: 'nacional' as Supplier['type'] });
@@ -36,18 +38,15 @@ export default function SuppliersPage() {
       return;
     }
     if (editId) {
-      setSuppliers(prev => prev.map(s => s.id === editId ? { ...s, ...form } : s));
-      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'proveedores', action: 'editar_proveedor', entityId: editId, newValue: form.name, comment: `Proveedor ${form.name} editado` });
-      toast.success('Proveedor actualizado');
+      updateMutation.mutate({ id: editId, ...form });
     } else {
-      const newSupplier: Supplier = { id: `s-${Date.now()}`, ...form };
-      setSuppliers(prev => [newSupplier, ...prev]);
-      addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'proveedores', action: 'crear_proveedor', entityId: newSupplier.id, newValue: form.name });
-      toast.success(`Proveedor ${form.name} creado`);
+      addMutation.mutate(form);
     }
     setOpen(false);
     resetForm();
   };
+
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Cargando proveedores...</div>;
 
   return (
     <div>
