@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, CalendarIcon } from 'lucide-react';
+import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, Trash2, CalendarIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
