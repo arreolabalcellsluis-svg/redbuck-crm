@@ -64,7 +64,7 @@ function dbToOrder(o: DBOrder): Order {
 }
 
 export default function OrdersPage() {
-  const { currentRole, exchangeRate, receivables, setReceivables, payments, setPayments, getOrderPayments, getTotalPaid, registerPayment } = useAppContext();
+  const { currentRole, exchangeRate } = useAppContext();
   const isAdmin = currentRole === 'director';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
 
