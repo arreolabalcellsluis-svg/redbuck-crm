@@ -19,6 +19,7 @@ const VENDEDOR_BLOCKED_PATHS = [
   '/servicio',
   '/gastos',
   '/activos',
+  '/balance-general',
   '/cuentas-pagar',
   '/facturacion',
   '/simulador-comisiones',

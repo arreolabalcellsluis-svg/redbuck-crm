@@ -37,6 +37,7 @@ import OperatingExpensesPage from "./pages/OperatingExpensesPage";
 import AssetsPage from "./pages/AssetsPage";
 import AccountsPayablePage from "./pages/AccountsPayablePage";
 import CFODashboardPage from "./pages/CFODashboardPage";
+import BalanceSheetPage from "./pages/BalanceSheetPage";
 import VendorGoalsPage from "./pages/VendorGoalsPage";
 import CommissionSimulatorPage from "./pages/CommissionSimulatorPage";
 import SalesForecastPage from "./pages/SalesForecastPage";
@@ -130,6 +131,7 @@ function ProtectedRoutes() {
             <Route path="/planeacion" element={<PlanningPage />} />
             <Route path="/gastos" element={<OperatingExpensesPage />} />
             <Route path="/activos" element={<AssetsPage />} />
+            <Route path="/balance-general" element={<BalanceSheetPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
             <Route path="/reportes-ejecutivos" element={<ExecutiveReportsPage />} />
             <Route path="/reportes/ventas" element={<SalesReportPage />} />
