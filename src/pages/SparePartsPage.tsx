@@ -303,6 +303,36 @@ export default function SparePartsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ===================== VIEW SPARE PART DIALOG (READ-ONLY) ===================== */}
+      <Dialog open={!!viewingSparePart} onOpenChange={() => setViewingSparePart(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{viewingSparePart?.name}</DialogTitle>
+            <DialogDescription>Información de la refacción</DialogDescription>
+          </DialogHeader>
+          {viewingSparePart && (
+            <div className="space-y-4">
+              {viewingSparePart.image && (
+                <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden">
+                  <img src={viewingSparePart.image} alt={viewingSparePart.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingSparePart.sku}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Equipo relacionado</span><span className="font-medium">{viewingSparePart.productName || '—'}</span></div>
+                {!isVendedor && (
+                  <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingSparePart.cost)}</span></div>
+                )}
+                <div><span className="text-xs text-muted-foreground block">Precio</span><span className="font-bold">{fmt(viewingSparePart.price)}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Stock</span><span className={`font-bold ${viewingSparePart.stock <= viewingSparePart.minStock ? 'text-destructive' : ''}`}>{viewingSparePart.stock}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Stock mínimo</span><span className="font-medium">{viewingSparePart.minStock}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Estado</span>{viewingSparePart.active ? <span className="status-badge-success">Activa</span> : <span className="status-badge-neutral">Inactiva</span>}</div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
     </div>
   );

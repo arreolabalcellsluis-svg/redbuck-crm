@@ -526,6 +526,54 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ===================== VIEW PRODUCT DIALOG (READ-ONLY) ===================== */}
+      <Dialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewingProduct?.name}</DialogTitle>
+            <DialogDescription>Información del producto</DialogDescription>
+          </DialogHeader>
+          {viewingProduct && (
+            <div className="space-y-4">
+              {(viewingProduct.image || getProductImage(viewingProduct.id)) && (
+                <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden">
+                  <img src={viewingProduct.image || getProductImage(viewingProduct.id)} alt={viewingProduct.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingProduct.sku}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Categoría</span><span className="font-medium">{CATEGORY_LABELS[viewingProduct.category]}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Marca</span><span className="font-medium">{viewingProduct.brand}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Modelo</span><span className="font-medium">{viewingProduct.model}</span></div>
+                <div className="col-span-2"><span className="text-xs text-muted-foreground block">Descripción</span><span className="font-medium">{viewingProduct.description || '—'}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Precio de lista</span><span className="font-bold text-lg">{fmt(viewingProduct.listPrice, viewingProduct.currency)}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Precio mínimo</span><span className="font-medium">{fmt(viewingProduct.minPrice, viewingProduct.currency)}</span></div>
+                {currentRole !== 'vendedor' && (
+                  <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingProduct.cost, viewingProduct.currency)}</span></div>
+                )}
+                <div><span className="text-xs text-muted-foreground block">Moneda</span><span className="font-medium">{viewingProduct.currency}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Stock total</span><span className="font-bold">{totalStock(viewingProduct)}</span></div>
+                <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Garantía</span><span className="font-medium">{viewingProduct.warranty}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Días de entrega</span><span className="font-medium">{viewingProduct.deliveryDays}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Proveedor</span><span className="font-medium">{viewingProduct.supplier || '—'}</span></div>
+              </div>
+              {(() => {
+                const wh = getWarehouseNames(viewingProduct.stock);
+                return wh.length > 0 ? (
+                  <div className="pt-3 border-t">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Stock por bodega</span>
+                    <div className="flex flex-wrap gap-2">
+                      {wh.map(w => <span key={w.name} className="text-xs px-2 py-1 rounded-full bg-muted">{w.name}: <strong>{w.qty}</strong></span>)}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
     </div>
   );
