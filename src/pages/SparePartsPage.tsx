@@ -209,11 +209,11 @@ export default function SparePartsPage() {
                 <td>
                   <div className="flex items-center gap-3">
                     {sp.image && (
-                      <div className="w-10 h-10 rounded-md overflow-hidden border shrink-0 cursor-pointer" onClick={() => setViewImage(sp.image!)}>
+                      <div className="w-10 h-10 rounded-md overflow-hidden border shrink-0 cursor-pointer" onClick={() => setViewingSparePart(sp)}>
                         <img src={sp.image} alt={sp.name} className="w-full h-full object-cover" />
                       </div>
                     )}
-                    <span className="font-medium">{sp.name}</span>
+                    <span className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingSparePart(sp)}>{sp.name}</span>
                   </div>
                 </td>
                 <td className="text-muted-foreground text-sm">{sp.productName}</td>
