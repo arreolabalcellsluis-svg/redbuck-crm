@@ -58,6 +58,7 @@ export default function CRMPage() {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [form, setForm] = useState(emptyCustomer());
 
   // DB hooks
@@ -283,7 +284,7 @@ export default function CRMPage() {
               <tbody>
                 {filteredCustomers.map(c => (
                   <tr key={c.id} className="cursor-pointer">
-                    <td className="font-medium">{c.name}</td>
+                    <td className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingCustomer(c)}>{c.name}</td>
                     <td><span className="text-xs">{CUSTOMER_TYPE_LABELS[c.type]}</span></td>
                     <td className="text-muted-foreground">{c.city}, {c.state}</td>
                     <td className="text-muted-foreground">{resolveVendor(c.vendorId)}</td>
@@ -334,6 +335,66 @@ export default function CRMPage() {
           })}
         </div>
       )}
+
+      {/* ===================== VIEW CLIENT DIALOG (READ-ONLY) ===================== */}
+      <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{viewingCustomer?.name}</DialogTitle>
+            <DialogDescription>Información del cliente</DialogDescription>
+          </DialogHeader>
+          {viewingCustomer && (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {viewingCustomer.contactName && (
+                <div className="col-span-2">
+                  <span className="text-xs text-muted-foreground block">Nombre de contacto</span>
+                  <span className="font-medium">{viewingCustomer.contactName}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-xs text-muted-foreground block">Tipo</span>
+                <span className="font-medium">{CUSTOMER_TYPE_LABELS[viewingCustomer.type]}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Prioridad</span>
+                <StatusBadge status={viewingCustomer.priority} type="priority" />
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Teléfono</span>
+                <span className="font-medium">{viewingCustomer.phone || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">WhatsApp</span>
+                <span className="font-medium">{viewingCustomer.whatsapp || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Correo</span>
+                <span className="font-medium">{viewingCustomer.email || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">RFC</span>
+                <span className="font-medium">{viewingCustomer.rfc || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Ciudad</span>
+                <span className="font-medium">{viewingCustomer.city || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Estado</span>
+                <span className="font-medium">{viewingCustomer.state || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Vendedor</span>
+                <span className="font-medium">{resolveVendor(viewingCustomer.vendorId)}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Desde</span>
+                <span className="font-medium">{viewingCustomer.createdAt}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ===================== CREATE CLIENT DIALOG ===================== */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>

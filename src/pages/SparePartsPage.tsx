@@ -29,6 +29,7 @@ export default function SparePartsPage() {
   const [form, setForm] = useState<SparePartForm>(emptyForm());
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [viewImage, setViewImage] = useState<string | null>(null);
+  const [viewingSparePart, setViewingSparePart] = useState<SparePart | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: spareParts = [], isLoading } = useSpareParts();
@@ -208,11 +209,11 @@ export default function SparePartsPage() {
                 <td>
                   <div className="flex items-center gap-3">
                     {sp.image && (
-                      <div className="w-10 h-10 rounded-md overflow-hidden border shrink-0 cursor-pointer" onClick={() => setViewImage(sp.image!)}>
+                      <div className="w-10 h-10 rounded-md overflow-hidden border shrink-0 cursor-pointer" onClick={() => setViewingSparePart(sp)}>
                         <img src={sp.image} alt={sp.name} className="w-full h-full object-cover" />
                       </div>
                     )}
-                    <span className="font-medium">{sp.name}</span>
+                    <span className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingSparePart(sp)}>{sp.name}</span>
                   </div>
                 </td>
                 <td className="text-muted-foreground text-sm">{sp.productName}</td>
@@ -299,6 +300,36 @@ export default function SparePartsPage() {
       <Dialog open={!!viewImage} onOpenChange={() => setViewImage(null)}>
         <DialogContent className="max-w-3xl p-2">
           {viewImage && <img src={viewImage} alt="Refacción" className="w-full max-h-[80vh] object-contain rounded-lg" />}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===================== VIEW SPARE PART DIALOG (READ-ONLY) ===================== */}
+      <Dialog open={!!viewingSparePart} onOpenChange={() => setViewingSparePart(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{viewingSparePart?.name}</DialogTitle>
+            <DialogDescription>Información de la refacción</DialogDescription>
+          </DialogHeader>
+          {viewingSparePart && (
+            <div className="space-y-4">
+              {viewingSparePart.image && (
+                <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden">
+                  <img src={viewingSparePart.image} alt={viewingSparePart.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingSparePart.sku}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Equipo relacionado</span><span className="font-medium">{viewingSparePart.productName || '—'}</span></div>
+                {!isVendedor && (
+                  <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingSparePart.cost)}</span></div>
+                )}
+                <div><span className="text-xs text-muted-foreground block">Precio</span><span className="font-bold">{fmt(viewingSparePart.price)}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Stock</span><span className={`font-bold ${viewingSparePart.stock <= viewingSparePart.minStock ? 'text-destructive' : ''}`}>{viewingSparePart.stock}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Stock mínimo</span><span className="font-medium">{viewingSparePart.minStock}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Estado</span>{viewingSparePart.active ? <span className="status-badge-success">Activa</span> : <span className="status-badge-neutral">Inactiva</span>}</div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
