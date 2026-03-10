@@ -208,6 +208,7 @@ export default function ProductsPage() {
         in_transit: form.inTransit,
         active: form.active,
         image: form.image || null,
+        images: form.images ?? [],
       }, {
         onSuccess: () => {
           saveFiscalData(editId);
