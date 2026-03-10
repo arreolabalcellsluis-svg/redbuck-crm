@@ -73,6 +73,9 @@ export default function ProductsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   
   const filtered = products.filter(p => {
     if (!p.active) return false;
