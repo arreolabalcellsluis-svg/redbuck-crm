@@ -27,6 +27,7 @@ function dbToProduct(db: DBProduct): Product {
     model: db.model,
     description: db.description,
     image: db.image || undefined,
+    images: db.images ?? [],
     listPrice: db.list_price,
     minPrice: db.min_price,
     cost: db.cost,
