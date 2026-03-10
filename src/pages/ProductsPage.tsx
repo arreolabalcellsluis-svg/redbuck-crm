@@ -330,13 +330,6 @@ export default function ProductsPage() {
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo ({form.currency})</label>
-        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="52000" />
-        {form.currency === 'USD' && form.cost > 0 && (
-          <p className="text-[10px] text-primary mt-1">≈ {fmt(form.cost * exchangeRate, 'MXN')} MXN</p>
-        )}
-      </div>
-      <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Garantía</label>
         <input value={form.warranty} onChange={e => setForm(p => ({ ...p, warranty: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="2 años" />
       </div>
@@ -548,9 +541,6 @@ export default function ProductsPage() {
                 <div className="col-span-2"><span className="text-xs text-muted-foreground block">Descripción</span><span className="font-medium">{viewingProduct.description || '—'}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Precio de lista</span><span className="font-bold text-lg">{fmt(viewingProduct.listPrice, viewingProduct.currency)}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Precio mínimo</span><span className="font-medium">{fmt(viewingProduct.minPrice, viewingProduct.currency)}</span></div>
-                {currentRole !== 'vendedor' && (
-                  <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingProduct.cost, viewingProduct.currency)}</span></div>
-                )}
                 <div><span className="text-xs text-muted-foreground block">Moneda</span><span className="font-medium">{viewingProduct.currency}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Stock total</span><span className="font-bold">{totalStock(viewingProduct)}</span></div>
                 <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
