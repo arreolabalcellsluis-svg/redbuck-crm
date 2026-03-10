@@ -12,6 +12,7 @@ import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import { useAllProductFiscalData, useSaveProductFiscalData } from '@/hooks/useInvoicing';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, type DBProduct } from '@/hooks/useProducts';
+import ImageGalleryLightbox from '@/components/shared/ImageGalleryLightbox';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
