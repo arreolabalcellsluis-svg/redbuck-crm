@@ -1,0 +1,1 @@
+ALTER TABLE public.spare_parts ADD COLUMN IF NOT EXISTS images jsonb NOT NULL DEFAULT '[]'::jsonb;

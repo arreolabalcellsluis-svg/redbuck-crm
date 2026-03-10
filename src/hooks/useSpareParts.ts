@@ -17,6 +17,7 @@ function dbToSparePart(row: any): SparePart {
     warehouse: row.warehouse,
     active: row.active,
     image: row.image || '',
+    images: Array.isArray(row.images) ? row.images : [],
   };
 }
 
@@ -51,6 +52,7 @@ export function useAddSparePart() {
         warehouse: sp.warehouse,
         active: sp.active,
         image: sp.image || null,
+        images: (sp.images ?? []) as any,
         user_id: user?.id ?? null,
       });
       if (error) throw error;
@@ -79,6 +81,7 @@ export function useUpdateSparePart() {
       if (sp.warehouse !== undefined) updates.warehouse = sp.warehouse;
       if (sp.active !== undefined) updates.active = sp.active;
       if (sp.image !== undefined) updates.image = sp.image || null;
+      if (sp.images !== undefined) updates.images = sp.images ?? [];
       const { error } = await supabase.from('spare_parts').update(updates).eq('id', id);
       if (error) throw error;
     },
