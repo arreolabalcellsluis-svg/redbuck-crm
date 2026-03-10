@@ -132,6 +132,7 @@ export default function ProductsPage() {
       model: form.model,
       description: form.description,
       image: form.image || null,
+      images: form.images ?? [],
       list_price: form.listPrice,
       min_price: form.minPrice,
       cost: form.cost,
