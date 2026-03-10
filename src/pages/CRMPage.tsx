@@ -58,6 +58,7 @@ export default function CRMPage() {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [form, setForm] = useState(emptyCustomer());
 
   // DB hooks
