@@ -17,6 +17,7 @@ function dbToSparePart(row: any): SparePart {
     warehouse: row.warehouse,
     active: row.active,
     image: row.image || '',
+    images: Array.isArray(row.images) ? row.images : [],
   };
 }
 
