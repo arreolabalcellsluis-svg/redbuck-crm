@@ -417,11 +417,18 @@ export default function ProductsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map(p => {
           const warehouses = getWarehouseNames(p.stock);
+          const cardImages = p.images?.length ? p.images : [p.image || getProductImage(p.id)];
+          const mainImage = cardImages[0];
           return (
             <div key={p.id} className="bg-card rounded-xl border hover:shadow-md transition-shadow overflow-hidden">
-              <div className="aspect-[16/10] bg-muted relative overflow-hidden cursor-pointer" onClick={() => setViewingProduct(p)}>
-                <img src={p.image || getProductImage(p.id)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+              <div className="aspect-[16/10] bg-muted relative overflow-hidden cursor-pointer" onClick={() => { if (cardImages.length > 1) { openLightbox(cardImages, 0); } else { setViewingProduct(p); } }}>
+                <img src={mainImage} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                 <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-card/90 text-muted-foreground backdrop-blur-sm">{CATEGORY_LABELS[p.category]}</span>
+                {cardImages.length > 1 && (
+                  <span className="absolute bottom-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-sm">
+                    📷 {cardImages.length}
+                  </span>
+                )}
               </div>
               <div className="p-5">
                 <h3 className="font-display font-semibold text-sm cursor-pointer text-primary hover:underline" onClick={() => setViewingProduct(p)}>{p.name}</h3>
