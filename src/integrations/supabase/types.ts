@@ -1497,6 +1497,7 @@ export type Database = {
           created_at: string
           id: string
           image: string | null
+          images: Json
           min_stock: number
           name: string
           price: number
@@ -1514,6 +1515,7 @@ export type Database = {
           created_at?: string
           id?: string
           image?: string | null
+          images?: Json
           min_stock?: number
           name: string
           price?: number
@@ -1531,6 +1533,7 @@ export type Database = {
           created_at?: string
           id?: string
           image?: string | null
+          images?: Json
           min_stock?: number
           name?: string
           price?: number
