@@ -11,6 +11,7 @@ export interface DBProduct {
   model: string;
   description: string;
   image: string | null;
+  images: string[];
   list_price: number;
   min_price: number;
   cost: number;
