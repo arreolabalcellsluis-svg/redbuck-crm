@@ -11,6 +11,7 @@ export interface DBProduct {
   model: string;
   description: string;
   image: string | null;
+  images: string[];
   list_price: number;
   min_price: number;
   cost: number;
@@ -35,6 +36,7 @@ function mapRow(row: any): DBProduct {
     model: row.model,
     description: row.description,
     image: row.image,
+    images: Array.isArray(row.images) ? row.images : [],
     list_price: Number(row.list_price),
     min_price: Number(row.min_price),
     cost: Number(row.cost),
@@ -77,6 +79,7 @@ export function useAddProduct() {
         model: product.model,
         description: product.description,
         image: product.image,
+        images: (product.images ?? []) as any,
         list_price: product.list_price,
         min_price: product.min_price,
         cost: product.cost,
@@ -116,6 +119,7 @@ export function useUpdateProduct() {
       if (product.in_transit !== undefined) updates.in_transit = product.in_transit;
       if (product.active !== undefined) updates.active = product.active;
       if (product.image !== undefined) updates.image = product.image;
+      if (product.images !== undefined) updates.images = product.images;
       if (product.description !== undefined) updates.description = product.description;
       if (product.supplier !== undefined) updates.supplier = product.supplier;
       if (product.warranty !== undefined) updates.warranty = product.warranty;

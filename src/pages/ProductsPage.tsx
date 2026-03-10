@@ -12,6 +12,7 @@ import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import { useAllProductFiscalData, useSaveProductFiscalData } from '@/hooks/useInvoicing';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, type DBProduct } from '@/hooks/useProducts';
+import ImageGalleryLightbox from '@/components/shared/ImageGalleryLightbox';
 
 const fmt = (n: number, currency: 'MXN' | 'USD' = 'MXN') => new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
@@ -73,6 +74,9 @@ export default function ProductsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   
   const filtered = products.filter(p => {
     if (!p.active) return false;
@@ -89,22 +93,34 @@ export default function ProductsPage() {
   demoWarehouses.forEach(w => { warehouseMap[w.id] = w.name; });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setImagePreview(dataUrl);
-      setForm(p => ({ ...p, image: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        setForm(p => {
+          const newImages = [...(p.images || []), dataUrl];
+          return { ...p, images: newImages, image: newImages[0] };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearImage = () => {
-    setImagePreview(null);
-    setForm(p => ({ ...p, image: '' }));
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeImage = (index: number) => {
+    setForm(p => {
+      const newImages = (p.images || []).filter((_, i) => i !== index);
+      return { ...p, images: newImages, image: newImages[0] || '' };
+    });
+  };
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
   };
 
   const saveFiscalData = (productId: string) => {
@@ -132,6 +148,7 @@ export default function ProductsPage() {
       model: form.model,
       description: form.description,
       image: form.image || null,
+      images: form.images ?? [],
       list_price: form.listPrice,
       min_price: form.minPrice,
       cost: form.cost,
@@ -192,6 +209,7 @@ export default function ProductsPage() {
         in_transit: form.inTransit,
         active: form.active,
         image: form.image || null,
+        images: form.images ?? [],
       }, {
         onSuccess: () => {
           saveFiscalData(editId);
@@ -250,33 +268,29 @@ export default function ProductsPage() {
 
   const productFormFields = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Image upload */}
+      {/* Image upload - multiple */}
       <div className="md:col-span-2">
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Imagen del producto</label>
-        <div className="flex items-center gap-4">
-          {imagePreview ? (
-            <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
-              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-              <button onClick={clearImage} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground">
-                <X size={12} />
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Imágenes del producto</label>
+        <div className="flex flex-wrap items-center gap-3">
+          {(form.images || []).map((img, idx) => (
+            <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border group">
+              <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover cursor-pointer" onClick={() => openLightbox(form.images || [], idx)} />
+              <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <X size={10} />
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-sm hover:border-primary/50 hover:text-primary transition-colors"
-            >
-              <Upload size={16} /> Adjuntar imagen
-            </button>
-          )}
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-          {imagePreview && (
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">
-              Cambiar imagen
-            </button>
-          )}
+          ))}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center justify-center w-20 h-20 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-xs hover:border-primary/50 hover:text-primary transition-colors gap-1"
+          >
+            <Upload size={16} />
+            <span>Agregar</span>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
         </div>
+        <p className="text-[10px] text-muted-foreground mt-1">Puedes subir múltiples imágenes. La primera será la imagen principal.</p>
       </div>
 
       <div className="md:col-span-2">
@@ -403,11 +417,18 @@ export default function ProductsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map(p => {
           const warehouses = getWarehouseNames(p.stock);
+          const cardImages = p.images?.length ? p.images : [p.image || getProductImage(p.id)];
+          const mainImage = cardImages[0];
           return (
             <div key={p.id} className="bg-card rounded-xl border hover:shadow-md transition-shadow overflow-hidden">
-              <div className="aspect-[16/10] bg-muted relative overflow-hidden cursor-pointer" onClick={() => setViewingProduct(p)}>
-                <img src={p.image || getProductImage(p.id)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+              <div className="aspect-[16/10] bg-muted relative overflow-hidden cursor-pointer" onClick={() => { if (cardImages.length > 1) { openLightbox(cardImages, 0); } else { setViewingProduct(p); } }}>
+                <img src={mainImage} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                 <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-card/90 text-muted-foreground backdrop-blur-sm">{CATEGORY_LABELS[p.category]}</span>
+                {cardImages.length > 1 && (
+                  <span className="absolute bottom-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-sm">
+                    📷 {cardImages.length}
+                  </span>
+                )}
               </div>
               <div className="p-5">
                 <h3 className="font-display font-semibold text-sm cursor-pointer text-primary hover:underline" onClick={() => setViewingProduct(p)}>{p.name}</h3>
@@ -528,11 +549,29 @@ export default function ProductsPage() {
           </DialogHeader>
           {viewingProduct && (
             <div className="space-y-4">
-              {(viewingProduct.image || getProductImage(viewingProduct.id)) && (
-                <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden">
-                  <img src={viewingProduct.image || getProductImage(viewingProduct.id)} alt={viewingProduct.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
-                </div>
-              )}
+              {(() => {
+                const allImages = [
+                  ...(viewingProduct.images?.length ? viewingProduct.images : []),
+                  ...((!viewingProduct.images?.length && (viewingProduct.image || getProductImage(viewingProduct.id))) ? [viewingProduct.image || getProductImage(viewingProduct.id)] : []),
+                ];
+                return allImages.length > 0 ? (
+                  <div>
+                    <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openLightbox(allImages, 0)}>
+                      <img src={allImages[0]} alt={viewingProduct.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                    </div>
+                    {allImages.length > 1 && (
+                      <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                        {allImages.map((img, idx) => (
+                          <button key={idx} onClick={() => openLightbox(allImages, idx)} className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors">
+                            <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-1">Haz clic en la imagen para ampliar</p>
+                  </div>
+                ) : null;
+              })()}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingProduct.sku}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Categoría</span><span className="font-medium">{CATEGORY_LABELS[viewingProduct.category]}</span></div>
@@ -546,7 +585,6 @@ export default function ProductsPage() {
                 <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Garantía</span><span className="font-medium">{viewingProduct.warranty}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Días de entrega</span><span className="font-medium">{viewingProduct.deliveryDays}</span></div>
-                
               </div>
               {(() => {
                 const wh = getWarehouseNames(viewingProduct.stock);
@@ -563,6 +601,14 @@ export default function ProductsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ===================== IMAGE LIGHTBOX ===================== */}
+      <ImageGalleryLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+      />
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
     </div>

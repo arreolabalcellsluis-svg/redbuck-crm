@@ -72,6 +72,7 @@ export interface Product {
   model: string;
   description: string;
   image?: string;
+  images?: string[];
   listPrice: number;
   minPrice: number;
   cost: number;

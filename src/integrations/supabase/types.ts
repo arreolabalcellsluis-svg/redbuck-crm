@@ -1188,6 +1188,7 @@ export type Database = {
           description: string
           id: string
           image: string | null
+          images: Json
           in_transit: number
           list_price: number
           min_price: number
@@ -1211,6 +1212,7 @@ export type Database = {
           description?: string
           id?: string
           image?: string | null
+          images?: Json
           in_transit?: number
           list_price?: number
           min_price?: number
@@ -1234,6 +1236,7 @@ export type Database = {
           description?: string
           id?: string
           image?: string | null
+          images?: Json
           in_transit?: number
           list_price?: number
           min_price?: number
