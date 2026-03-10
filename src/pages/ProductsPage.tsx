@@ -266,33 +266,29 @@ export default function ProductsPage() {
 
   const productFormFields = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Image upload */}
+      {/* Image upload - multiple */}
       <div className="md:col-span-2">
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Imagen del producto</label>
-        <div className="flex items-center gap-4">
-          {imagePreview ? (
-            <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
-              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-              <button onClick={clearImage} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground">
-                <X size={12} />
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Imágenes del producto</label>
+        <div className="flex flex-wrap items-center gap-3">
+          {(form.images || []).map((img, idx) => (
+            <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border group">
+              <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover cursor-pointer" onClick={() => openLightbox(form.images || [], idx)} />
+              <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <X size={10} />
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-sm hover:border-primary/50 hover:text-primary transition-colors"
-            >
-              <Upload size={16} /> Adjuntar imagen
-            </button>
-          )}
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-          {imagePreview && (
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">
-              Cambiar imagen
-            </button>
-          )}
+          ))}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center justify-center w-20 h-20 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-xs hover:border-primary/50 hover:text-primary transition-colors gap-1"
+          >
+            <Upload size={16} />
+            <span>Agregar</span>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
         </div>
+        <p className="text-[10px] text-muted-foreground mt-1">Puedes subir múltiples imágenes. La primera será la imagen principal.</p>
       </div>
 
       <div className="md:col-span-2">
