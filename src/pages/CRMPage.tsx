@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react';
-import { demoOpportunities, demoUsers } from '@/data/demo-data';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
-import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -12,6 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useOrders } from '@/hooks/useOrders';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -66,12 +67,14 @@ export default function CRMPage() {
   const addCustomerMut = useAddCustomer();
   const updateCustomerMut = useUpdateCustomer();
   const deleteCustomerMut = useDeleteCustomer();
+  const { data: dbQuotations = [] } = useQuotations();
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbTeam = [] } = useTeamMembers();
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
   const canExport = true;
   const isVendedor = currentRole === 'vendedor';
-  const vendorId = DEMO_VENDEDOR_ID;
 
   const [fiscal, setFiscal] = useState<FiscalData>(emptyFiscal());
   const [showFiscal, setShowFiscal] = useState(false);
@@ -91,28 +94,69 @@ export default function CRMPage() {
     });
   };
 
-  const allCustomers = isVendedor
-    ? customers.filter(c => c.vendorId === vendorId)
-    : customers;
+  const allCustomers = customers;
 
-  const allOpportunities = isVendedor
-    ? demoOpportunities.filter(o => o.vendorId === vendorId)
-    : demoOpportunities;
+  // Map quotation status → pipeline stage for display
+  const quotationToPipelineStage = (status: string): string => {
+    switch (status) {
+      case 'borrador': return 'cotizacion_enviada';
+      case 'enviada': return 'cotizacion_enviada';
+      case 'vista': return 'seguimiento';
+      case 'seguimiento': return 'seguimiento';
+      case 'aceptada': return 'negociacion';
+      case 'rechazada': return 'cierre_perdido';
+      case 'vencida': return 'cierre_perdido';
+      default: return 'prospecto_nuevo';
+    }
+  };
+
+  // Build pipeline opportunities from real quotations
+  const allOpportunities = useMemo(() => {
+    const customerMap = new Map(allCustomers.map(c => [c.id, c]));
+    const teamMap = new Map(dbTeam.map(t => [t.id, t]));
+
+    const quotationOpps = dbQuotations.map(q => ({
+      id: q.id,
+      customerId: q.customer_id || '',
+      customerName: q.customer_name,
+      vendorId: q.vendor_id || '',
+      vendorName: q.vendor_name || (q.vendor_id ? (teamMap.get(q.vendor_id)?.name ?? q.vendor_id) : 'Sin asignar'),
+      estimatedAmount: q.total,
+      stage: quotationToPipelineStage(q.status),
+      status: q.status,
+      folio: q.folio,
+    }));
+
+    // Orders represent "cierre_ganado"
+    const orderOpps = dbOrders.map(o => ({
+      id: o.id,
+      customerId: o.customer_id || '',
+      customerName: o.customer_name,
+      vendorId: '',
+      vendorName: o.vendor_name || 'Sin asignar',
+      estimatedAmount: o.total,
+      stage: 'cierre_ganado',
+      status: 'orden',
+      folio: o.folio,
+    }));
+
+    return [...quotationOpps, ...orderOpps];
+  }, [dbQuotations, dbOrders, allCustomers, dbTeam]);
 
   const filteredCustomers = allCustomers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.city.toLowerCase().includes(search.toLowerCase())
   );
 
   const resolveVendor = (vendorId: string) => {
-    const u = demoUsers.find(usr => usr.id === vendorId);
-    return u ? u.name : vendorId;
+    const u = dbTeam.find(usr => usr.id === vendorId);
+    return u ? u.name : vendorId || '—';
   };
 
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+  const vendors = dbTeam.filter(u => u.role === 'vendedor');
   const pipelineStages = ['prospecto_nuevo', 'contactado', 'calificado', 'diagnostico', 'cotizacion_enviada', 'seguimiento', 'negociacion'] as const;
 
   const handleExport = () => {
-    exportCRMToExcel(filteredCustomers, demoUsers);
+    exportCRMToExcel(filteredCustomers, dbTeam as any);
     toast.success(`${filteredCustomers.length} registros exportados a Excel`);
   };
 
@@ -323,9 +367,8 @@ export default function CRMPage() {
                       <div className="text-xs text-muted-foreground mt-1">{o.vendorName}</div>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-sm font-semibold">{fmt(o.estimatedAmount)}</span>
-                        <span className="text-xs text-muted-foreground">{o.probability}%</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{o.folio}</span>
                       </div>
-                      {o.nextActivity && <div className="text-xs text-primary mt-1.5">→ {o.nextActivity}</div>}
                     </div>
                   ))}
                   {opps.length === 0 && <div className="p-4 text-center text-xs text-muted-foreground border border-dashed rounded-lg">Sin oportunidades</div>}
