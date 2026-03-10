@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react';
-import { demoOpportunities, demoUsers } from '@/data/demo-data';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
-import { DEMO_VENDEDOR_ID } from '@/lib/rolePermissions';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -12,6 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useOrders } from '@/hooks/useOrders';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
