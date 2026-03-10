@@ -330,13 +330,6 @@ export default function ProductsPage() {
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo ({form.currency})</label>
-        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="52000" />
-        {form.currency === 'USD' && form.cost > 0 && (
-          <p className="text-[10px] text-primary mt-1">≈ {fmt(form.cost * exchangeRate, 'MXN')} MXN</p>
-        )}
-      </div>
-      <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Garantía</label>
         <input value={form.warranty} onChange={e => setForm(p => ({ ...p, warranty: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="2 años" />
       </div>
