@@ -109,6 +109,7 @@ export default function InventoryPage() {
       model: '',
       description: '',
       image: null,
+      images: [],
       list_price: 0,
       min_price: 0,
       cost: form.cost,

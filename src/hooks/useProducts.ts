@@ -79,6 +79,7 @@ export function useAddProduct() {
         model: product.model,
         description: product.description,
         image: product.image,
+        images: (product.images ?? []) as any,
         list_price: product.list_price,
         min_price: product.min_price,
         cost: product.cost,
