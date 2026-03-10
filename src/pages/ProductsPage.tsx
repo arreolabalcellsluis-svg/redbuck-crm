@@ -92,22 +92,34 @@ export default function ProductsPage() {
   demoWarehouses.forEach(w => { warehouseMap[w.id] = w.name; });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setImagePreview(dataUrl);
-      setForm(p => ({ ...p, image: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        setForm(p => {
+          const newImages = [...(p.images || []), dataUrl];
+          return { ...p, images: newImages, image: newImages[0] };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearImage = () => {
-    setImagePreview(null);
-    setForm(p => ({ ...p, image: '' }));
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeImage = (index: number) => {
+    setForm(p => {
+      const newImages = (p.images || []).filter((_, i) => i !== index);
+      return { ...p, images: newImages, image: newImages[0] || '' };
+    });
+  };
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
   };
 
   const saveFiscalData = (productId: string) => {

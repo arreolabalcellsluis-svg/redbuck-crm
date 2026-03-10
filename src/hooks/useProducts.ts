@@ -119,6 +119,7 @@ export function useUpdateProduct() {
       if (product.in_transit !== undefined) updates.in_transit = product.in_transit;
       if (product.active !== undefined) updates.active = product.active;
       if (product.image !== undefined) updates.image = product.image;
+      if (product.images !== undefined) updates.images = product.images;
       if (product.description !== undefined) updates.description = product.description;
       if (product.supplier !== undefined) updates.supplier = product.supplier;
       if (product.warranty !== undefined) updates.warranty = product.warranty;
