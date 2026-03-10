@@ -98,6 +98,7 @@ export interface SparePart {
   warehouse: string;
   active: boolean;
   image?: string;
+  images?: string[];
 }
 
 export type QuotationStatus = 'borrador' | 'enviada' | 'vista' | 'seguimiento' | 'aceptada' | 'rechazada' | 'vencida';
