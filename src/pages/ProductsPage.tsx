@@ -595,6 +595,14 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ===================== IMAGE LIGHTBOX ===================== */}
+      <ImageGalleryLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+      />
+
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
     </div>
   );
