@@ -175,14 +175,20 @@ export default function ProductsPage() {
     setEditId(p.id);
     const existing = fiscalMap.get(p.id);
     const taxFamily = existing ? (existing.vat_rate === 0 ? (existing.tax_object === '01' || existing.tax_object === '04' ? 'exento' : '0') : String(existing.vat_rate)) : '16';
+    // Consolidate images: use images array if available, otherwise fall back to single image
+    const consolidatedImages = (p.images && p.images.length > 0)
+      ? p.images
+      : (p.image ? [p.image] : []);
     setForm({
       ...p,
+      images: consolidatedImages,
+      image: consolidatedImages[0] || '',
       satProductKey: existing?.sat_product_key || '',
       satUnitKey: existing?.sat_unit_key || '',
       taxObject: existing?.tax_object || '02',
       taxFamily,
     });
-    setImagePreview(p.image || null);
+    setImagePreview(consolidatedImages[0] || null);
     setShowEdit(true);
   };
 
