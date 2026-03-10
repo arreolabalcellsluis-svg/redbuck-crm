@@ -36,6 +36,7 @@ function mapRow(row: any): DBProduct {
     model: row.model,
     description: row.description,
     image: row.image,
+    images: Array.isArray(row.images) ? row.images : [],
     list_price: Number(row.list_price),
     min_price: Number(row.min_price),
     cost: Number(row.cost),
