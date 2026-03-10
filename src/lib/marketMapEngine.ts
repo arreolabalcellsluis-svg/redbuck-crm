@@ -1,9 +1,7 @@
 /**
  * Market Map Engine — Aggregates CRM data by city for geographic market analysis.
+ * Uses real data passed as parameters (no demo data).
  */
-import {
-  demoCustomers, demoOpportunities, demoQuotations, demoOrders, demoUsers,
-} from '@/data/demo-data';
 
 // ─── Types ───────────────────────────────────────────────────────
 export type PenetrationLevel = 'alto' | 'medio' | 'bajo' | 'sin_presencia';
@@ -51,7 +49,6 @@ export interface CityMarketData {
   opportunities: string[];
   potentialValue: number;
   priority: 'alta' | 'media' | 'baja';
-  // Map coordinates (approximate for Mexico cities)
   lat: number;
   lng: number;
 }
@@ -63,6 +60,7 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   'San Pedro': { lat: 25.66, lng: -100.40 },
   'Guadalajara': { lat: 20.67, lng: -103.35 },
   'CDMX': { lat: 19.43, lng: -99.13 },
+  'Ciudad de México': { lat: 19.43, lng: -99.13 },
   'Ciudad Juárez': { lat: 31.69, lng: -106.42 },
   'Saltillo': { lat: 25.42, lng: -100.99 },
   'Nuevo Laredo': { lat: 27.48, lng: -99.52 },
@@ -70,7 +68,6 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   'León': { lat: 21.12, lng: -101.68 },
   'Cuernavaca': { lat: 18.92, lng: -99.23 },
   'Querétaro': { lat: 20.59, lng: -100.39 },
-  // Additional potential cities (no customers yet)
   'Puebla': { lat: 19.04, lng: -98.20 },
   'Mérida': { lat: 20.97, lng: -89.62 },
   'Tijuana': { lat: 32.51, lng: -117.02 },
@@ -88,31 +85,42 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   'Oaxaca': { lat: 17.07, lng: -96.72 },
   'Durango': { lat: 24.02, lng: -104.67 },
   'Reynosa': { lat: 26.08, lng: -98.28 },
+  'Torreón': { lat: 25.54, lng: -103.41 },
+  'Culiacán': { lat: 24.80, lng: -107.39 },
+  'Acapulco': { lat: 16.86, lng: -99.88 },
+  'Irapuato': { lat: 20.68, lng: -101.35 },
+  'Celaya': { lat: 20.52, lng: -100.82 },
+  'Pachuca': { lat: 20.12, lng: -98.73 },
+  'Tuxtla': { lat: 16.75, lng: -93.12 },
+  'Mexicali': { lat: 32.62, lng: -115.45 },
 };
 
-// States for potential cities
-const CITY_STATES: Record<string, string> = {
-  'Puebla': 'Puebla',
-  'Mérida': 'Yucatán',
-  'Tijuana': 'Baja California',
-  'Aguascalientes': 'Aguascalientes',
-  'Hermosillo': 'Sonora',
-  'Chihuahua': 'Chihuahua',
-  'Toluca': 'Estado de México',
-  'Veracruz': 'Veracruz',
-  'Cancún': 'Quintana Roo',
-  'Tampico': 'Tamaulipas',
-  'San Luis Potosí': 'San Luis Potosí',
-  'Morelia': 'Michoacán',
-  'Villahermosa': 'Tabasco',
-  'Tuxtla Gutiérrez': 'Chiapas',
-  'Oaxaca': 'Oaxaca',
-  'Durango': 'Durango',
-  'Reynosa': 'Tamaulipas',
-};
+// Input data interfaces (what the page passes in)
+export interface MarketCustomer {
+  id: string;
+  city: string;
+  state: string;
+  vendor_id: string | null;
+}
 
-function resolveVendor(vendorId: string) {
-  return demoUsers.find(u => u.id === vendorId)?.name ?? vendorId;
+export interface MarketQuotation {
+  id: string;
+  customer_id: string | null;
+  status: string;
+  total: number;
+  items: any[];
+}
+
+export interface MarketOrder {
+  id: string;
+  customer_id: string | null;
+  total: number;
+  items: any[];
+}
+
+export interface MarketTeamMember {
+  id: string;
+  name: string;
 }
 
 function classifyPenetration(customers: number, sales: number, quotations: number): PenetrationLevel {
@@ -123,28 +131,38 @@ function classifyPenetration(customers: number, sales: number, quotations: numbe
   return 'sin_presencia';
 }
 
-export function generateMarketData(filterVendorId?: string): CityMarketData[] {
-  // Collect all cities from customers
+export function generateMarketData(
+  customers: MarketCustomer[],
+  quotations: MarketQuotation[],
+  orders: MarketOrder[],
+  teamMembers: MarketTeamMember[],
+  filterVendorId?: string,
+): CityMarketData[] {
   const cityMap = new Map<string, CityMarketData>();
 
-  // Filter customers by vendor if provided
-  const customers = filterVendorId
-    ? demoCustomers.filter(c => c.vendorId === filterVendorId)
-    : demoCustomers;
+  const resolveVendor = (vendorId: string | null) => {
+    if (!vendorId) return 'Sin asignar';
+    return teamMembers.find(m => m.id === vendorId)?.name ?? vendorId;
+  };
+
+  // Build customer lookup
+  const customerById = new Map(customers.map(c => [c.id, c]));
+
+  // Filter customers by vendor if needed
+  const filteredCustomers = filterVendorId
+    ? customers.filter(c => c.vendor_id === filterVendorId)
+    : customers;
 
   // Initialize with customer cities
-  customers.forEach(c => {
+  filteredCustomers.forEach(c => {
+    if (!c.city) return;
     if (!cityMap.has(c.city)) {
       const coords = CITY_COORDS[c.city] ?? { lat: 23, lng: -102 };
       cityMap.set(c.city, {
         city: c.city,
         state: c.state ?? '',
-        customers: 0,
-        leads: 0,
-        quotations: 0,
-        openQuotations: 0,
-        closedSales: 0,
-        totalSalesValue: 0,
+        customers: 0, leads: 0, quotations: 0, openQuotations: 0,
+        closedSales: 0, totalSalesValue: 0,
         vendors: [],
         penetration: 'sin_presencia',
         topProducts: [],
@@ -158,14 +176,15 @@ export function generateMarketData(filterVendorId?: string): CityMarketData[] {
     const cd = cityMap.get(c.city)!;
     cd.customers++;
     cd.leads++;
-    const vendorName = resolveVendor(c.vendorId);
+    const vendorName = resolveVendor(c.vendor_id);
     if (!cd.vendors.includes(vendorName)) cd.vendors.push(vendorName);
   });
 
   // Add quotation data
   const productCounts: Record<string, Record<string, number>> = {};
-  demoQuotations.forEach(q => {
-    const customer = demoCustomers.find(c => c.id === q.customerId);
+  quotations.forEach(q => {
+    if (!q.customer_id) return;
+    const customer = customerById.get(q.customer_id);
     if (!customer) return;
     const cd = cityMap.get(customer.city);
     if (!cd) return;
@@ -175,72 +194,42 @@ export function generateMarketData(filterVendorId?: string): CityMarketData[] {
       cd.potentialValue += q.total;
     }
     if (!productCounts[customer.city]) productCounts[customer.city] = {};
-    q.items.forEach(item => {
-      productCounts[customer.city][item.productName] = (productCounts[customer.city][item.productName] || 0) + item.qty;
+    const items = Array.isArray(q.items) ? q.items : [];
+    items.forEach((item: any) => {
+      const name = item.productName || item.product_name || 'Producto';
+      const qty = item.qty || 1;
+      productCounts[customer.city][name] = (productCounts[customer.city][name] || 0) + qty;
     });
   });
 
   // Add sales (orders) data
-  demoOrders.forEach(o => {
-    const customer = demoCustomers.find(c => c.id === o.customerId);
+  orders.forEach(o => {
+    if (!o.customer_id) return;
+    const customer = customerById.get(o.customer_id);
     if (!customer) return;
     const cd = cityMap.get(customer.city);
     if (!cd) return;
     cd.closedSales++;
     cd.totalSalesValue += o.total;
     if (!productCounts[customer.city]) productCounts[customer.city] = {};
-    o.items.forEach(item => {
-      productCounts[customer.city][item.productName] = (productCounts[customer.city][item.productName] || 0) + item.qty;
+    const items = Array.isArray(o.items) ? o.items : [];
+    items.forEach((item: any) => {
+      const name = item.productName || item.product_name || 'Producto';
+      const qty = item.qty || 1;
+      productCounts[customer.city][name] = (productCounts[customer.city][name] || 0) + qty;
     });
-  });
-
-  // Add won opportunities to sales count
-  demoOpportunities.filter(o => o.stage === 'cierre_ganado').forEach(o => {
-    const customer = demoCustomers.find(c => c.id === o.customerId);
-    if (!customer) return;
-    const cd = cityMap.get(customer.city);
-    if (cd) cd.totalSalesValue += o.estimatedAmount;
-  });
-
-  // Add potential market cities (without customers)
-  const potentialCities = [
-    'Puebla', 'Mérida', 'Tijuana', 'Aguascalientes', 'Hermosillo',
-    'Toluca', 'Veracruz', 'Cancún', 'Tampico', 'San Luis Potosí',
-    'Morelia', 'Villahermosa', 'Durango', 'Reynosa',
-  ];
-  potentialCities.forEach(city => {
-    if (!cityMap.has(city)) {
-      const coords = CITY_COORDS[city] ?? { lat: 23, lng: -102 };
-      cityMap.set(city, {
-        city,
-        state: CITY_STATES[city] ?? '',
-        customers: 0, leads: 0, quotations: 0, openQuotations: 0,
-        closedSales: 0, totalSalesValue: 0,
-        vendors: [],
-        penetration: 'sin_presencia',
-        topProducts: [],
-        opportunities: ['Ciudad sin presencia comercial — mercado potencial'],
-        potentialValue: 80000, // estimated
-        priority: 'media',
-        lat: coords.lat,
-        lng: coords.lng,
-      });
-    }
   });
 
   // Finalize each city
   cityMap.forEach((cd, city) => {
-    // Top products
     const pc = productCounts[city] ?? {};
     cd.topProducts = Object.entries(pc)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Penetration
     cd.penetration = classifyPenetration(cd.customers, cd.closedSales, cd.quotations);
 
-    // Detect opportunities
     if (cd.leads > 0 && cd.closedSales === 0) {
       cd.opportunities.push('Leads sin ventas cerradas');
     }
@@ -251,7 +240,6 @@ export function generateMarketData(filterVendorId?: string): CityMarketData[] {
       cd.opportunities.push('Pocos clientes — zona con potencial de crecimiento');
     }
 
-    // Priority
     if (cd.penetration === 'sin_presencia' && cd.potentialValue > 0) cd.priority = 'media';
     if (cd.leads > 0 && cd.closedSales === 0) cd.priority = 'alta';
     if (cd.openQuotations > 0) cd.priority = 'alta';
