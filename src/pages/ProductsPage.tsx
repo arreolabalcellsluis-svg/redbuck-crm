@@ -539,31 +539,31 @@ export default function ProductsPage() {
             <DialogTitle>{viewingProduct?.name}</DialogTitle>
             <DialogDescription>Información del producto</DialogDescription>
           </DialogHeader>
-          {viewingProduct && (() => {
-              const allImages = [
-                ...(viewingProduct.images?.length ? viewingProduct.images : []),
-                ...((!viewingProduct.images?.length && (viewingProduct.image || getProductImage(viewingProduct.id))) ? [viewingProduct.image || getProductImage(viewingProduct.id)] : []),
-              ];
-              return allImages.length > 0 ? (
-                <div>
-                  {/* Main image */}
-                  <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openLightbox(allImages, 0)}>
-                    <img src={allImages[0]} alt={viewingProduct.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
-                  </div>
-                  {/* Thumbnails */}
-                  {allImages.length > 1 && (
-                    <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
-                      {allImages.map((img, idx) => (
-                        <button key={idx} onClick={() => openLightbox(allImages, idx)} className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors">
-                          <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
-                        </button>
-                      ))}
+          {viewingProduct && (
+            <div className="space-y-4">
+              {(() => {
+                const allImages = [
+                  ...(viewingProduct.images?.length ? viewingProduct.images : []),
+                  ...((!viewingProduct.images?.length && (viewingProduct.image || getProductImage(viewingProduct.id))) ? [viewingProduct.image || getProductImage(viewingProduct.id)] : []),
+                ];
+                return allImages.length > 0 ? (
+                  <div>
+                    <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openLightbox(allImages, 0)}>
+                      <img src={allImages[0]} alt={viewingProduct.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                     </div>
-                  )}
-                  {allImages.length > 0 && <p className="text-[10px] text-muted-foreground mt-1">Haz clic en la imagen para ampliar</p>}
-                </div>
-              ) : null;
-            })()}
+                    {allImages.length > 1 && (
+                      <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                        {allImages.map((img, idx) => (
+                          <button key={idx} onClick={() => openLightbox(allImages, idx)} className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors">
+                            <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-1">Haz clic en la imagen para ampliar</p>
+                  </div>
+                ) : null;
+              })()}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingProduct.sku}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Categoría</span><span className="font-medium">{CATEGORY_LABELS[viewingProduct.category]}</span></div>
@@ -577,7 +577,6 @@ export default function ProductsPage() {
                 <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Garantía</span><span className="font-medium">{viewingProduct.warranty}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Días de entrega</span><span className="font-medium">{viewingProduct.deliveryDays}</span></div>
-                
               </div>
               {(() => {
                 const wh = getWarehouseNames(viewingProduct.stock);
