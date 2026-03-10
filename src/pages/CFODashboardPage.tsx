@@ -5,6 +5,9 @@ import { useAccountsPayable } from '@/hooks/useAccountsPayable';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
 import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
+import { useBankAccounts } from '@/hooks/useBankAccounts';
+import { useOrders } from '@/hooks/useOrders';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import {
   calcIncomeStatement, calcBalanceSheet, calcCashFlow,
   calcStrategicKPIs, calcMonthlyFlow, calcFinancialRadar,
