@@ -8,6 +8,7 @@ import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import { useSpareParts, useAddSparePart, useUpdateSparePart, useDeleteSparePart } from '@/hooks/useSpareParts';
 import { useProducts } from '@/hooks/useProducts';
+import ImageGalleryLightbox from '@/components/shared/ImageGalleryLightbox';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -15,7 +16,7 @@ type SparePartForm = Omit<SparePart, 'id'>;
 
 const emptyForm = (): SparePartForm => ({
   sku: '', name: '', productId: '', productName: '', cost: 0, price: 0,
-  stock: 0, minStock: 5, warehouse: 'w1', active: true, image: '',
+  stock: 0, minStock: 5, warehouse: 'w1', active: true, image: '', images: [],
 });
 
 export default function SparePartsPage() {
@@ -27,10 +28,13 @@ export default function SparePartsPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<SparePartForm>(emptyForm());
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [viewImage, setViewImage] = useState<string | null>(null);
   const [viewingSparePart, setViewingSparePart] = useState<SparePart | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
 
   const { data: spareParts = [], isLoading } = useSpareParts();
   const { data: dbProducts = [] } = useProducts();
@@ -44,27 +48,38 @@ export default function SparePartsPage() {
   const spareToDelete = spareParts.find(s => s.id === deleteTarget);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setImagePreview(dataUrl);
-      setForm(p => ({ ...p, image: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        setForm(p => {
+          const newImages = [...(p.images || []), dataUrl];
+          return { ...p, images: newImages, image: newImages[0] };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearImage = () => {
-    setImagePreview(null);
-    setForm(p => ({ ...p, image: '' }));
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeImage = (index: number) => {
+    setForm(p => {
+      const newImages = (p.images || []).filter((_, i) => i !== index);
+      return { ...p, images: newImages, image: newImages[0] || '' };
+    });
+  };
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
   };
 
   const resetForm = () => {
     setForm(emptyForm());
-    setImagePreview(null);
     setEditId(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -85,8 +100,15 @@ export default function SparePartsPage() {
 
   const openEdit = (sp: SparePart) => {
     setEditId(sp.id);
-    setForm({ ...sp });
-    setImagePreview(sp.image || null);
+    // Consolidate images: use images array if available, otherwise fall back to single image
+    const consolidatedImages = (sp.images && sp.images.length > 0)
+      ? sp.images
+      : (sp.image ? [sp.image] : []);
+    setForm({
+      ...sp,
+      images: consolidatedImages,
+      image: consolidatedImages[0] || '',
+    });
     setShowEdit(true);
   };
 
@@ -108,27 +130,29 @@ export default function SparePartsPage() {
 
   const formFields = (
     <div className="space-y-4">
+      {/* Multi-image upload */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Imagen de la refacción</label>
-        <div className="flex items-center gap-4">
-          {imagePreview ? (
-            <div className="relative w-20 h-20 rounded-lg overflow-hidden border shrink-0">
-              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-              <button onClick={clearImage} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground">
-                <X size={12} />
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Imágenes de la refacción</label>
+        <div className="flex flex-wrap items-center gap-3">
+          {(form.images || []).map((img, idx) => (
+            <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border group">
+              <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover cursor-pointer" onClick={() => openLightbox(form.images || [], idx)} />
+              <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <X size={10} />
               </button>
             </div>
-          ) : (
-            <button type="button" onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-sm hover:border-primary/50 hover:text-primary transition-colors">
-              <Upload size={16} /> Adjuntar imagen
-            </button>
-          )}
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-          {imagePreview && (
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">Cambiar imagen</button>
-          )}
+          ))}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center justify-center w-20 h-20 rounded-lg border border-dashed border-muted-foreground/30 text-muted-foreground text-xs hover:border-primary/50 hover:text-primary transition-colors gap-1"
+          >
+            <Upload size={16} />
+            <span>Agregar</span>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
         </div>
+        <p className="text-[10px] text-muted-foreground mt-1">Puedes subir múltiples imágenes. La primera será la imagen principal.</p>
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre *</label>
@@ -203,40 +227,49 @@ export default function SparePartsPage() {
             <tr><th>SKU</th><th>Refacción</th><th>Equipo relacionado</th>{!isVendedor && <th>Costo</th>}<th>Precio</th><th>Stock</th><th>Mín</th><th>Estado</th><th></th></tr>
           </thead>
           <tbody>
-            {filtered.map(sp => (
-              <tr key={sp.id}>
-                <td className="font-mono text-xs">{sp.sku}</td>
-                <td>
-                  <div className="flex items-center gap-3">
-                    {sp.image && (
-                      <div className="w-10 h-10 rounded-md overflow-hidden border shrink-0 cursor-pointer" onClick={() => setViewingSparePart(sp)}>
-                        <img src={sp.image} alt={sp.name} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <span className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingSparePart(sp)}>{sp.name}</span>
-                  </div>
-                </td>
-                <td className="text-muted-foreground text-sm">{sp.productName}</td>
-                {!isVendedor && <td>{fmt(sp.cost)}</td>}
-                <td className="font-semibold">{fmt(sp.price)}</td>
-                <td className={sp.stock <= sp.minStock ? 'text-destructive font-bold' : 'font-semibold'}>
-                  {sp.stock}
-                  {sp.stock <= sp.minStock && <AlertTriangle size={12} className="inline ml-1 text-destructive" />}
-                </td>
-                <td className="text-muted-foreground">{sp.minStock}</td>
-                <td>{sp.active ? <span className="status-badge-success">Activa</span> : <span className="status-badge-neutral">Inactiva</span>}</td>
-                <td>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(sp)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => setDeleteTarget(sp.id)} className="p-1.5 rounded-md text-destructive hover:bg-destructive/10">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(sp => {
+              const allImages = (sp.images && sp.images.length > 0) ? sp.images : (sp.image ? [sp.image] : []);
+              const mainImage = allImages[0];
+              return (
+                <tr key={sp.id}>
+                  <td className="font-mono text-xs">{sp.sku}</td>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      {mainImage && (
+                        <div className="w-10 h-10 rounded-md overflow-hidden border shrink-0 cursor-pointer" onClick={() => { if (allImages.length > 1) openLightbox(allImages, 0); else setViewingSparePart(sp); }}>
+                          <img src={mainImage} alt={sp.name} className="w-full h-full object-cover" />
+                          {allImages.length > 1 && (
+                            <span className="absolute bottom-0 right-0 text-[8px] font-semibold px-1 bg-black/60 text-white rounded-tl">
+                              📷 {allImages.length}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <span className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingSparePart(sp)}>{sp.name}</span>
+                    </div>
+                  </td>
+                  <td className="text-muted-foreground text-sm">{sp.productName}</td>
+                  {!isVendedor && <td>{fmt(sp.cost)}</td>}
+                  <td className="font-semibold">{fmt(sp.price)}</td>
+                  <td className={sp.stock <= sp.minStock ? 'text-destructive font-bold' : 'font-semibold'}>
+                    {sp.stock}
+                    {sp.stock <= sp.minStock && <AlertTriangle size={12} className="inline ml-1 text-destructive" />}
+                  </td>
+                  <td className="text-muted-foreground">{sp.minStock}</td>
+                  <td>{sp.active ? <span className="status-badge-success">Activa</span> : <span className="status-badge-neutral">Inactiva</span>}</td>
+                  <td>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openEdit(sp)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => setDeleteTarget(sp.id)} className="p-1.5 rounded-md text-destructive hover:bg-destructive/10">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -297,41 +330,60 @@ export default function SparePartsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!viewImage} onOpenChange={() => setViewImage(null)}>
-        <DialogContent className="max-w-3xl p-2">
-          {viewImage && <img src={viewImage} alt="Refacción" className="w-full max-h-[80vh] object-contain rounded-lg" />}
-        </DialogContent>
-      </Dialog>
-
       {/* ===================== VIEW SPARE PART DIALOG (READ-ONLY) ===================== */}
       <Dialog open={!!viewingSparePart} onOpenChange={() => setViewingSparePart(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{viewingSparePart?.name}</DialogTitle>
             <DialogDescription>Información de la refacción</DialogDescription>
           </DialogHeader>
-          {viewingSparePart && (
-            <div className="space-y-4">
-              {viewingSparePart.image && (
-                <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden">
-                  <img src={viewingSparePart.image} alt={viewingSparePart.name} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingSparePart.sku}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Equipo relacionado</span><span className="font-medium">{viewingSparePart.productName || '—'}</span></div>
-                {!isVendedor && (
-                  <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingSparePart.cost)}</span></div>
+          {viewingSparePart && (() => {
+            const allImages = (viewingSparePart.images && viewingSparePart.images.length > 0)
+              ? viewingSparePart.images
+              : (viewingSparePart.image ? [viewingSparePart.image] : []);
+            return (
+              <div className="space-y-4">
+                {allImages.length > 0 && (
+                  <div>
+                    <div className="aspect-[16/10] bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openLightbox(allImages, 0)}>
+                      <img src={allImages[0]} alt={viewingSparePart.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                    </div>
+                    {allImages.length > 1 && (
+                      <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                        {allImages.map((img, idx) => (
+                          <button key={idx} onClick={() => openLightbox(allImages, idx)} className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors">
+                            <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-1">Haz clic en la imagen para ampliar</p>
+                  </div>
                 )}
-                <div><span className="text-xs text-muted-foreground block">Precio</span><span className="font-bold">{fmt(viewingSparePart.price)}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Stock</span><span className={`font-bold ${viewingSparePart.stock <= viewingSparePart.minStock ? 'text-destructive' : ''}`}>{viewingSparePart.stock}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Stock mínimo</span><span className="font-medium">{viewingSparePart.minStock}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Estado</span>{viewingSparePart.active ? <span className="status-badge-success">Activa</span> : <span className="status-badge-neutral">Inactiva</span>}</div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-xs text-muted-foreground block">SKU</span><span className="font-mono font-medium">{viewingSparePart.sku}</span></div>
+                  <div><span className="text-xs text-muted-foreground block">Equipo relacionado</span><span className="font-medium">{viewingSparePart.productName || '—'}</span></div>
+                  {!isVendedor && (
+                    <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingSparePart.cost)}</span></div>
+                  )}
+                  <div><span className="text-xs text-muted-foreground block">Precio</span><span className="font-bold">{fmt(viewingSparePart.price)}</span></div>
+                  <div><span className="text-xs text-muted-foreground block">Stock</span><span className={`font-bold ${viewingSparePart.stock <= viewingSparePart.minStock ? 'text-destructive' : ''}`}>{viewingSparePart.stock}</span></div>
+                  <div><span className="text-xs text-muted-foreground block">Stock mínimo</span><span className="font-medium">{viewingSparePart.minStock}</span></div>
+                  <div><span className="text-xs text-muted-foreground block">Estado</span>{viewingSparePart.active ? <span className="status-badge-success">Activa</span> : <span className="status-badge-neutral">Inactiva</span>}</div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
+
+      {/* ===================== IMAGE LIGHTBOX ===================== */}
+      <ImageGalleryLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+      />
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
     </div>
