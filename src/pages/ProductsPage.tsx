@@ -541,9 +541,6 @@ export default function ProductsPage() {
                 <div className="col-span-2"><span className="text-xs text-muted-foreground block">Descripción</span><span className="font-medium">{viewingProduct.description || '—'}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Precio de lista</span><span className="font-bold text-lg">{fmt(viewingProduct.listPrice, viewingProduct.currency)}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Precio mínimo</span><span className="font-medium">{fmt(viewingProduct.minPrice, viewingProduct.currency)}</span></div>
-                {currentRole !== 'vendedor' && (
-                  <div><span className="text-xs text-muted-foreground block">Costo</span><span className="font-medium">{fmt(viewingProduct.cost, viewingProduct.currency)}</span></div>
-                )}
                 <div><span className="text-xs text-muted-foreground block">Moneda</span><span className="font-medium">{viewingProduct.currency}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Stock total</span><span className="font-bold">{totalStock(viewingProduct)}</span></div>
                 <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
