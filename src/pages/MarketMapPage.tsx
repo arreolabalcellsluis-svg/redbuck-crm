@@ -39,9 +39,19 @@ function bubbleRadius(data: CityMarketData): number {
 }
 
 export default function MarketMapPage() {
-  const { currentRole } = useAppContext();
-  const isVendedor = currentRole === 'vendedor';
-  const [allData] = useState(() => generateMarketData(isVendedor ? DEMO_VENDEDOR_ID : undefined));
+  const { data: dbCustomers = [] } = useCustomers();
+  const { data: dbQuotations = [] } = useQuotations();
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbTeam = [] } = useTeamMembers();
+
+  const allData = useMemo(() => {
+    const customers = dbCustomers.map(c => ({ id: c.id, city: c.city, state: c.state, vendor_id: c.vendor_id }));
+    const quotations = dbQuotations.map(q => ({ id: q.id, customer_id: q.customer_id, status: q.status, total: q.total, items: q.items }));
+    const orders = dbOrders.map(o => ({ id: o.id, customer_id: o.customer_id, total: o.total, items: o.items }));
+    const team = dbTeam.map(t => ({ id: t.id, name: t.name }));
+    return generateMarketData(customers, quotations, orders, team);
+  }, [dbCustomers, dbQuotations, dbOrders, dbTeam]);
+
   const [search, setSearch] = useState('');
   const [filterState, setFilterState] = useState('todos');
   const [filterPenetration, setFilterPenetration] = useState<PenetrationLevel | 'todos'>('todos');
