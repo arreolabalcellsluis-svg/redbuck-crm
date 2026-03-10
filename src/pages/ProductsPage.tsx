@@ -546,7 +546,7 @@ export default function ProductsPage() {
                 <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Garantía</span><span className="font-medium">{viewingProduct.warranty}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Días de entrega</span><span className="font-medium">{viewingProduct.deliveryDays}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Proveedor</span><span className="font-medium">{viewingProduct.supplier || '—'}</span></div>
+                
               </div>
               {(() => {
                 const wh = getWarehouseNames(viewingProduct.stock);
