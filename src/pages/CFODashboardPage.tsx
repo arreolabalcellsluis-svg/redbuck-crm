@@ -50,10 +50,17 @@ export default function CFODashboardPage() {
   const { data: dbProducts = [] } = useProducts();
   const { data: dbOrders = [] } = useOrders();
   const { data: dbReceivables = [] } = useAccountsReceivable();
+  const { data: dbBankAccounts = [] } = useBankAccounts();
 
   const expenses = dbExpenses ?? [];
   const assets = dbAssets ?? [];
   const payables = dbPayables ?? [];
+
+  // Real bank balance from bank_accounts table
+  const totalBancos = useMemo(() =>
+    dbBankAccounts.filter(b => b.activa).reduce((s, b) => s + b.saldo, 0),
+    [dbBankAccounts]
+  );
 
   // Compute monthly sales from real orders
   const monthlySales = useMemo(() => {
@@ -79,11 +86,16 @@ export default function CFODashboardPage() {
   }, [dbProducts]);
 
   const [bsConfig, setBsConfig] = useState({
-    bancos: 850000,
+    bancos: 0,
     creditosBancarios: 0,
     aportacionSocios: 2000000,
     utilidadesAcumuladas: 500000,
   });
+
+  // Sync bank balance into bsConfig when data loads
+  useEffect(() => {
+    setBsConfig(prev => ({ ...prev, bancos: totalBancos }));
+  }, [totalBancos]);
 
   // Period selector — derive available months from monthlySales
   const availableMonths = useMemo(() =>
