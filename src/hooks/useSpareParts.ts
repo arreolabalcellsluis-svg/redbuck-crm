@@ -52,6 +52,7 @@ export function useAddSparePart() {
         warehouse: sp.warehouse,
         active: sp.active,
         image: sp.image || null,
+        images: (sp.images ?? []) as any,
         user_id: user?.id ?? null,
       });
       if (error) throw error;
