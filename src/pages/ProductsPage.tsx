@@ -412,12 +412,12 @@ export default function ProductsPage() {
           const warehouses = getWarehouseNames(p.stock);
           return (
             <div key={p.id} className="bg-card rounded-xl border hover:shadow-md transition-shadow overflow-hidden">
-              <div className="aspect-[16/10] bg-muted relative overflow-hidden">
+              <div className="aspect-[16/10] bg-muted relative overflow-hidden cursor-pointer" onClick={() => setViewingProduct(p)}>
                 <img src={p.image || getProductImage(p.id)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
                 <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-card/90 text-muted-foreground backdrop-blur-sm">{CATEGORY_LABELS[p.category]}</span>
               </div>
               <div className="p-5">
-                <h3 className="font-display font-semibold text-sm">{p.name}</h3>
+                <h3 className="font-display font-semibold text-sm cursor-pointer text-primary hover:underline" onClick={() => setViewingProduct(p)}>{p.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{p.sku} · {p.brand} {p.model}</p>
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">

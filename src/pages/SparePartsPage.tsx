@@ -29,6 +29,7 @@ export default function SparePartsPage() {
   const [form, setForm] = useState<SparePartForm>(emptyForm());
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [viewImage, setViewImage] = useState<string | null>(null);
+  const [viewingSparePart, setViewingSparePart] = useState<SparePart | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: spareParts = [], isLoading } = useSpareParts();
