@@ -284,7 +284,7 @@ export default function CRMPage() {
               <tbody>
                 {filteredCustomers.map(c => (
                   <tr key={c.id} className="cursor-pointer">
-                    <td className="font-medium">{c.name}</td>
+                    <td className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingCustomer(c)}>{c.name}</td>
                     <td><span className="text-xs">{CUSTOMER_TYPE_LABELS[c.type]}</span></td>
                     <td className="text-muted-foreground">{c.city}, {c.state}</td>
                     <td className="text-muted-foreground">{resolveVendor(c.vendorId)}</td>
