@@ -367,9 +367,8 @@ export default function CRMPage() {
                       <div className="text-xs text-muted-foreground mt-1">{o.vendorName}</div>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-sm font-semibold">{fmt(o.estimatedAmount)}</span>
-                        <span className="text-xs text-muted-foreground">{o.probability}%</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{o.folio}</span>
                       </div>
-                      {o.nextActivity && <div className="text-xs text-primary mt-1.5">→ {o.nextActivity}</div>}
                     </div>
                   ))}
                   {opps.length === 0 && <div className="p-4 text-center text-xs text-muted-foreground border border-dashed rounded-lg">Sin oportunidades</div>}
