@@ -58,12 +58,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md px-4">
         <div className="bg-card rounded-2xl border shadow-xl p-8 space-y-6">
           {/* Brand */}
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center font-display font-bold text-xl"
-              style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>
-              RB
-            </div>
-            <h1 className="text-2xl font-display font-bold">REDBUCK</h1>
+          <div className="text-center space-y-3">
+            <img src="/images/bucky-avatar.png" alt="Bucky" className="w-24 h-24 mx-auto object-contain" />
+            <img src="/images/logo-redbuck-full.png" alt="Red Buck Equipment" className="h-16 mx-auto object-contain" />
             <p className="text-xs tracking-widest uppercase text-muted-foreground">ERP · CRM · EQUIPMENT</p>
           </div>
 
