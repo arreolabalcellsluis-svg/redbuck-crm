@@ -84,7 +84,7 @@ function ProtectedRoutes() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'hsl(var(--background))' }}>
         <div className="text-center space-y-3">
-          <img src="/images/logo-redbuck.png" alt="Logo" className="w-12 h-12 mx-auto object-contain" />
+          <img src="/images/logo-redbuck-full.png" alt="Logo" className="h-14 mx-auto object-contain" />
           <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
