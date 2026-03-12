@@ -59,8 +59,10 @@ export default function LoginPage() {
         <div className="bg-card rounded-2xl border shadow-xl p-8 space-y-6">
           {/* Brand */}
           <div className="text-center space-y-3">
-            <img src="/images/bucky-avatar.png" alt="Bucky" className="w-24 h-24 mx-auto object-contain" />
-            <img src="/images/logo-redbuck-full.png" alt="Red Buck Equipment" className="h-16 mx-auto object-contain" />
+            <div className="flex items-center justify-center gap-3">
+              <img src="/images/bucky-avatar-nobg.png" alt="Bucky" className="w-20 h-20 object-contain" />
+              <img src="/images/logo-redbuck-full.png" alt="Red Buck Equipment" className="h-14 object-contain" />
+            </div>
             <p className="text-xs tracking-widest uppercase text-muted-foreground">ERP · CRM · EQUIPMENT</p>
           </div>
 
