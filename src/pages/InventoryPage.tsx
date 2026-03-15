@@ -9,7 +9,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, Trash2, CalendarIcon } from 'lucide-react';
+import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, Trash2, CalendarIcon, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
@@ -91,6 +93,63 @@ export default function InventoryPage() {
     if (filterWarehouse && (p.stock[filterWarehouse] || 0) === 0) return false;
     return true;
   });
+
+  const handleExportAuditExcel = () => {
+    const dateStr = format(inventoryDate, "d 'de' MMMM yyyy", { locale: es });
+    const whNames = demoWarehouses.map(w => w.name);
+    
+    const rows = filtered.map(p => {
+      const totalStock = Object.values(p.stock).reduce((a, b) => a + b, 0);
+      const row: Record<string, any> = {
+        'SKU': p.sku,
+        'Producto': p.name,
+        'Categoría': CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] || p.category,
+      };
+      demoWarehouses.forEach(w => { row[w.name] = p.stock[w.id] || 0; });
+      row['Stock Total'] = totalStock;
+      row['En Tránsito'] = p.inTransit;
+      if (!isVendedor) {
+        row['Costo'] = p.cost;
+        row['Valor Total'] = totalStock * p.cost;
+      }
+      row['Confirmación'] = '';
+      return row;
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Set column widths
+    const colCount = Object.keys(rows[0] || {}).length;
+    ws['!cols'] = Array.from({ length: colCount }, (_, i) => ({ wch: i <= 2 ? 28 : 16 }));
+
+    // Add blank rows after data for audit signature
+    const lastRow = rows.length + 2; // +1 header, +1 for 0-index
+    const blankRows = 6;
+    for (let i = 0; i < blankRows; i++) {
+      const r = lastRow + i;
+      // just ensure rows exist
+    }
+
+    // Add signature section
+    const sigRow = lastRow + 2;
+    XLSX.utils.sheet_add_aoa(ws, [
+      [],
+      [],
+      ['Auditoría de inventario realizada el ' + dateStr],
+      [],
+      [],
+      ['Nombre: ____________________________________', '', '', '', 'Firma: ____________________________________'],
+      [],
+      ['Cargo: _____________________________________', '', '', '', 'Fecha: ____________________________________'],
+    ], { origin: `A${sigRow}` });
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Auditoría Inventario');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `Auditoria_Inventario_${format(inventoryDate, 'yyyy-MM-dd')}.xlsx`);
+    toast.success('Excel de auditoría descargado');
+  };
 
   const resetForm = () => {
     setForm(emptyForm());
@@ -254,6 +313,9 @@ export default function InventoryPage() {
           </Popover>
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setInventoryDate(new Date())}>
             Hoy
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 text-sm" onClick={handleExportAuditExcel}>
+            <FileSpreadsheet size={16} /> Auditoría Excel
           </Button>
           {isAdmin && (
             <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
