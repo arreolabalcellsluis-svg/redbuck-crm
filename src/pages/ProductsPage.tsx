@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { demoWarehouses } from '@/data/demo-data';
+import { useWarehouses } from '@/hooks/useWarehouses';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { getProductImage } from '@/lib/productImages';
@@ -59,6 +59,7 @@ export default function ProductsPage() {
 
   // DB hooks
   const { data: dbProducts, isLoading } = useProducts();
+  const { data: dbWarehouses = [] } = useWarehouses();
   const addProductMut = useAddProduct();
   const updateProductMut = useUpdateProduct();
   const deleteProductMut = useDeleteProduct();
@@ -92,7 +93,7 @@ export default function ProductsPage() {
   const productToDelete = products.find(p => p.id === deleteTarget);
 
   const warehouseMap: Record<string, string> = {};
-  demoWarehouses.forEach(w => { warehouseMap[w.id] = w.name; });
+  dbWarehouses.forEach(w => { warehouseMap[w.id] = w.name; });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
