@@ -4,9 +4,10 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { demoProducts, demoWarehouses } from '@/data/demo-data';
 import { CATEGORY_LABELS } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
+import { useProducts, type DBProduct } from '@/hooks/useProducts';
+import { useWarehouses } from '@/hooks/useWarehouses';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -15,9 +16,13 @@ export default function InventoryReportPage() {
   const isVendedor = currentRole === 'vendedor';
   const [filters, setFilters] = useState<Record<string, any>>({ search: '', bodega: '', categoria: '' });
 
+  const { data: dbProducts = [] } = useProducts();
+  const { data: warehouses = [] } = useWarehouses();
+
   const records = useMemo(() => {
-    return demoProducts.filter(p => p.active).map(p => {
-      const totalStock = Object.values(p.stock).reduce((a, b) => a + b, 0);
+    return dbProducts.filter(p => p.active).map(p => {
+      const stock = (p.stock && typeof p.stock === 'object') ? p.stock as Record<string, number> : {};
+      const totalStock = Object.values(stock).reduce((a: number, b: number) => a + b, 0);
       return {
         id: p.id,
         sku: p.sku,
@@ -25,15 +30,15 @@ export default function InventoryReportPage() {
         categoria: p.category,
         modelo: p.model,
         marca: p.brand,
-        ...Object.fromEntries(demoWarehouses.map(w => [`stock_${w.id}`, p.stock[w.id] || 0])),
+        ...Object.fromEntries(warehouses.map(w => [`stock_${w.id}`, (stock[w.id] as number) || 0])),
         stockTotal: totalStock,
         stockComprometido: 0,
-        enTransito: p.inTransit,
+        enTransito: p.in_transit,
         costo: p.cost,
         valorTotal: totalStock * p.cost,
       };
     });
-  }, []);
+  }, [dbProducts, warehouses]);
 
   const filtered = useMemo(() => {
     return records.filter(r => {
@@ -56,11 +61,11 @@ export default function InventoryReportPage() {
 
   const handleExport = () => {
     const dateStr = new Date().toISOString().split('T')[0];
-    const whNames = demoWarehouses.map(w => w.name);
+    const whNames = warehouses.map(w => w.name);
     const headers = ['SKU', 'Producto', 'Categoría', 'Modelo', ...whNames, 'Total', 'Tránsito', ...(isVendedor ? [] : ['Costo', 'Valor'])];
     const rows = filtered.map(r => [
       r.sku, r.producto, CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria, r.modelo,
-      ...demoWarehouses.map(w => (r as any)[`stock_${w.id}`]),
+      ...warehouses.map(w => (r as any)[`stock_${w.id}`]),
       r.stockTotal, r.enTransito,
       ...(isVendedor ? [] : [fmt(r.costo), fmt(r.valorTotal)]),
     ]);
@@ -110,7 +115,7 @@ export default function InventoryReportPage() {
         config={{
           search: true, searchPlaceholder: 'Buscar por producto o SKU...',
           selects: [
-            { key: 'bodega', label: 'Bodega', options: demoWarehouses.map(w => ({ value: w.id, label: w.name })) },
+            { key: 'bodega', label: 'Bodega', options: warehouses.map(w => ({ value: w.id, label: w.name })) },
             { key: 'categoria', label: 'Categoría', options: Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v })) },
           ],
           exportExcel: true, exportPdf: true,
@@ -145,7 +150,7 @@ export default function InventoryReportPage() {
           <thead>
             <tr>
               <th>SKU</th><th>Producto</th><th>Categoría</th><th>Modelo</th>
-              {demoWarehouses.map(w => <th key={w.id}>{w.name}</th>)}
+              {warehouses.map(w => <th key={w.id}>{w.name}</th>)}
               <th>Total</th><th>Tránsito</th>{!isVendedor && <><th>Costo</th><th>Valor</th></>}
             </tr>
           </thead>
@@ -156,7 +161,7 @@ export default function InventoryReportPage() {
                 <td className="text-xs font-medium">{r.producto}</td>
                 <td className="text-xs">{CATEGORY_LABELS[r.categoria as keyof typeof CATEGORY_LABELS] || r.categoria}</td>
                 <td className="text-xs">{r.modelo}</td>
-                {demoWarehouses.map(w => (
+                {warehouses.map(w => (
                   <td key={w.id} className="text-xs text-center">{(r as any)[`stock_${w.id}`]}</td>
                 ))}
                 <td className="text-xs font-bold text-center">{r.stockTotal}</td>
