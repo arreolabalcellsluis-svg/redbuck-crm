@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { demoWarehouses } from '@/data/demo-data';
 import { useAppContext } from '@/contexts/AppContext';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
@@ -17,6 +16,7 @@ import { toast } from 'sonner';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, type DBProduct } from '@/hooks/useProducts';
+import { useWarehouses } from '@/hooks/useWarehouses';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
@@ -54,12 +54,6 @@ type InventoryForm = {
   cost: number;
 };
 
-const emptyForm = (): InventoryForm => ({
-  productId: '', productName: '', sku: '', category: 'elevadores',
-  stock: Object.fromEntries(demoWarehouses.map(w => [w.id, 0])),
-  inTransit: 0, cost: 0,
-});
-
 export default function InventoryPage() {
   const { currentRole } = useAppContext();
   const [search, setSearch] = useState('');
@@ -67,10 +61,11 @@ export default function InventoryPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<InventoryForm>(emptyForm());
+  const [form, setForm] = useState<InventoryForm>({ productId: '', productName: '', sku: '', category: 'elevadores', stock: {}, inTransit: 0, cost: 0 });
 
   // DB hooks
   const { data: dbProducts, isLoading } = useProducts();
+  const { data: warehouses = [], isLoading: whLoading } = useWarehouses();
   const addProductMut = useAddProduct();
   const updateProductMut = useUpdateProduct();
   const deleteProductMut = useDeleteProduct();
@@ -96,7 +91,6 @@ export default function InventoryPage() {
 
   const handleExportAuditExcel = () => {
     const dateStr = format(inventoryDate, "d 'de' MMMM yyyy", { locale: es });
-    const whNames = demoWarehouses.map(w => w.name);
     
     const rows = filtered.map(p => {
       const totalStock = Object.values(p.stock).reduce((a, b) => a + b, 0);
@@ -105,7 +99,7 @@ export default function InventoryPage() {
         'Producto': p.name,
         'Categoría': CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] || p.category,
       };
-      demoWarehouses.forEach(w => { row[w.name] = p.stock[w.id] || 0; });
+      warehouses.forEach(w => { row[w.name] = p.stock[w.id] || 0; });
       row['Stock Total'] = totalStock;
       row['En Tránsito'] = p.inTransit;
       if (!isVendedor) {
@@ -119,19 +113,11 @@ export default function InventoryPage() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
 
-    // Set column widths
     const colCount = Object.keys(rows[0] || {}).length;
     ws['!cols'] = Array.from({ length: colCount }, (_, i) => ({ wch: i <= 2 ? 28 : 16 }));
 
-    // Add blank rows after data for audit signature
-    const lastRow = rows.length + 2; // +1 header, +1 for 0-index
-    const blankRows = 6;
-    for (let i = 0; i < blankRows; i++) {
-      const r = lastRow + i;
-      // just ensure rows exist
-    }
+    const lastRow = rows.length + 2;
 
-    // Add signature section
     const sigRow = lastRow + 2;
     XLSX.utils.sheet_add_aoa(ws, [
       [],
@@ -152,7 +138,7 @@ export default function InventoryPage() {
   };
 
   const resetForm = () => {
-    setForm(emptyForm());
+    setForm({ productId: '', productName: '', sku: '', category: 'elevadores', stock: Object.fromEntries(warehouses.map(w => [w.id, 0])), inTransit: 0, cost: 0 });
     setEditId(null);
   };
 
@@ -261,7 +247,7 @@ export default function InventoryPage() {
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-2 block">Stock por bodega</label>
         <div className="space-y-2">
-          {demoWarehouses.map(w => (
+          {warehouses.map(w => (
             <div key={w.id} className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground w-40 shrink-0">{w.name}</span>
               <input
@@ -334,8 +320,8 @@ export default function InventoryPage() {
 
       {/* Warehouses overview */}
       {!isVendedor && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {demoWarehouses.map(w => {
+        <div className={`grid grid-cols-1 md:grid-cols-${Math.min(warehouses.length, 4)} gap-4 mb-6`}>
+          {warehouses.map(w => {
             const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
             const value = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
             return (
@@ -365,7 +351,7 @@ export default function InventoryPage() {
         </div>
         <select value={filterWarehouse} onChange={e => setFilterWarehouse(e.target.value)} className="px-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20">
           <option value="">Todas las bodegas</option>
-          {demoWarehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
         {(search || filterWarehouse) && (
           <button onClick={() => { setSearch(''); setFilterWarehouse(''); }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors">
@@ -374,7 +360,7 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {(isLoading || whLoading) ? (
         <div className="text-center py-12 text-muted-foreground">Cargando inventario...</div>
       ) : (
       <div className="bg-card rounded-xl border overflow-x-auto">
@@ -383,7 +369,7 @@ export default function InventoryPage() {
             <tr>
               <th>Producto</th>
               <th>SKU</th>
-              {demoWarehouses.map(w => <th key={w.id}>{w.name}</th>)}
+              {warehouses.map(w => <th key={w.id}>{w.name}</th>)}
               <th>Total</th>
               <th>Tránsito</th>
               {isAdmin && <th></th>}
@@ -396,7 +382,7 @@ export default function InventoryPage() {
                 <tr key={p.id}>
                   <td className="font-medium">{p.name}</td>
                   <td className="text-muted-foreground text-xs font-mono">{p.sku}</td>
-                  {demoWarehouses.map(w => (
+                  {warehouses.map(w => (
                     <td key={w.id}>
                       <span className={`font-semibold ${(p.stock[w.id] || 0) === 0 ? 'text-destructive' : ''}`}>{p.stock[w.id] || 0}</span>
                     </td>
