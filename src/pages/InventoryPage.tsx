@@ -94,6 +94,63 @@ export default function InventoryPage() {
     return true;
   });
 
+  const handleExportAuditExcel = () => {
+    const dateStr = format(inventoryDate, "d 'de' MMMM yyyy", { locale: es });
+    const whNames = demoWarehouses.map(w => w.name);
+    
+    const rows = filtered.map(p => {
+      const totalStock = Object.values(p.stock).reduce((a, b) => a + b, 0);
+      const row: Record<string, any> = {
+        'SKU': p.sku,
+        'Producto': p.name,
+        'Categoría': CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] || p.category,
+      };
+      demoWarehouses.forEach(w => { row[w.name] = p.stock[w.id] || 0; });
+      row['Stock Total'] = totalStock;
+      row['En Tránsito'] = p.inTransit;
+      if (!isVendedor) {
+        row['Costo'] = p.cost;
+        row['Valor Total'] = totalStock * p.cost;
+      }
+      row['Confirmación'] = '';
+      return row;
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Set column widths
+    const colCount = Object.keys(rows[0] || {}).length;
+    ws['!cols'] = Array.from({ length: colCount }, (_, i) => ({ wch: i <= 2 ? 28 : 16 }));
+
+    // Add blank rows after data for audit signature
+    const lastRow = rows.length + 2; // +1 header, +1 for 0-index
+    const blankRows = 6;
+    for (let i = 0; i < blankRows; i++) {
+      const r = lastRow + i;
+      // just ensure rows exist
+    }
+
+    // Add signature section
+    const sigRow = lastRow + 2;
+    XLSX.utils.sheet_add_aoa(ws, [
+      [],
+      [],
+      ['Auditoría de inventario realizada el ' + dateStr],
+      [],
+      [],
+      ['Nombre: ____________________________________', '', '', '', 'Firma: ____________________________________'],
+      [],
+      ['Cargo: _____________________________________', '', '', '', 'Fecha: ____________________________________'],
+    ], { origin: `A${sigRow}` });
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Auditoría Inventario');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `Auditoria_Inventario_${format(inventoryDate, 'yyyy-MM-dd')}.xlsx`);
+    toast.success('Excel de auditoría descargado');
+  };
+
   const resetForm = () => {
     setForm(emptyForm());
     setEditId(null);
