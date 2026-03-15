@@ -314,6 +314,9 @@ export default function InventoryPage() {
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setInventoryDate(new Date())}>
             Hoy
           </Button>
+          <Button variant="outline" size="sm" className="gap-2 text-sm" onClick={handleExportAuditExcel}>
+            <FileSpreadsheet size={16} /> Auditoría Excel
+          </Button>
           {isAdmin && (
             <button onClick={() => { resetForm(); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
               <Plus size={16} /> Nuevo inventario
