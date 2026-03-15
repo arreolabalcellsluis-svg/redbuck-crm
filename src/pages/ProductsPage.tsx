@@ -59,6 +59,7 @@ export default function ProductsPage() {
 
   // DB hooks
   const { data: dbProducts, isLoading } = useProducts();
+  const { data: dbWarehouses = [] } = useWarehouses();
   const addProductMut = useAddProduct();
   const updateProductMut = useUpdateProduct();
   const deleteProductMut = useDeleteProduct();
