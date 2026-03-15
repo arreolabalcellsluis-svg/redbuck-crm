@@ -93,7 +93,7 @@ export default function ProductsPage() {
   const productToDelete = products.find(p => p.id === deleteTarget);
 
   const warehouseMap: Record<string, string> = {};
-  demoWarehouses.forEach(w => { warehouseMap[w.id] = w.name; });
+  dbWarehouses.forEach(w => { warehouseMap[w.id] = w.name; });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
