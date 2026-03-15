@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { demoWarehouses } from '@/data/demo-data';
+import { useWarehouses } from '@/hooks/useWarehouses';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { getProductImage } from '@/lib/productImages';
