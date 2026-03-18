@@ -328,7 +328,7 @@ export default function InventoryPage() {
         <div className={`grid grid-cols-1 md:grid-cols-${Math.min(warehouses.length, 4)} gap-4 mb-6`}>
           {warehouses.map(w => {
             const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
-            const value = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
+            const valueUSD = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
             return (
               <div key={w.id} className="bg-card rounded-xl border p-5">
                 <div className="flex items-center gap-3 mb-3">
