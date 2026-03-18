@@ -340,7 +340,10 @@ export default function InventoryPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{units} unidades</span>
-                  <span className="font-semibold">{fmt(value)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">{fmtUSD(valueUSD)}</span>
+                    <span className="text-[10px] text-primary block">≈ {fmtMXN(valueUSD * exchangeRate)}</span>
+                  </div>
                 </div>
               </div>
             );
