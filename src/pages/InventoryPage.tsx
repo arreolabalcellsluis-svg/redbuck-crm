@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppContext } from '@/contexts/AppContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import { cn } from '@/lib/utils';
