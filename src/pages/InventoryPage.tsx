@@ -90,6 +90,13 @@ export default function InventoryPage() {
     const q = search.toLowerCase();
     if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q)) return false;
     if (filterWarehouse && (p.stock[filterWarehouse] || 0) === 0) return false;
+    // Quick filters from metric cards
+    if (quickFilter === 'low_stock') {
+      const total = Object.values(p.stock).reduce((a, b) => a + b, 0);
+      if (total > 2) return false;
+    }
+    if (quickFilter === 'in_transit' && p.inTransit <= 0) return false;
+    if (quickFilter === 'warehouse' && selectedWarehouseCard && (p.stock[selectedWarehouseCard] || 0) === 0) return false;
     return true;
   });
 
