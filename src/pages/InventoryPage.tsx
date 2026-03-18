@@ -105,8 +105,9 @@ export default function InventoryPage() {
       row['Stock Total'] = totalStock;
       row['En Tránsito'] = p.inTransit;
       if (!isVendedor) {
-        row['Costo'] = p.cost;
-        row['Valor Total'] = totalStock * p.cost;
+        row['Costo (USD)'] = p.cost;
+        row['Valor Total (USD)'] = totalStock * p.cost;
+        row['Valor Total (MXN)'] = totalStock * p.cost * exchangeRate;
       }
       row['Confirmación'] = '';
       return row;
