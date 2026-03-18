@@ -329,28 +329,28 @@ export default function ProductsPage() {
         <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full px-3 py-2 rounded-lg border bg-card text-sm resize-y" placeholder="Descripción del producto..." />
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Moneda</label>
-        <select value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value as 'MXN' | 'USD' }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
-          <option value="MXN">MXN — Pesos Mexicanos</option>
-          <option value="USD">USD — Dólares</option>
-        </select>
-        {form.currency === 'USD' && (
-          <p className="text-[10px] text-muted-foreground mt-1">Tipo de cambio: $1 USD = ${exchangeRate} MXN (configurable en Parámetros Fiscales)</p>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo unitario (USD)</label>
+        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="3000" />
+        {form.cost > 0 && (
+          <p className="text-[10px] text-primary mt-1">≈ {fmt(form.cost * exchangeRate, 'MXN')} MXN</p>
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio de lista ({form.currency}) *</label>
-        <input type="number" value={form.listPrice || ''} onChange={e => setForm(p => ({ ...p, listPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="89000" />
-        {form.currency === 'USD' && form.listPrice > 0 && (
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio de lista (USD) *</label>
+        <input type="number" value={form.listPrice || ''} onChange={e => setForm(p => ({ ...p, listPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="5000" />
+        {form.listPrice > 0 && (
           <p className="text-[10px] text-primary mt-1">≈ {fmt(form.listPrice * exchangeRate, 'MXN')} MXN</p>
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio mínimo ({form.currency})</label>
-        <input type="number" value={form.minPrice || ''} onChange={e => setForm(p => ({ ...p, minPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="79000" />
-        {form.currency === 'USD' && form.minPrice > 0 && (
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio mínimo (USD)</label>
+        <input type="number" value={form.minPrice || ''} onChange={e => setForm(p => ({ ...p, minPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="4500" />
+        {form.minPrice > 0 && (
           <p className="text-[10px] text-primary mt-1">≈ {fmt(form.minPrice * exchangeRate, 'MXN')} MXN</p>
         )}
+      </div>
+      <div className="md:col-span-2">
+        <p className="text-[10px] text-muted-foreground">Tipo de cambio: $1 USD = ${exchangeRate} MXN (configurable en Ajustes)</p>
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Garantía</label>
