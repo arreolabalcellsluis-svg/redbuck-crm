@@ -155,7 +155,7 @@ export default function ProductsPage() {
       list_price: form.listPrice,
       min_price: form.minPrice,
       cost: form.cost,
-      currency: form.currency,
+      currency: 'USD',
       delivery_days: form.deliveryDays,
       supplier: form.supplier,
       warranty: form.warranty,
