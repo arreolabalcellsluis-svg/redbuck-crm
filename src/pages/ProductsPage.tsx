@@ -445,11 +445,9 @@ export default function ProductsPage() {
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">
                   <div>
-                    <div className="text-lg font-bold font-display">{fmt(p.listPrice, p.currency)}</div>
-                    <div className="text-[10px] text-muted-foreground">Precio de lista {p.currency === 'USD' ? '(USD)' : ''}</div>
-                    {p.currency === 'USD' && (
-                      <div className="text-[10px] text-primary">≈ {fmt(p.listPrice * exchangeRate, 'MXN')} MXN</div>
-                    )}
+                    <div className="text-lg font-bold font-display">{fmt(p.listPrice, 'USD')}</div>
+                    <div className="text-[10px] text-muted-foreground">Precio de lista (USD)</div>
+                    <div className="text-[10px] text-primary">≈ {fmt(p.listPrice * exchangeRate, 'MXN')} MXN</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold">{totalStock(p)} <span className="text-xs font-normal text-muted-foreground">en stock</span></div>
