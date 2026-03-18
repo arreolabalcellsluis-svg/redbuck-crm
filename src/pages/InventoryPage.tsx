@@ -60,6 +60,8 @@ export default function InventoryPage() {
   const { currentRole, exchangeRate } = useAppContext();
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'low_stock' | 'in_transit' | 'warehouse'>('all');
+  const [selectedWarehouseCard, setSelectedWarehouseCard] = useState<string>('');
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
