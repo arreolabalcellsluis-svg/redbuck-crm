@@ -318,7 +318,7 @@ export default function InventoryPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} />
-        {!isVendedor && <MetricCard title="Valor inventario" value={isLoading ? '...' : fmt(totalValue)} icon={Warehouse} variant="primary" />}
+        {!isVendedor && <MetricCard title="Valor inventario (USD)" value={isLoading ? '...' : fmtUSD(totalValueUSD)} icon={Warehouse} variant="primary" subtitle={`≈ ${fmtMXN(totalValueUSD * exchangeRate)} MXN`} />}
         <MetricCard title="En tránsito" value={isLoading ? '...' : inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
         <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
       </div>
