@@ -57,7 +57,7 @@ type InventoryForm = {
 };
 
 export default function InventoryPage() {
-  const { currentRole } = useAppContext();
+  const { currentRole, exchangeRate } = useAppContext();
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
   const [showCreate, setShowCreate] = useState(false);
