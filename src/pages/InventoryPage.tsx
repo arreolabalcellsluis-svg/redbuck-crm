@@ -339,10 +339,10 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} />
-        {!isVendedor && <MetricCard title="Valor inventario (USD)" value={isLoading ? '...' : fmtUSD(totalValueUSD)} icon={Warehouse} variant="primary" subtitle={`≈ ${fmtMXN(totalValueUSD * exchangeRate)} MXN`} />}
-        <MetricCard title="En tránsito" value={isLoading ? '...' : inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
-        <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
+        <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} onClick={() => applyQuickFilter('all')} />
+        {!isVendedor && <MetricCard title="Valor inventario (USD)" value={isLoading ? '...' : fmtUSD(totalValueUSD)} icon={Warehouse} variant="primary" subtitle={`≈ ${fmtMXN(totalValueUSD * exchangeRate)} MXN`} onClick={() => applyQuickFilter('all')} />}
+        <MetricCard title="En tránsito" value={isLoading ? '...' : inTransitCount} icon={ArrowLeftRight} variant={quickFilter === 'in_transit' ? 'info' : 'warning'} subtitle="unidades" onClick={() => applyQuickFilter('in_transit')} />
+        <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant={quickFilter === 'low_stock' ? 'info' : 'danger'} subtitle="productos" onClick={() => applyQuickFilter('low_stock')} />
       </div>
 
       {/* Warehouses overview */}
