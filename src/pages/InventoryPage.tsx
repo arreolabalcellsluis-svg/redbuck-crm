@@ -352,7 +352,7 @@ export default function InventoryPage() {
             const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
             const valueUSD = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
             return (
-              <div key={w.id} className="bg-card rounded-xl border p-5">
+              <div key={w.id} className={`bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${quickFilter === 'warehouse' && selectedWarehouseCard === w.id ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/30'}`} onClick={() => applyQuickFilter('warehouse', w.id)}>
                 <div className="flex items-center gap-3 mb-3">
                   <Warehouse size={20} className="text-muted-foreground" />
                   <div>
