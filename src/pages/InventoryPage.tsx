@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppContext } from '@/contexts/AppContext';
@@ -60,6 +60,8 @@ export default function InventoryPage() {
   const { currentRole, exchangeRate } = useAppContext();
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'low_stock' | 'in_transit' | 'warehouse'>('all');
+  const [selectedWarehouseCard, setSelectedWarehouseCard] = useState<string>('');
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -77,10 +79,22 @@ export default function InventoryPage() {
   const isAdmin = currentRole === 'director';
   const isVendedor = currentRole === 'vendedor';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const applyQuickFilter = (filter: 'all' | 'low_stock' | 'in_transit' | 'warehouse', warehouseId?: string) => {
+    setQuickFilter(prev => prev === filter && filter !== 'warehouse' ? 'all' : filter);
+    if (filter === 'warehouse') {
+      setSelectedWarehouseCard(prev => prev === warehouseId ? '' : (warehouseId || ''));
+      if (selectedWarehouseCard === warehouseId) { setQuickFilter('all'); }
+    } else {
+      setSelectedWarehouseCard('');
+    }
+    setTimeout(() => tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
 
   const totalValueUSD = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0) * p.cost, 0);
   const totalUnits = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0), 0);
-  const inTransit = products.reduce((s, p) => s + p.inTransit, 0);
+  const inTransitCount = products.reduce((s, p) => s + p.inTransit, 0);
   const lowStock = products.filter(p => Object.values(p.stock).reduce((a, b) => a + b, 0) <= 2).length;
 
   const filtered = products.filter(p => {
@@ -88,6 +102,13 @@ export default function InventoryPage() {
     const q = search.toLowerCase();
     if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q)) return false;
     if (filterWarehouse && (p.stock[filterWarehouse] || 0) === 0) return false;
+    // Quick filters from metric cards
+    if (quickFilter === 'low_stock') {
+      const total = Object.values(p.stock).reduce((a, b) => a + b, 0);
+      if (total > 2) return false;
+    }
+    if (quickFilter === 'in_transit' && p.inTransit <= 0) return false;
+    if (quickFilter === 'warehouse' && selectedWarehouseCard && (p.stock[selectedWarehouseCard] || 0) === 0) return false;
     return true;
   });
 
@@ -318,10 +339,10 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} />
-        {!isVendedor && <MetricCard title="Valor inventario (USD)" value={isLoading ? '...' : fmtUSD(totalValueUSD)} icon={Warehouse} variant="primary" subtitle={`≈ ${fmtMXN(totalValueUSD * exchangeRate)} MXN`} />}
-        <MetricCard title="En tránsito" value={isLoading ? '...' : inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
-        <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
+        <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} onClick={() => applyQuickFilter('all')} />
+        {!isVendedor && <MetricCard title="Valor inventario (USD)" value={isLoading ? '...' : fmtUSD(totalValueUSD)} icon={Warehouse} variant="primary" subtitle={`≈ ${fmtMXN(totalValueUSD * exchangeRate)} MXN`} onClick={() => applyQuickFilter('all')} />}
+        <MetricCard title="En tránsito" value={isLoading ? '...' : inTransitCount} icon={ArrowLeftRight} variant={quickFilter === 'in_transit' ? 'info' : 'warning'} subtitle="unidades" onClick={() => applyQuickFilter('in_transit')} />
+        <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant={quickFilter === 'low_stock' ? 'info' : 'danger'} subtitle="productos" onClick={() => applyQuickFilter('low_stock')} />
       </div>
 
       {/* Warehouses overview */}
@@ -331,7 +352,7 @@ export default function InventoryPage() {
             const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
             const valueUSD = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
             return (
-              <div key={w.id} className="bg-card rounded-xl border p-5">
+              <div key={w.id} className={`bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${quickFilter === 'warehouse' && selectedWarehouseCard === w.id ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/30'}`} onClick={() => applyQuickFilter('warehouse', w.id)}>
                 <div className="flex items-center gap-3 mb-3">
                   <Warehouse size={20} className="text-muted-foreground" />
                   <div>
@@ -353,7 +374,15 @@ export default function InventoryPage() {
       )}
 
       {/* Product stock table */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div ref={tableRef} className="flex items-center gap-3 mb-4 flex-wrap">
+        {quickFilter !== 'all' && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            {quickFilter === 'low_stock' && '🔴 Stock bajo'}
+            {quickFilter === 'in_transit' && '🚚 En tránsito'}
+            {quickFilter === 'warehouse' && `📦 ${warehouses.find(w => w.id === selectedWarehouseCard)?.name || 'Bodega'}`}
+            <button onClick={() => { setQuickFilter('all'); setSelectedWarehouseCard(''); }} className="ml-1 hover:text-destructive">✕</button>
+          </div>
+        )}
         <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por producto o SKU..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
@@ -362,8 +391,8 @@ export default function InventoryPage() {
           <option value="">Todas las bodegas</option>
           {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
-        {(search || filterWarehouse) && (
-          <button onClick={() => { setSearch(''); setFilterWarehouse(''); }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors">
+        {(search || filterWarehouse || quickFilter !== 'all') && (
+          <button onClick={() => { setSearch(''); setFilterWarehouse(''); setQuickFilter('all'); setSelectedWarehouseCard(''); }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors">
             Limpiar filtros
           </button>
         )}
