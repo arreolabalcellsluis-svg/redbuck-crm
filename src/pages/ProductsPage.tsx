@@ -155,7 +155,7 @@ export default function ProductsPage() {
       list_price: form.listPrice,
       min_price: form.minPrice,
       cost: form.cost,
-      currency: form.currency,
+      currency: 'USD',
       delivery_days: form.deliveryDays,
       supplier: form.supplier,
       warranty: form.warranty,
@@ -329,28 +329,28 @@ export default function ProductsPage() {
         <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full px-3 py-2 rounded-lg border bg-card text-sm resize-y" placeholder="Descripción del producto..." />
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Moneda</label>
-        <select value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value as 'MXN' | 'USD' }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
-          <option value="MXN">MXN — Pesos Mexicanos</option>
-          <option value="USD">USD — Dólares</option>
-        </select>
-        {form.currency === 'USD' && (
-          <p className="text-[10px] text-muted-foreground mt-1">Tipo de cambio: $1 USD = ${exchangeRate} MXN (configurable en Parámetros Fiscales)</p>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo unitario (USD)</label>
+        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="3000" />
+        {form.cost > 0 && (
+          <p className="text-[10px] text-primary mt-1">≈ {fmt(form.cost * exchangeRate, 'MXN')} MXN</p>
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio de lista ({form.currency}) *</label>
-        <input type="number" value={form.listPrice || ''} onChange={e => setForm(p => ({ ...p, listPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="89000" />
-        {form.currency === 'USD' && form.listPrice > 0 && (
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio de lista (USD) *</label>
+        <input type="number" value={form.listPrice || ''} onChange={e => setForm(p => ({ ...p, listPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="5000" />
+        {form.listPrice > 0 && (
           <p className="text-[10px] text-primary mt-1">≈ {fmt(form.listPrice * exchangeRate, 'MXN')} MXN</p>
         )}
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio mínimo ({form.currency})</label>
-        <input type="number" value={form.minPrice || ''} onChange={e => setForm(p => ({ ...p, minPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="79000" />
-        {form.currency === 'USD' && form.minPrice > 0 && (
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio mínimo (USD)</label>
+        <input type="number" value={form.minPrice || ''} onChange={e => setForm(p => ({ ...p, minPrice: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="4500" />
+        {form.minPrice > 0 && (
           <p className="text-[10px] text-primary mt-1">≈ {fmt(form.minPrice * exchangeRate, 'MXN')} MXN</p>
         )}
+      </div>
+      <div className="md:col-span-2">
+        <p className="text-[10px] text-muted-foreground">Tipo de cambio: $1 USD = ${exchangeRate} MXN (configurable en Ajustes)</p>
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Garantía</label>
@@ -445,11 +445,9 @@ export default function ProductsPage() {
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t">
                   <div>
-                    <div className="text-lg font-bold font-display">{fmt(p.listPrice, p.currency)}</div>
-                    <div className="text-[10px] text-muted-foreground">Precio de lista {p.currency === 'USD' ? '(USD)' : ''}</div>
-                    {p.currency === 'USD' && (
-                      <div className="text-[10px] text-primary">≈ {fmt(p.listPrice * exchangeRate, 'MXN')} MXN</div>
-                    )}
+                    <div className="text-lg font-bold font-display">{fmt(p.listPrice, 'USD')}</div>
+                    <div className="text-[10px] text-muted-foreground">Precio de lista (USD)</div>
+                    <div className="text-[10px] text-primary">≈ {fmt(p.listPrice * exchangeRate, 'MXN')} MXN</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold">{totalStock(p)} <span className="text-xs font-normal text-muted-foreground">en stock</span></div>
@@ -587,9 +585,9 @@ export default function ProductsPage() {
                 <div><span className="text-xs text-muted-foreground block">Marca</span><span className="font-medium">{viewingProduct.brand}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Modelo</span><span className="font-medium">{viewingProduct.model}</span></div>
                 <div className="col-span-2"><span className="text-xs text-muted-foreground block">Descripción</span><span className="font-medium">{viewingProduct.description || '—'}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Precio de lista</span><span className="font-bold text-lg">{fmt(viewingProduct.listPrice, viewingProduct.currency)}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Precio mínimo</span><span className="font-medium">{fmt(viewingProduct.minPrice, viewingProduct.currency)}</span></div>
-                <div><span className="text-xs text-muted-foreground block">Moneda</span><span className="font-medium">{viewingProduct.currency}</span></div>
+                <div><span className="text-xs text-muted-foreground block">Precio de lista (USD)</span><span className="font-bold text-lg">{fmt(viewingProduct.listPrice, 'USD')}</span><span className="text-[10px] text-primary block">≈ {fmt(viewingProduct.listPrice * exchangeRate, 'MXN')} MXN</span></div>
+                <div><span className="text-xs text-muted-foreground block">Precio mínimo (USD)</span><span className="font-medium">{fmt(viewingProduct.minPrice, 'USD')}</span><span className="text-[10px] text-primary block">≈ {fmt(viewingProduct.minPrice * exchangeRate, 'MXN')} MXN</span></div>
+                <div><span className="text-xs text-muted-foreground block">Costo (USD)</span><span className="font-medium">{fmt(viewingProduct.cost, 'USD')}</span><span className="text-[10px] text-primary block">≈ {fmt(viewingProduct.cost * exchangeRate, 'MXN')} MXN</span></div>
                 <div><span className="text-xs text-muted-foreground block">Stock total</span><span className="font-bold">{totalStock(viewingProduct)}</span></div>
                 <div><span className="text-xs text-muted-foreground block">En tránsito</span><span className="font-medium">{viewingProduct.inTransit}</span></div>
                 <div><span className="text-xs text-muted-foreground block">Garantía</span><span className="font-medium">{viewingProduct.warranty}</span></div>

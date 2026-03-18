@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppContext } from '@/contexts/AppContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import MetricCard from '@/components/shared/MetricCard';
 import { cn } from '@/lib/utils';
@@ -18,7 +19,8 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, type DBProduct } from '@/hooks/useProducts';
 import { useWarehouses } from '@/hooks/useWarehouses';
 
-const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+const fmtMXN = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+const fmtUSD = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
 // Map DB row to local Product type
 function dbToProduct(db: DBProduct): Product {
@@ -55,7 +57,7 @@ type InventoryForm = {
 };
 
 export default function InventoryPage() {
-  const { currentRole } = useAppContext();
+  const { currentRole, exchangeRate } = useAppContext();
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -76,7 +78,7 @@ export default function InventoryPage() {
   const isVendedor = currentRole === 'vendedor';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
 
-  const totalValue = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0) * p.cost, 0);
+  const totalValueUSD = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0) * p.cost, 0);
   const totalUnits = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0), 0);
   const inTransit = products.reduce((s, p) => s + p.inTransit, 0);
   const lowStock = products.filter(p => Object.values(p.stock).reduce((a, b) => a + b, 0) <= 2).length;
@@ -103,8 +105,9 @@ export default function InventoryPage() {
       row['Stock Total'] = totalStock;
       row['En Tránsito'] = p.inTransit;
       if (!isVendedor) {
-        row['Costo'] = p.cost;
-        row['Valor Total'] = totalStock * p.cost;
+        row['Costo (USD)'] = p.cost;
+        row['Valor Total (USD)'] = totalStock * p.cost;
+        row['Valor Total (MXN)'] = totalStock * p.cost * exchangeRate;
       }
       row['Confirmación'] = '';
       return row;
@@ -158,7 +161,7 @@ export default function InventoryPage() {
       list_price: 0,
       min_price: 0,
       cost: form.cost,
-      currency: 'MXN',
+      currency: 'USD',
       delivery_days: 5,
       supplier: '',
       warranty: '1 año',
@@ -240,8 +243,11 @@ export default function InventoryPage() {
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo unitario (MXN)</label>
-        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="52000" />
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo unitario (USD)</label>
+        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="3000" />
+        {form.cost > 0 && (
+          <p className="text-[10px] text-primary mt-1">≈ {fmtMXN(form.cost * exchangeRate)} MXN (TC: ${exchangeRate})</p>
+        )}
       </div>
 
       <div>
@@ -313,7 +319,7 @@ export default function InventoryPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <MetricCard title="Unidades totales" value={isLoading ? '...' : totalUnits} icon={Package} />
-        {!isVendedor && <MetricCard title="Valor inventario" value={isLoading ? '...' : fmt(totalValue)} icon={Warehouse} variant="primary" />}
+        {!isVendedor && <MetricCard title="Valor inventario (USD)" value={isLoading ? '...' : fmtUSD(totalValueUSD)} icon={Warehouse} variant="primary" subtitle={`≈ ${fmtMXN(totalValueUSD * exchangeRate)} MXN`} />}
         <MetricCard title="En tránsito" value={isLoading ? '...' : inTransit} icon={ArrowLeftRight} variant="warning" subtitle="unidades" />
         <MetricCard title="Stock bajo" value={isLoading ? '...' : lowStock} icon={AlertTriangle} variant="danger" subtitle="productos" />
       </div>
@@ -323,7 +329,7 @@ export default function InventoryPage() {
         <div className={`grid grid-cols-1 md:grid-cols-${Math.min(warehouses.length, 4)} gap-4 mb-6`}>
           {warehouses.map(w => {
             const units = products.reduce((s, p) => s + (p.stock[w.id] || 0), 0);
-            const value = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
+            const valueUSD = products.reduce((s, p) => s + (p.stock[w.id] || 0) * p.cost, 0);
             return (
               <div key={w.id} className="bg-card rounded-xl border p-5">
                 <div className="flex items-center gap-3 mb-3">
@@ -335,7 +341,10 @@ export default function InventoryPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{units} unidades</span>
-                  <span className="font-semibold">{fmt(value)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">{fmtUSD(valueUSD)}</span>
+                    <span className="text-[10px] text-primary block">≈ {fmtMXN(valueUSD * exchangeRate)}</span>
+                  </div>
                 </div>
               </div>
             );
