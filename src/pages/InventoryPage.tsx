@@ -79,10 +79,22 @@ export default function InventoryPage() {
   const isAdmin = currentRole === 'director';
   const isVendedor = currentRole === 'vendedor';
   const { authRequest, requestAuthorization, closeAuth } = useAuthorization();
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const applyQuickFilter = (filter: 'all' | 'low_stock' | 'in_transit' | 'warehouse', warehouseId?: string) => {
+    setQuickFilter(prev => prev === filter && filter !== 'warehouse' ? 'all' : filter);
+    if (filter === 'warehouse') {
+      setSelectedWarehouseCard(prev => prev === warehouseId ? '' : (warehouseId || ''));
+      if (selectedWarehouseCard === warehouseId) { setQuickFilter('all'); }
+    } else {
+      setSelectedWarehouseCard('');
+    }
+    setTimeout(() => tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
 
   const totalValueUSD = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0) * p.cost, 0);
   const totalUnits = products.reduce((s, p) => s + Object.values(p.stock).reduce((a, b) => a + b, 0), 0);
-  const inTransit = products.reduce((s, p) => s + p.inTransit, 0);
+  const inTransitCount = products.reduce((s, p) => s + p.inTransit, 0);
   const lowStock = products.filter(p => Object.values(p.stock).reduce((a, b) => a + b, 0) <= 2).length;
 
   const filtered = products.filter(p => {
