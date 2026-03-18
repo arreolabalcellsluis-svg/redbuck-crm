@@ -242,8 +242,11 @@ export default function InventoryPage() {
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo unitario (MXN)</label>
-        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="52000" />
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Costo unitario (USD)</label>
+        <input type="number" value={form.cost || ''} onChange={e => setForm(p => ({ ...p, cost: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="3000" />
+        {form.cost > 0 && (
+          <p className="text-[10px] text-primary mt-1">≈ {fmtMXN(form.cost * exchangeRate)} MXN (TC: ${exchangeRate})</p>
+        )}
       </div>
 
       <div>
