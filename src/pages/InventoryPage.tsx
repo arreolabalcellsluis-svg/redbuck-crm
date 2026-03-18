@@ -374,7 +374,15 @@ export default function InventoryPage() {
       )}
 
       {/* Product stock table */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div ref={tableRef} className="flex items-center gap-3 mb-4 flex-wrap">
+        {quickFilter !== 'all' && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            {quickFilter === 'low_stock' && '🔴 Stock bajo'}
+            {quickFilter === 'in_transit' && '🚚 En tránsito'}
+            {quickFilter === 'warehouse' && `📦 ${warehouses.find(w => w.id === selectedWarehouseCard)?.name || 'Bodega'}`}
+            <button onClick={() => { setQuickFilter('all'); setSelectedWarehouseCard(''); }} className="ml-1 hover:text-destructive">✕</button>
+          </div>
+        )}
         <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por producto o SKU..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
@@ -383,8 +391,8 @@ export default function InventoryPage() {
           <option value="">Todas las bodegas</option>
           {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
-        {(search || filterWarehouse) && (
-          <button onClick={() => { setSearch(''); setFilterWarehouse(''); }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors">
+        {(search || filterWarehouse || quickFilter !== 'all') && (
+          <button onClick={() => { setSearch(''); setFilterWarehouse(''); setQuickFilter('all'); setSelectedWarehouseCard(''); }} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors">
             Limpiar filtros
           </button>
         )}
