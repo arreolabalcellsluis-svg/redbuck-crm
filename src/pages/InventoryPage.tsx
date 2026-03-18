@@ -160,7 +160,7 @@ export default function InventoryPage() {
       list_price: 0,
       min_price: 0,
       cost: form.cost,
-      currency: 'MXN',
+      currency: 'USD',
       delivery_days: 5,
       supplier: '',
       warranty: '1 año',
