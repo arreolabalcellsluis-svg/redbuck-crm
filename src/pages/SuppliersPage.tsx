@@ -93,6 +93,9 @@ export default function SuppliersPage() {
               <div className="flex justify-between"><span className="text-muted-foreground">Teléfono:</span><span>{s.phone}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Email:</span><span className="text-xs">{s.email}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Tipo:</span><span className="capitalize">{s.type}</span></div>
+              {s.website && <div className="flex justify-between"><span className="text-muted-foreground">Web:</span><a href={s.website.startsWith('http') ? s.website : `https://${s.website}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[160px]">{s.website}</a></div>}
+              {s.bancoDestino && <div className="flex justify-between"><span className="text-muted-foreground">Banco:</span><span className="text-xs">{s.bancoDestino}</span></div>}
+              {s.cuentaDestino && <div className="flex justify-between"><span className="text-muted-foreground">Cuenta:</span><span className="text-xs">{s.cuentaDestino}</span></div>}
             </div>
           </div>
         ))}
