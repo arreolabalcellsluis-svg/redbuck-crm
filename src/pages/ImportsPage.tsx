@@ -1,4 +1,5 @@
 import { useAppContext } from '@/contexts/AppContext';
+import ImportCostingSummary from '@/components/imports/ImportCostingSummary';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
@@ -217,6 +218,12 @@ export default function ImportsPage() {
                   </div>
                 ))}
               </div>
+              <ImportCostingSummary
+                items={imp.items}
+                freightCost={imp.freightCost}
+                customsCost={imp.customsCost}
+                exchangeRate={imp.exchangeRate}
+              />
             </div>
           </div>
         ))}
