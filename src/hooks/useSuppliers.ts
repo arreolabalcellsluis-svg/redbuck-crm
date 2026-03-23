@@ -40,7 +40,7 @@ export function useAddSupplier() {
   return useMutation({
     mutationFn: async (s: Omit<Supplier, 'id'>) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('suppliers').insert({
+      const { error } = await (supabase as any).from('suppliers').insert({
         name: s.name,
         country: s.country,
         contact: s.contact,
@@ -48,6 +48,11 @@ export function useAddSupplier() {
         email: s.email,
         currency: s.currency,
         type: s.type,
+        website: s.website ?? '',
+        banco_destino: s.bancoDestino ?? '',
+        cuenta_destino: s.cuentaDestino ?? '',
+        clabe_destino: s.clabeDestino ?? '',
+        divisa_banco: s.divisaBanco ?? 'USD',
         user_id: user?.id ?? null,
       });
       if (error) throw error;
