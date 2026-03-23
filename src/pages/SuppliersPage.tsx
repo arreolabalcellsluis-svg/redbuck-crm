@@ -17,7 +17,7 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN' as 'MXN' | 'USD' | 'CNY', type: 'nacional' as Supplier['type'] });
+  const [form, setForm] = useState({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN' as 'MXN' | 'USD' | 'CNY', type: 'nacional' as Supplier['type'], website: '', bancoDestino: '', cuentaDestino: '', clabeDestino: '', divisaBanco: 'USD' });
 
   const filtered = suppliers.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
