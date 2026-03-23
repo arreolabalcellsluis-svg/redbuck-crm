@@ -218,6 +218,12 @@ export default function ImportsPage() {
                   </div>
                 ))}
               </div>
+              <ImportCostingSummary
+                items={imp.items}
+                freightCost={imp.freightCost}
+                customsCost={imp.customsCost}
+                exchangeRate={imp.exchangeRate}
+              />
             </div>
           </div>
         ))}
