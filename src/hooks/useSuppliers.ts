@@ -13,6 +13,11 @@ function dbToSupplier(row: any): Supplier {
     email: row.email,
     currency: row.currency as Supplier['currency'],
     type: row.type as Supplier['type'],
+    website: row.website ?? '',
+    bancoDestino: row.banco_destino ?? '',
+    cuentaDestino: row.cuenta_destino ?? '',
+    clabeDestino: row.clabe_destino ?? '',
+    divisaBanco: row.divisa_banco ?? 'USD',
   };
 }
 
@@ -35,7 +40,7 @@ export function useAddSupplier() {
   return useMutation({
     mutationFn: async (s: Omit<Supplier, 'id'>) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('suppliers').insert({
+      const { error } = await (supabase as any).from('suppliers').insert({
         name: s.name,
         country: s.country,
         contact: s.contact,
@@ -43,6 +48,11 @@ export function useAddSupplier() {
         email: s.email,
         currency: s.currency,
         type: s.type,
+        website: s.website ?? '',
+        banco_destino: s.bancoDestino ?? '',
+        cuenta_destino: s.cuentaDestino ?? '',
+        clabe_destino: s.clabeDestino ?? '',
+        divisa_banco: s.divisaBanco ?? 'USD',
         user_id: user?.id ?? null,
       });
       if (error) throw error;
@@ -67,7 +77,12 @@ export function useUpdateSupplier() {
       if (s.email !== undefined) updates.email = s.email;
       if (s.currency !== undefined) updates.currency = s.currency;
       if (s.type !== undefined) updates.type = s.type;
-      const { error } = await supabase.from('suppliers').update(updates).eq('id', id);
+      if (s.website !== undefined) updates.website = s.website;
+      if (s.bancoDestino !== undefined) updates.banco_destino = s.bancoDestino;
+      if (s.cuentaDestino !== undefined) updates.cuenta_destino = s.cuentaDestino;
+      if (s.clabeDestino !== undefined) updates.clabe_destino = s.clabeDestino;
+      if (s.divisaBanco !== undefined) updates.divisa_banco = s.divisaBanco;
+      const { error } = await (supabase as any).from('suppliers').update(updates).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

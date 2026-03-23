@@ -17,19 +17,19 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN' as 'MXN' | 'USD' | 'CNY', type: 'nacional' as Supplier['type'] });
+  const [form, setForm] = useState({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN' as 'MXN' | 'USD' | 'CNY', type: 'nacional' as Supplier['type'], website: '', bancoDestino: '', cuentaDestino: '', clabeDestino: '', divisaBanco: 'USD' });
 
   const filtered = suppliers.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
   const openEdit = (s: Supplier) => {
     setEditId(s.id);
-    setForm({ name: s.name, country: s.country, contact: s.contact, phone: s.phone, email: s.email, currency: s.currency, type: s.type });
+    setForm({ name: s.name, country: s.country, contact: s.contact, phone: s.phone, email: s.email, currency: s.currency, type: s.type, website: s.website ?? '', bancoDestino: s.bancoDestino ?? '', cuentaDestino: s.cuentaDestino ?? '', clabeDestino: s.clabeDestino ?? '', divisaBanco: s.divisaBanco ?? 'USD' });
     setOpen(true);
   };
 
   const resetForm = () => {
     setEditId(null);
-    setForm({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN', type: 'nacional' });
+    setForm({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN', type: 'nacional', website: '', bancoDestino: '', cuentaDestino: '', clabeDestino: '', divisaBanco: 'USD' });
   };
 
   const handleSave = () => {
@@ -93,6 +93,9 @@ export default function SuppliersPage() {
               <div className="flex justify-between"><span className="text-muted-foreground">Teléfono:</span><span>{s.phone}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Email:</span><span className="text-xs">{s.email}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Tipo:</span><span className="capitalize">{s.type}</span></div>
+              {s.website && <div className="flex justify-between"><span className="text-muted-foreground">Web:</span><a href={s.website.startsWith('http') ? s.website : `https://${s.website}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[160px]">{s.website}</a></div>}
+              {s.bancoDestino && <div className="flex justify-between"><span className="text-muted-foreground">Banco:</span><span className="text-xs">{s.bancoDestino}</span></div>}
+              {s.cuentaDestino && <div className="flex justify-between"><span className="text-muted-foreground">Cuenta:</span><span className="text-xs">{s.cuentaDestino}</span></div>}
             </div>
           </div>
         ))}
@@ -146,6 +149,35 @@ export default function SuppliersPage() {
               <label className="text-xs font-medium text-muted-foreground">Email</label>
               <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
             </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Página de internet</label>
+              <input value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="https://ejemplo.com" className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+
+            <div className="border-t pt-3 mt-1">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Datos bancarios del proveedor</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Banco destino</label>
+                <input value={form.bancoDestino} onChange={e => setForm({ ...form, bancoDestino: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Divisa bancaria</label>
+                <select value={form.divisaBanco} onChange={e => setForm({ ...form, divisaBanco: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
+                  <option value="MXN">MXN</option><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Cuenta destino</label>
+              <input value={form.cuentaDestino} onChange={e => setForm({ ...form, cuentaDestino: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">CLABE interbancaria</label>
+              <input value={form.clabeDestino} onChange={e => setForm({ ...form, clabeDestino: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => { setOpen(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
               <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
