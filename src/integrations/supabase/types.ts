@@ -1549,10 +1549,14 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          banco_destino: string | null
+          clabe_destino: string | null
           contact: string
           country: string
           created_at: string
+          cuenta_destino: string | null
           currency: string
+          divisa_banco: string | null
           email: string
           id: string
           name: string
@@ -1560,12 +1564,17 @@ export type Database = {
           type: string
           updated_at: string
           user_id: string | null
+          website: string | null
         }
         Insert: {
+          banco_destino?: string | null
+          clabe_destino?: string | null
           contact?: string
           country?: string
           created_at?: string
+          cuenta_destino?: string | null
           currency?: string
+          divisa_banco?: string | null
           email?: string
           id?: string
           name: string
@@ -1573,12 +1582,17 @@ export type Database = {
           type?: string
           updated_at?: string
           user_id?: string | null
+          website?: string | null
         }
         Update: {
+          banco_destino?: string | null
+          clabe_destino?: string | null
           contact?: string
           country?: string
           created_at?: string
+          cuenta_destino?: string | null
           currency?: string
+          divisa_banco?: string | null
           email?: string
           id?: string
           name?: string
@@ -1586,6 +1600,7 @@ export type Database = {
           type?: string
           updated_at?: string
           user_id?: string | null
+          website?: string | null
         }
         Relationships: []
       }
