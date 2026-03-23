@@ -77,7 +77,12 @@ export function useUpdateSupplier() {
       if (s.email !== undefined) updates.email = s.email;
       if (s.currency !== undefined) updates.currency = s.currency;
       if (s.type !== undefined) updates.type = s.type;
-      const { error } = await supabase.from('suppliers').update(updates).eq('id', id);
+      if (s.website !== undefined) updates.website = s.website;
+      if (s.bancoDestino !== undefined) updates.banco_destino = s.bancoDestino;
+      if (s.cuentaDestino !== undefined) updates.cuenta_destino = s.cuentaDestino;
+      if (s.clabeDestino !== undefined) updates.clabe_destino = s.clabeDestino;
+      if (s.divisaBanco !== undefined) updates.divisa_banco = s.divisaBanco;
+      const { error } = await (supabase as any).from('suppliers').update(updates).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
