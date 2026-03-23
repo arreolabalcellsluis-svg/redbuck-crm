@@ -149,6 +149,35 @@ export default function SuppliersPage() {
               <label className="text-xs font-medium text-muted-foreground">Email</label>
               <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
             </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Página de internet</label>
+              <input value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="https://ejemplo.com" className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+
+            <div className="border-t pt-3 mt-1">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Datos bancarios del proveedor</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Banco destino</label>
+                <input value={form.bancoDestino} onChange={e => setForm({ ...form, bancoDestino: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Divisa bancaria</label>
+                <select value={form.divisaBanco} onChange={e => setForm({ ...form, divisaBanco: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
+                  <option value="MXN">MXN</option><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Cuenta destino</label>
+              <input value={form.cuentaDestino} onChange={e => setForm({ ...form, cuentaDestino: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">CLABE interbancaria</label>
+              <input value={form.clabeDestino} onChange={e => setForm({ ...form, clabeDestino: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => { setOpen(false); resetForm(); }} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancelar</button>
               <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
