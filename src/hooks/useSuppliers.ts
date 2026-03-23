@@ -13,6 +13,11 @@ function dbToSupplier(row: any): Supplier {
     email: row.email,
     currency: row.currency as Supplier['currency'],
     type: row.type as Supplier['type'],
+    website: row.website ?? '',
+    bancoDestino: row.banco_destino ?? '',
+    cuentaDestino: row.cuenta_destino ?? '',
+    clabeDestino: row.clabe_destino ?? '',
+    divisaBanco: row.divisa_banco ?? 'USD',
   };
 }
 

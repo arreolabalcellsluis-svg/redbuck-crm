@@ -250,6 +250,11 @@ export interface Supplier {
   email: string;
   currency: 'MXN' | 'USD' | 'CNY';
   type: 'nacional' | 'internacional' | 'refacciones' | 'logistica' | 'aduana' | 'servicio';
+  website?: string;
+  bancoDestino?: string;
+  cuentaDestino?: string;
+  clabeDestino?: string;
+  divisaBanco?: string;
 }
 
 export interface Warehouse {
