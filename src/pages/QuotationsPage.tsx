@@ -151,10 +151,13 @@ export default function QuotationsPage() {
     const product = dbProducts.find(p => p.id === productId);
     if (!product) return;
     const priceInMxn = product.currency === 'USD' ? Math.round(product.list_price * exchangeRate) : product.list_price;
+    // Use main image: first from images array, then single image, then fallback
+    const images = Array.isArray(product.images) ? product.images as string[] : [];
+    const mainImage = images[0] || product.image || getProductImage(product.id);
     setItems(prev => [...prev, {
       productId: product.id,
       productName: product.name,
-      productImage: product.image || getProductImage(product.id),
+      productImage: mainImage,
       sku: product.sku,
       qty: 1,
       unitPrice: priceInMxn,
