@@ -135,11 +135,31 @@ export default function SparePartsPage() {
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Imágenes de la refacción</label>
         <div className="flex flex-wrap items-center gap-3">
           {(form.images || []).map((img, idx) => (
-            <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border group">
+            <div key={idx} className={`relative w-20 h-20 rounded-lg overflow-hidden border group ${idx === 0 ? 'ring-2 ring-primary' : ''}`}>
               <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover cursor-pointer" onClick={() => openLightbox(form.images || [], idx)} />
               <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                 <X size={10} />
               </button>
+              {idx !== 0 && (
+                <button
+                  onClick={() => {
+                    setForm(p => {
+                      const imgs = [...(p.images || [])];
+                      const [selected] = imgs.splice(idx, 1);
+                      imgs.unshift(selected);
+                      return { ...p, images: imgs, image: selected };
+                    });
+                    toast.success('Imagen principal actualizada');
+                  }}
+                  title="Establecer como imagen principal"
+                  className="absolute bottom-1 left-1 p-0.5 rounded-full bg-yellow-500/90 text-white opacity-0 group-hover:opacity-100 transition-opacity text-[9px] leading-none"
+                >
+                  ⭐
+                </button>
+              )}
+              {idx === 0 && (
+                <span className="absolute bottom-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">Principal</span>
+              )}
             </div>
           ))}
           <button
@@ -152,7 +172,7 @@ export default function SparePartsPage() {
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">Puedes subir múltiples imágenes. La primera será la imagen principal.</p>
+        <p className="text-[10px] text-muted-foreground mt-1">Puedes subir múltiples imágenes. Haz clic en ⭐ para seleccionar la imagen principal.</p>
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre *</label>
