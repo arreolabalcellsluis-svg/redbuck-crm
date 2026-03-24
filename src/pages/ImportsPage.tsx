@@ -36,9 +36,12 @@ export default function ImportsPage() {
 
   const { data: imports = [], isLoading } = useImportOrders();
   const { data: suppliers = [] } = useSuppliers();
+  const { data: dbProducts = [] } = useProducts();
+  const { data: warehouses = [] } = useWarehouses();
   const addMutation = useAddImportOrder();
   const updateMutation = useUpdateImportOrder();
   const qc = useQueryClient();
+  const [processing, setProcessing] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
