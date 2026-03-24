@@ -77,6 +77,7 @@ export default function OrdersPage() {
   const updateOrderMutation = useUpdateOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const updateProductMutation = useUpdateProduct();
   const { data: dbOrderPayments = [] } = useOrderPayments();
   const addOrderPaymentMutation = useAddOrderPayment();
   const { data: dbReceivables = [] } = useAccountsReceivable();
