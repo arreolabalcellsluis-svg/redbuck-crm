@@ -27,12 +27,27 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const result = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), 8000)
+        ),
+      ]);
 
-    if (error) {
-      setError('Credenciales incorrectas. Verifica tu email y contraseña.');
+      if (result.error) {
+        setError('Credenciales incorrectas. Verifica tu email y contraseña.');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'LOGIN_TIMEOUT') {
+        setError('El inicio de sesión tardó demasiado en responder en preview. Intenta en la app publicada.');
+      } else {
+        setError('No fue posible iniciar sesión en este momento. Intenta nuevamente.');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
