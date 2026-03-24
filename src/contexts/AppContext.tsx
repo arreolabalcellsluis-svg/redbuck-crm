@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { UserRole, Quotation, QuotationStatus, User, Order, AccountReceivable } from '@/types';
 import { Payment } from '@/types/payments';
-import { demoUsers } from '@/data/demo-data';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { addAuditLog } from '@/lib/auditLog';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -50,10 +50,11 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
+  const { data: teamMembers = [] } = useTeamMembers();
   const [currentRole, setCurrentRole] = useState<UserRole>('director');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>(buildInitialSeries(demoUsers));
+  const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>({});
 
   // Shared state for orders, receivables, payments
   const [orders, setOrders] = useState<Order[]>([]);
@@ -66,23 +67,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [userRole]);
 
+  // Build vendor series from DB team members
+  useEffect(() => {
+    if (teamMembers.length > 0) {
+      setVendorSeries(buildInitialSeries(teamMembers));
+    }
+  }, [teamMembers]);
+
   const [exchangeRate, setExchangeRate] = useState<number>(17.5);
 
   const getNextFolio = useCallback((vendorId: string): string => {
-    const vendor = demoUsers.find(u => u.id === vendorId);
+    const vendor = teamMembers.find(u => u.id === vendorId);
     if (!vendor?.seriesPrefix) return `COT-${Date.now()}`;
     const current = vendorSeries[vendorId] ?? vendor.seriesStart ?? 1000;
     const next = current + 1;
     return `${vendor.seriesPrefix}-${next}`;
-  }, [vendorSeries]);
+  }, [vendorSeries, teamMembers]);
 
   const consumeFolio = useCallback((vendorId: string) => {
     setVendorSeries(prev => {
-      const vendor = demoUsers.find(u => u.id === vendorId);
+      const vendor = teamMembers.find(u => u.id === vendorId);
       const current = prev[vendorId] ?? vendor?.seriesStart ?? 1000;
       return { ...prev, [vendorId]: current + 1 };
     });
-  }, []);
+  }, [teamMembers]);
 
   const addQuotation = useCallback((q: Quotation) => {
     setQuotations(prev => {

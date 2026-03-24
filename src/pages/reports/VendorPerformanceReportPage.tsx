@@ -4,54 +4,60 @@ import { ArrowLeft, Users, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { demoOrders, demoProducts, demoQuotations, salesByVendor, demoUsers, dashboardMetrics } from '@/data/demo-data';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useOrders } from '@/hooks/useOrders';
+import { useQuotations } from '@/hooks/useQuotations';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
 export default function VendorPerformanceReportPage() {
   const [filters, setFilters] = useState<Record<string, any>>({ dateFrom: undefined, dateTo: undefined });
+  const { data: dbTeamMembers = [] } = useTeamMembers();
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbQuotations = [] } = useQuotations();
 
   const records = useMemo(() => {
-    const vendorUsers = demoUsers.filter(u => u.role === 'vendedor');
+    const vendorUsers = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
     return vendorUsers.map(user => {
-      const vendorOrders = demoOrders.filter(o => o.vendorName.includes(user.name.split(' ')[0]));
-      const vendorQuotes = demoQuotations.filter(q => q.vendorId === user.id);
+      const vendorOrders = dbOrders.filter(o => o.vendor_name === user.name);
+      const vendorQuotes = dbQuotations.filter(q => q.vendor_id === user.id || q.vendor_name === user.name);
       const ventasTotales = vendorOrders.reduce((s, o) => s + o.total, 0);
       const numVentas = vendorOrders.length;
       const ticketProm = numVentas > 0 ? ventasTotales / numVentas : 0;
-      const productosVendidos = vendorOrders.reduce((s, o) => s + o.items.reduce((ss, i) => ss + i.qty, 0), 0);
+      const productosVendidos = vendorOrders.reduce((s, o) => s + (Array.isArray(o.items) ? (o.items as any[]).reduce((ss: number, i: any) => ss + (i.qty || 0), 0) : 0), 0);
       const quotesEnviadas = vendorQuotes.length;
       const quotesAceptadas = vendorQuotes.filter(q => q.status === 'aceptada').length;
       const conversion = quotesEnviadas > 0 ? (quotesAceptadas / quotesEnviadas * 100) : 0;
-      const meta = 300000; // meta mensual por vendedor
+      const meta = 300000;
       const cumplimiento = meta > 0 ? (ventasTotales / meta * 100) : 0;
-      const svData = salesByVendor.find(sv => sv.name.includes(user.name.split(' ')[0]));
 
       return {
         id: user.id,
         vendedor: user.name,
         email: user.email,
-        ventasTotales: svData?.sales || ventasTotales,
-        numVentas: numVentas || Math.round((svData?.sales || 0) / dashboardMetrics.avgTicket),
-        ticketProm: ticketProm || dashboardMetrics.avgTicket,
+        ventasTotales,
+        numVentas,
+        ticketProm,
         productosVendidos,
         cotizacionesEnviadas: quotesEnviadas,
         cotizacionesAceptadas: quotesAceptadas,
         conversion,
         meta,
-        cumplimiento: svData ? (svData.sales / meta * 100) : cumplimiento,
+        cumplimiento,
         comision: (user.commissionRate || 5),
-        comisionGenerada: (svData?.sales || ventasTotales) * ((user.commissionRate || 5) / 100),
+        comisionGenerada: ventasTotales * ((user.commissionRate || 5) / 100),
       };
     }).sort((a, b) => b.ventasTotales - a.ventasTotales);
-  }, []);
+  }, [dbTeamMembers, dbOrders, dbQuotations]);
 
   const chartData = records.map(r => ({
     name: r.vendedor.split(' ')[0],
     ventas: r.ventasTotales,
     meta: r.meta,
   }));
+
+  const avgTicket = records.length > 0 ? records.reduce((s, r) => s + r.ticketProm, 0) / records.length : 0;
 
   const handleExportExcel = () => {
     const dateStr = new Date().toISOString().split('T')[0];
@@ -61,7 +67,7 @@ export default function VendorPerformanceReportPage() {
       kpis: [
         { label: 'Total ventas equipo', value: fmt(totalVentas), color: 'primary' },
         { label: 'Vendedores', value: records.length },
-        { label: 'Ticket promedio', value: fmt(dashboardMetrics.avgTicket) },
+        { label: 'Ticket promedio', value: fmt(avgTicket) },
       ],
       sections: [
         { title: 'Ventas vs Meta (gráfica)', headers: ['Vendedor', 'Ventas', 'Meta', 'Cumpl. %'], rows: records.map(r => [r.vendedor, fmt(r.ventasTotales), fmt(r.meta), `${r.cumplimiento.toFixed(0)}%`]) },
@@ -77,7 +83,7 @@ export default function VendorPerformanceReportPage() {
       kpis: [
         { label: 'Total ventas equipo', value: fmt(records.reduce((s, r) => s + r.ventasTotales, 0)), color: 'primary' },
         { label: 'Vendedores', value: records.length },
-        { label: 'Ticket promedio', value: fmt(dashboardMetrics.avgTicket) },
+        { label: 'Ticket promedio', value: fmt(avgTicket) },
       ],
       sections: [
         { title: 'Ventas vs Meta', headers: ['Vendedor', 'Ventas', 'Meta', 'Cumpl. %'], rows: records.map(r => [r.vendedor, fmt(r.ventasTotales), fmt(r.meta), `${r.cumplimiento.toFixed(0)}%`]) },

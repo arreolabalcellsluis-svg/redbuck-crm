@@ -1,4 +1,4 @@
-import { demoUsers } from '@/data/demo-data';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
@@ -23,8 +23,8 @@ const SERVICE_STATUS_LABELS: Record<ServiceStatus, string> = {
   terminado: 'Terminado', cancelado: 'Cancelado',
 };
 
-function generateServiceReportPDF(so: ExtendedServiceOrder) {
-  const tech = demoUsers.find(u => u.name === so.technicianName);
+function generateServiceReportPDF(so: ExtendedServiceOrder, teamMembers?: any[]) {
+  const tech = teamMembers?.find((u: any) => u.name === so.technicianName);
   const html = `
     <html><head><title>Reporte ${so.folio}</title>
     <style>
@@ -77,8 +77,6 @@ function sendServiceReportWhatsApp(so: ExtendedServiceOrder) {
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
 
-const technicians = demoUsers.filter(u => u.role === 'tecnico');
-
 export default function ServicePage() {
   const { currentRole } = useAppContext();
   const canEdit = currentRole === 'director' || currentRole === 'tecnico' || currentRole === 'administracion';
@@ -86,13 +84,16 @@ export default function ServicePage() {
   const { data: services = [], isLoading } = useServiceOrders();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
   const addMutation = useAddServiceOrder();
   const updateMutation = useUpdateServiceOrder();
+
+  const technicians = dbTeamMembers.filter(u => u.role === 'tecnico' && u.active);
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    customerId: '', productName: '', technicianName: technicians[0]?.name || '',
+    customerId: '', productName: '', technicianName: '',
     type: 'instalacion' as ServiceType, scheduledDate: '', description: '',
     status: 'pendiente' as ServiceStatus,
     diagnosis: '', actionsPerformed: '', completedDate: '', observations: '',
@@ -277,7 +278,7 @@ export default function ServicePage() {
                 </td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => generateServiceReportPDF(so)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" title="Descargar PDF">
+                    <button onClick={() => generateServiceReportPDF(so, dbTeamMembers)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" title="Descargar PDF">
                       <FileDown size={14} />
                     </button>
                     <button onClick={() => sendServiceReportWhatsApp(so)} className="p-1.5 rounded-md hover:bg-muted text-green-600 hover:text-green-700" title="Enviar por WhatsApp">

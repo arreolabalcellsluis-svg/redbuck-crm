@@ -1,4 +1,4 @@
-import { demoUsers, demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
+import { demoCompanyInfo, demoSalesConditions, demoWhatsAppTemplate, demoSpareParts } from '@/data/demo-data';
 import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAddAccountReceivable } from '@/hooks/useAccountsReceivable';
@@ -26,6 +26,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useAddOrder } from '@/hooks/useOrders';
 import { useOrders } from '@/hooks/useOrders';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
 const IVA_RATE = 0.16;
@@ -43,6 +44,7 @@ export default function QuotationsPage() {
   const addOrderMutation = useAddOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
 
   // Map DB quotations to local Quotation type
   const quotations: Quotation[] = useMemo(() => dbQuotations.map(q => ({
@@ -146,7 +148,7 @@ export default function QuotationsPage() {
     return true;
   });
 
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
 
   const addItem = (productId: string) => {
     const product = dbProducts.find(p => p.id === productId);
@@ -199,7 +201,7 @@ export default function QuotationsPage() {
     const subtotal = calcSubtotal();
     const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
-    const vendor = demoUsers.find(u => u.id === selectedVendorId);
+    const vendor = dbTeamMembers.find(u => u.id === selectedVendorId);
     const customer = dbCustomers.find(c => c.id === selectedCustomerId);
     const folio = getNextFolio(selectedVendorId);
 
@@ -284,7 +286,7 @@ export default function QuotationsPage() {
     const subtotal = calcSubtotal();
     const tax = Math.round(subtotal * IVA_RATE * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
-    const vendor = demoUsers.find(u => u.id === selectedVendorId);
+    const vendor = dbTeamMembers.find(u => u.id === selectedVendorId);
     const customer = dbCustomers.find(c => c.id === selectedCustomerId);
 
     const today = new Date();
@@ -458,7 +460,7 @@ export default function QuotationsPage() {
     const cleanPhone = customerPhone.startsWith('52') ? customerPhone : `52${customerPhone.replace(/[^0-9]/g, '')}`;
     
     // Use vendor's WhatsApp number so the link opens on the vendor's device sending TO the customer
-    const vendor = demoUsers.find(u => u.id === q.vendorId);
+    const vendor = dbTeamMembers.find(u => u.id === q.vendorId);
     const vendorWa = vendor?.whatsapp || vendor?.phone?.replace(/[^0-9]/g, '') || '';
 
     // wa.me sends TO the customer's number — this opens WhatsApp on whichever device opens the link

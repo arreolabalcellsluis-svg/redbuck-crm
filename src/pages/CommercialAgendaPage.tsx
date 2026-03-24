@@ -15,9 +15,9 @@ import {
   getPendingActivities, getOverdueActivities,
   type Activity, type ActivityType, type ActivityStatus,
 } from '@/lib/agendaEngine';
-import { demoUsers } from '@/data/demo-data';
 import { useActivities, useAddActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/useActivities';
 import { useCustomers } from '@/hooks/useCustomers';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProducts } from '@/hooks/useProducts';
 import MetricCard from '@/components/shared/MetricCard';
@@ -75,13 +75,14 @@ export default function CommercialAgendaPage() {
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbQuotations = [] } = useQuotations();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
 
   // Open create dialog pre-filled when navigated from DailyAssistant
   useEffect(() => {
     const state = location.state as any;
     if (state?.newActivityForCustomer) {
       const { customerId, customerName, vendorName, suggestedProduct } = state.newActivityForCustomer;
-      const vendor = demoUsers.find(u => u.name === vendorName && u.role === 'vendedor');
+      const vendor = dbTeamMembers.find(u => u.name === vendorName && u.role === 'vendedor');
       setForm({
         ...emptyActivity(),
         customerId: customerId || undefined,
@@ -95,7 +96,7 @@ export default function CommercialAgendaPage() {
     }
   }, [location.state]);
 
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
 
   // ─── Filtering ───────────────────────────────────────────
   const filtered = useMemo(() => {

@@ -4,7 +4,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrderPayments, useAddOrderPayment } from '@/hooks/useOrderPayments';
 import { useAccountsReceivable, useAddAccountReceivable, useUpdateAccountReceivable } from '@/hooks/useAccountsReceivable';
-import { demoUsers } from '@/data/demo-data';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText, Loader2 } from 'lucide-react';
@@ -23,7 +23,7 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
-const vendors = demoUsers.filter(u => u.role === 'vendedor');
+// vendors will be populated inside the component from useTeamMembers
 const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'nuevo', label: 'Nuevo' },
   { value: 'por_confirmar', label: 'Por confirmar' },
@@ -78,6 +78,8 @@ export default function OrdersPage() {
   const { data: dbOrderPayments = [] } = useOrderPayments();
   const addOrderPaymentMutation = useAddOrderPayment();
   const { data: dbReceivables = [] } = useAccountsReceivable();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
   const addReceivableMutation = useAddAccountReceivable();
   const updateReceivableMutation = useUpdateAccountReceivable();
 
