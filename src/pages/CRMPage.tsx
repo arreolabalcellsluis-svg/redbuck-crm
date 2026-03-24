@@ -544,36 +544,75 @@ export default function CRMPage() {
         </>
       )}
 
-      {tab === 'pipeline' && (
-        <div className="flex gap-3 overflow-x-auto pb-4">
-          {pipelineStages.map(stage => {
-            const opps = allOpportunities.filter(o => o.stage === stage);
-            const total = opps.reduce((s, o) => s + o.estimatedAmount, 0);
-            return (
-              <div key={stage} className="min-w-[260px] flex-shrink-0">
-                <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{PIPELINE_LABELS[stage]}</span>
-                  <span className="text-xs font-medium">{opps.length}</span>
+      {tab === 'pipeline' && (() => {
+        const stageColors: Record<string, string> = {
+          prospecto_nuevo: 'border-muted-foreground/30',
+          contactado: 'border-blue-400',
+          calificado: 'border-cyan-400',
+          diagnostico: 'border-yellow-400',
+          cotizacion_enviada: 'border-orange-400',
+          seguimiento: 'border-amber-400',
+          negociacion: 'border-purple-400',
+          cierre_ganado: 'border-green-500',
+          cierre_perdido: 'border-destructive',
+          postventa: 'border-primary',
+        };
+        const stageBg: Record<string, string> = {
+          cierre_ganado: 'bg-green-50 dark:bg-green-950/20',
+          cierre_perdido: 'bg-red-50 dark:bg-red-950/20',
+          postventa: 'bg-primary/5',
+        };
+        return (
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {pipelineStages.map(stage => {
+              const opps = allOpportunities.filter(o => o.stage === stage);
+              const total = opps.reduce((s, o) => s + o.estimatedAmount, 0);
+              return (
+                <div key={stage} className="min-w-[240px] max-w-[280px] flex-shrink-0">
+                  <div className={`flex items-center justify-between mb-2 px-2 py-1.5 rounded-lg border-l-4 ${stageColors[stage] || ''} ${stageBg[stage] || 'bg-muted/30'}`}>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{PIPELINE_LABELS[stage]}</span>
+                    <span className="text-xs font-bold bg-background rounded-full px-2 py-0.5">{opps.length}</span>
+                  </div>
+                  {total > 0 && <div className="text-xs font-semibold text-muted-foreground mb-2 px-1">{fmt(total)}</div>}
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {opps.map(o => {
+                      const customer = allCustomers.find(c => c.id === o.customerId);
+                      return (
+                        <div key={o.id} className="p-3 rounded-lg bg-card border hover:shadow-md transition-shadow">
+                          <div className="font-medium text-sm">{o.customerName}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{o.vendorName}</div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm font-bold">{fmt(o.estimatedAmount)}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">{o.folio}</span>
+                          </div>
+                          <div className="flex gap-1 mt-2 flex-wrap">
+                            {customer && (
+                              <button onClick={() => setViewingCustomer(customer)} className="text-[10px] px-2 py-1 rounded bg-muted hover:bg-accent text-foreground flex items-center gap-1">
+                                <Eye className="w-3 h-3" /> Cliente
+                              </button>
+                            )}
+                            {stage !== 'cierre_ganado' && stage !== 'cierre_perdido' && (
+                              <button onClick={() => navigate('/cotizaciones')} className="text-[10px] px-2 py-1 rounded bg-muted hover:bg-accent text-foreground flex items-center gap-1">
+                                <FileText className="w-3 h-3" /> Cotización
+                              </button>
+                            )}
+                            {stage === 'cierre_ganado' && (
+                              <button onClick={() => navigate('/pedidos')} className="text-[10px] px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-800 dark:text-green-300 flex items-center gap-1">
+                                <Package className="w-3 h-3" /> Pedido
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {opps.length === 0 && <div className="p-4 text-center text-xs text-muted-foreground border border-dashed rounded-lg">Sin oportunidades</div>}
+                  </div>
                 </div>
-                {total > 0 && <div className="text-xs text-muted-foreground mb-2 px-1">{fmt(total)}</div>}
-                <div className="space-y-2">
-                  {opps.map(o => (
-                    <div key={o.id} className="p-3 rounded-lg bg-card border hover:shadow-md transition-shadow cursor-pointer">
-                      <div className="font-medium text-sm">{o.customerName}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{o.vendorName}</div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm font-semibold">{fmt(o.estimatedAmount)}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{o.folio}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {opps.length === 0 && <div className="p-4 text-center text-xs text-muted-foreground border border-dashed rounded-lg">Sin oportunidades</div>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ═══ ONBOARDING TAB ═══ */}
       {tab === 'onboarding' && (() => {
