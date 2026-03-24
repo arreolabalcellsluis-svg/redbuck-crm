@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
+import { classifyAllCustomers, type CustomerClassification, type ValueThresholds } from '@/lib/customerClassificationEngine';
 import { useAppContext } from '@/contexts/AppContext';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
