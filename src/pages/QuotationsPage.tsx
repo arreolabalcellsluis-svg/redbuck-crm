@@ -987,7 +987,16 @@ export default function QuotationsPage() {
       {/* QUOTATION PREVIEW */}
       <Dialog open={!!showPreview} onOpenChange={() => setShowPreview(null)}>
         <DialogContent className="max-w-[720px] max-h-[92vh] overflow-y-auto p-0">
-          {showPreview && <QuotationPreview quotation={showPreview} />}
+          {showPreview && (
+            <>
+              <div className="sticky top-0 z-10 flex justify-end px-4 pt-3 pb-1">
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => handleDownloadPdf(showPreview)}>
+                  <Download size={14} /> Descargar PDF
+                </Button>
+              </div>
+              <QuotationPreview quotation={showPreview} />
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
