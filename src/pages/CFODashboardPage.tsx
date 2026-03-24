@@ -1081,7 +1081,7 @@ export default function CFODashboardPage() {
             </div>
 
             {/* Low Margin */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/rentabilidad')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <TrendingUp size={16} /> Productos Bajo Margen
               </h3>
