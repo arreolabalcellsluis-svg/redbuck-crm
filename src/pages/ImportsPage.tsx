@@ -223,6 +223,12 @@ export default function ImportsPage() {
                         <Edit2 size={14} />
                       </button>
                     )}
+                    <button onClick={() => exportImportPdf(imp)} className="p-1.5 rounded-md hover:bg-muted text-destructive" title="Exportar PDF">
+                      <FileText size={14} />
+                    </button>
+                    <button onClick={() => exportImportExcel(imp)} className="p-1.5 rounded-md hover:bg-muted text-green-600" title="Exportar Excel">
+                      <FileSpreadsheet size={14} />
+                    </button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{imp.supplier} · {imp.country}</p>
                 </div>
