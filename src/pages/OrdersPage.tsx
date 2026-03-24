@@ -1,5 +1,6 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { useOrders, useAddOrder, useUpdateOrderStatus, useUpdateOrder, type DBOrder } from '@/hooks/useOrders';
+import OrderDetailDialog from '@/components/orders/OrderDetailDialog';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrderPayments, useAddOrderPayment } from '@/hooks/useOrderPayments';
