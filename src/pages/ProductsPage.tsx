@@ -523,6 +523,12 @@ export default function ProductsPage() {
 
                 <div className="flex gap-2 mt-3">
                   <button
+                    onClick={(e) => { e.stopPropagation(); setDatasheetProduct(p); }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <FileText size={12} /> Ficha PDF
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); openEdit(p); }}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted transition-colors"
                   >
