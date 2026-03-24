@@ -16,6 +16,8 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useImportOrders, useAddImportOrder, useUpdateImportOrder } from '@/hooks/useImportOrders';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
@@ -33,6 +35,7 @@ export default function ImportsPage() {
   const { data: suppliers = [] } = useSuppliers();
   const addMutation = useAddImportOrder();
   const updateMutation = useUpdateImportOrder();
+  const qc = useQueryClient();
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -82,7 +85,27 @@ export default function ImportsPage() {
     setItems([]);
   };
 
-  const handleSave = () => {
+  const updateProductsInTransit = async (importItems: ImportItemData[]) => {
+    const linkedItems = importItems.filter(it => it.productId);
+    for (const item of linkedItems) {
+      // Get current in_transit value
+      const { data: product } = await supabase
+        .from('products')
+        .select('in_transit')
+        .eq('id', item.productId!)
+        .maybeSingle();
+      if (product) {
+        const newInTransit = (product.in_transit || 0) + item.qty;
+        await supabase
+          .from('products')
+          .update({ in_transit: newInTransit, updated_at: new Date().toISOString() })
+          .eq('id', item.productId!);
+      }
+    }
+    qc.invalidateQueries({ queryKey: ['products'] });
+  };
+
+  const handleSave = async () => {
     if (!form.supplier || items.length === 0 || !form.purchaseDate) {
       toast.error('Completa proveedor, productos y fecha');
       return;
@@ -131,6 +154,8 @@ export default function ImportsPage() {
         volumenTotalCbm: cbmTotal,
         numeroContenedores: 1,
       });
+      // Update in_transit for linked products (new imports only)
+      await updateProductsInTransit(items);
     }
     setOpen(false);
     resetForm();
