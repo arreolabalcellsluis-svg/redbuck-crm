@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useAssets, getTotalMonthlyDepAmort } from '@/hooks/useAssets';
 import { useAccountsPayable } from '@/hooks/useAccountsPayable';
@@ -44,6 +45,7 @@ const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 export default function CFODashboardPage() {
+  const navigate = useNavigate();
   const { data: dbExpenses } = useExpenses();
   const { data: dbAssets } = useAssets();
   const { data: dbPayables } = useAccountsPayable();
@@ -1023,8 +1025,17 @@ export default function CFODashboardPage() {
                 <AlertTriangle size={18} /> Alertas del Negocio
               </h3>
               <div className="space-y-2">
-                {leakSummary.alertas.map((alerta, i) => (
-                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${
+                {leakSummary.alertas.map((alerta, i) => {
+                  const alertRoutes: Record<string, string> = {
+                    margen: '/reportes/rentabilidad',
+                    inventario: '/reportes/inventario-muerto',
+                    cobranza: '/reportes/cuentas-cobrar',
+                    exceso: '/reportes/sobrestock',
+                    pagos: '/cuentas-por-pagar',
+                  };
+                  const route = alertRoutes[alerta.tipo];
+                  return (
+                  <div key={i} onClick={() => route && navigate(route)} className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${
                     alerta.severity === 'critico' ? 'bg-destructive/10' : alerta.severity === 'alto' ? 'bg-amber-500/10' : 'bg-muted/50'
                   }`}>
                     <span className="text-lg mt-0.5">{alerta.severity === 'critico' ? '🔴' : alerta.severity === 'alto' ? '🟡' : '🟠'}</span>
@@ -1039,7 +1050,8 @@ export default function CFODashboardPage() {
                       }`}>{alerta.severity}</div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
