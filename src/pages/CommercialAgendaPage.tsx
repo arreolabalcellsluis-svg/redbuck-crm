@@ -4,6 +4,7 @@
  * CRUD, reschedule, duplicate, export.
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { suggestTitles, detectCustomerStage, type CustomerStage } from '@/lib/onboardingEngine';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
