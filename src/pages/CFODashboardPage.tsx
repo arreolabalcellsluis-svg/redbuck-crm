@@ -1058,7 +1058,7 @@ export default function CFODashboardPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Slow Inventory */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/inventario-muerto')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Package size={16} /> Inventario sin Rotación
               </h3>
@@ -1081,7 +1081,7 @@ export default function CFODashboardPage() {
             </div>
 
             {/* Low Margin */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/rentabilidad')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <TrendingUp size={16} /> Productos Bajo Margen
               </h3>
@@ -1109,7 +1109,7 @@ export default function CFODashboardPage() {
             </div>
 
             {/* Capital Consuming Clients */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/cuentas-cobrar')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Eye size={16} /> Clientes que Consumen Capital
               </h3>
@@ -1134,7 +1134,7 @@ export default function CFODashboardPage() {
             </div>
 
             {/* Excess Inventory */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/sobrestock')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Layers size={16} /> Exceso de Inventario
               </h3>
