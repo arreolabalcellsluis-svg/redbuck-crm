@@ -3,12 +3,14 @@ import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Custom
 import { useAppContext } from '@/contexts/AppContext';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
+import { findDuplicates, scanGlobalDuplicates, type DuplicateMatch, type DuplicateGroup } from '@/lib/duplicateDetectionEngine';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye, Merge, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
 import { useAllCustomerFiscalData, useSaveCustomerFiscalData } from '@/hooks/useInvoicing';
 import { useQuotations } from '@/hooks/useQuotations';
@@ -17,10 +19,11 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useActivities, useAddActivity } from '@/hooks/useActivities';
 import { useOnboardingConfig } from '@/hooks/useOnboardingConfig';
 import { generateOnboardingActivities, buildWhatsAppLink } from '@/lib/onboardingEngine';
+import { useQueryClient } from '@tanstack/react-query';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-type Tab = 'clientes' | 'pipeline' | 'onboarding';
+type Tab = 'clientes' | 'pipeline' | 'onboarding' | 'duplicados';
 
 type FiscalData = {
   taxRegime: string;
