@@ -122,6 +122,7 @@ export async function generatePriceListPdf(
       .map(
         (p, i) => {
           const priceDistCalc = p.price_client > 0 ? p.price_client * 0.85 : 0;
+          const comDist = p.price_client > 0 ? p.price_client * 0.15 : 0;
           const comAdmin = p.price_client > 0 ? p.price_client * 0.025 : 0;
           return `
       <tr style="background:${i % 2 === 0 ? '#ffffff' : '#F5F5F5'};">
@@ -132,7 +133,7 @@ export async function generatePriceListPdf(
           ${p.image && imageCache[p.image] ? `<img src="${imageCache[p.image]}" style="height:40px;max-width:55px;object-fit:contain;" />` : '<span style="color:#ccc;font-size:9px;">Sin foto</span>'}
         </td>
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;font-weight:600;color:#C00000;">${p.price_client > 0 ? fmtPrice(p.price_client) : '—'}</td>
-        <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;font-weight:600;">${p.price_distributor > 0 ? fmtPrice(p.price_distributor) : '—'}</td>
+        <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;font-weight:600;">${priceDistCalc > 0 ? fmtPrice(priceDistCalc) : '—'}</td>
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;">${comDist > 0 ? fmtPrice(comDist) : '—'}</td>
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;">${comAdmin > 0 ? fmtPrice(comAdmin) : '—'}</td>
       </tr>
