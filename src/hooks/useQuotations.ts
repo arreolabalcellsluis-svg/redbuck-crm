@@ -103,11 +103,24 @@ export function useUpdateQuotationStatus() {
       }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ['quotations'] });
+      const previous = qc.getQueryData(['quotations']);
+      qc.setQueryData(['quotations'], (old: any[] | undefined) =>
+        old?.map(q => q.id === id ? { ...q, status, updated_at: new Date().toISOString() } : q) ?? []
+      );
+      return { previous };
+    },
+    onError: (e: any, _vars, context) => {
+      if (context?.previous) qc.setQueryData(['quotations'], context.previous);
+      toast({ title: 'Error al actualizar estatus', description: e.message, variant: 'destructive' });
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['quotations'] });
+    },
+    onSuccess: () => {
       toast({ title: 'Estatus actualizado' });
     },
-    onError: (e: any) => toast({ title: 'Error al actualizar', description: e.message, variant: 'destructive' }),
   });
 }
 
