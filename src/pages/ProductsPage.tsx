@@ -82,6 +82,11 @@ export default function ProductsPage() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   
+  // Datasheet PDF state
+  const [datasheetProduct, setDatasheetProduct] = useState<Product | null>(null);
+  const [datasheetSeller, setDatasheetSeller] = useState({ name: '', phone: '', email: '', note: '' });
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  
   const filtered = products.filter(p => {
     if (!p.active) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.sku.toLowerCase().includes(search.toLowerCase())) return false;
