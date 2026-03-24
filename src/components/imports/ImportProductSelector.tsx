@@ -102,6 +102,12 @@ function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onU
       productName: p.name,
       sku: p.sku,
       category: p.category,
+      brand: p.brand || '',
+      model: p.model || '',
+      description: p.description || '',
+      listPrice: p.list_price || 0,
+      minPrice: p.min_price || 0,
+      warranty: p.warranty || '',
       unitCost: p.cost || item.unitCost,
     });
     setSearch(p.name);
