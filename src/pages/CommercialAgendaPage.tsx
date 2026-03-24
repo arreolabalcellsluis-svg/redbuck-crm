@@ -82,7 +82,7 @@ export default function CommercialAgendaPage() {
     const state = location.state as any;
     if (state?.newActivityForCustomer) {
       const { customerId, customerName, vendorName, suggestedProduct } = state.newActivityForCustomer;
-      const vendor = demoUsers.find(u => u.name === vendorName && u.role === 'vendedor');
+      const vendor = dbTeamMembers.find(u => u.name === vendorName && u.role === 'vendedor');
       setForm({
         ...emptyActivity(),
         customerId: customerId || undefined,
