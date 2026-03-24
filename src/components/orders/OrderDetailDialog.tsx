@@ -4,11 +4,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DBOrder, useUpdateOrder } from '@/hooks/useOrders';
 import { DBOrderPayment } from '@/hooks/useOrderPayments';
 import { useInvoices } from '@/hooks/useInvoicing';
+import { useCommercialDocuments, useAddCommercialDocument, DOC_TYPES, DOC_TYPE_LABELS } from '@/hooks/useCommercialDocuments';
+import { generateCommercialDocPdf } from '@/lib/commercialDocPdf';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { addAuditLog } from '@/lib/auditLog';
 import { toast } from 'sonner';
-import { DollarSign, Truck, FileText, Image, Edit2, History, Package, AlertTriangle, Upload, X, Eye } from 'lucide-react';
+import { DollarSign, Truck, FileText, Image, Edit2, History, Package, AlertTriangle, Upload, X, Eye, FilePlus, Download, RefreshCw } from 'lucide-react';
 import ImageGalleryLightbox from '@/components/shared/ImageGalleryLightbox';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -28,6 +30,15 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
   const updateOrderMutation = useUpdateOrder();
   const { data: dbInvoices = [] } = useInvoices();
 
+  // Commercial documents
+  const { data: orderDocs = [] } = useCommercialDocuments(order?.id);
+  const addDocMutation = useAddCommercialDocument();
+  const [showDocGenerator, setShowDocGenerator] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState('nota_venta');
+  const [docNotes, setDocNotes] = useState('');
+  const [docConditions, setDocConditions] = useState('');
+  const [docLegalText, setDocLegalText] = useState('Precios sujetos a cambio sin previo aviso');
+
   // Shipping state
   const [shipping, setShipping] = useState({ transportista: '', guia_numero: '', fecha_envio: '' });
   const [shippingDirty, setShippingDirty] = useState(false);
@@ -45,7 +56,6 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
   const [uploading, setUploading] = useState(false);
 
   // Init shipping/invoice when order changes
-  const currentOrder = order;
   const linkedInvoice = useMemo(() => {
     if (!order) return null;
     return dbInvoices.find((inv: any) => inv.order_id === order.id) || null;
@@ -145,7 +155,6 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
     const changes: any[] = [];
     const oldItems = order.items || [];
 
-    // Detect changes
     editItems.forEach((newIt: any, i: number) => {
       const oldIt = oldItems[i];
       if (!oldIt) {
@@ -226,8 +235,86 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
     toast.success('Imagen eliminada');
   };
 
+  // Generate commercial document
+  const handleGenerateDoc = async () => {
+    const items = (order.items || []).map((it: any) => ({
+      name: it.name || it.productName || '',
+      qty: it.qty || 1,
+      unitPrice: it.unitPrice || 0,
+      subtotal: (it.qty || 1) * (it.unitPrice || 0),
+    }));
+    const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
+    const tax = Math.round(subtotal * 0.16);
+    const total = subtotal + tax;
+
+    const result = await addDocMutation.mutateAsync({
+      order_id: order.id,
+      doc_type: selectedDocType,
+      subtotal,
+      tax,
+      total,
+      items,
+      customer_name: order.customer_name,
+      customer_contact: '',
+      notes: docNotes,
+      conditions: docConditions,
+      legal_text: docLegalText,
+      vendor_name: order.vendor_name,
+      vendor_phone: '',
+      user_id: null,
+    });
+
+    // Generate PDF
+    await generateCommercialDocPdf({
+      docType: selectedDocType,
+      folio: result.folio,
+      date: new Date().toLocaleDateString('es-MX'),
+      customerName: order.customer_name,
+      customerContact: '',
+      vendorName: order.vendor_name,
+      vendorPhone: '',
+      items,
+      subtotal,
+      tax,
+      total,
+      notes: docNotes,
+      conditions: docConditions,
+      legalText: docLegalText,
+    });
+
+    addAuditLog({
+      userId: 'current', userName: 'Usuario actual', userRole: currentRole,
+      module: 'pedidos', action: 'generar_documento', entityId: order.id,
+      newValue: `${DOC_TYPE_LABELS[selectedDocType]} ${result.folio}`,
+      comment: `Documento generado para pedido ${order.folio}`,
+    });
+
+    setShowDocGenerator(false);
+    setDocNotes('');
+    setDocConditions('');
+  };
+
+  const handleRegenPdf = async (doc: any) => {
+    await generateCommercialDocPdf({
+      docType: doc.doc_type,
+      folio: doc.folio,
+      date: new Date(doc.created_at).toLocaleDateString('es-MX'),
+      customerName: doc.customer_name,
+      customerContact: doc.customer_contact,
+      vendorName: doc.vendor_name,
+      vendorPhone: doc.vendor_phone,
+      items: doc.items,
+      subtotal: doc.subtotal,
+      tax: doc.tax,
+      total: doc.total,
+      notes: doc.notes,
+      conditions: doc.conditions,
+      legalText: doc.legal_text,
+    });
+  };
+
   return (
-    <Dialog open={!!order} onOpenChange={() => { setEditMode(false); setEditConfirmed(false); onClose(); }}>
+    <Dialog open={!!order} onOpenChange={() => { setEditMode(false); setEditConfirmed(false); setShowDocGenerator(false); onClose(); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -257,7 +344,7 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
           </div>
         </div>
 
-        {/* Shipping status indicator */}
+        {/* Status indicators */}
         <div className="flex items-center gap-3 mb-2 text-xs">
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${order.transportista ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
             <Truck size={12} /> {order.transportista ? 'Envío registrado' : 'Sin envío'}
@@ -265,18 +352,24 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${linkedInvoice || order.invoice_number_manual ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
             <FileText size={12} /> {linkedInvoice ? `Factura ${(linkedInvoice as any).folio}` : order.invoice_number_manual ? `Factura ${order.invoice_number_manual}` : 'Sin factura'}
           </span>
+          {orderDocs.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary">
+              <FilePlus size={12} /> {orderDocs.length} doc(s)
+            </span>
+          )}
         </div>
 
         <Tabs defaultValue="general" className="w-full" onValueChange={(v) => {
           if (v === 'shipping') initShipping();
           if (v === 'invoicing') initInvoiceManual();
         }}>
-          <TabsList className="grid w-full grid-cols-6 text-xs">
+          <TabsList className="grid w-full grid-cols-7 text-xs">
             <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
             <TabsTrigger value="products" className="text-xs">Productos</TabsTrigger>
             <TabsTrigger value="payments" className="text-xs">Pagos</TabsTrigger>
             <TabsTrigger value="shipping" className="text-xs">Envío</TabsTrigger>
             <TabsTrigger value="invoicing" className="text-xs">Facturación</TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs">Documentos</TabsTrigger>
             <TabsTrigger value="evidence" className="text-xs">Evidencia</TabsTrigger>
           </TabsList>
 
@@ -445,7 +538,6 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
 
           {/* INVOICING */}
           <TabsContent value="invoicing" className="space-y-4 mt-3">
-            {/* System invoice */}
             {linkedInvoice && (
               <div className="p-3 rounded-lg border bg-primary/5">
                 <div className="text-xs font-medium text-primary mb-2">Factura del sistema</div>
@@ -458,7 +550,6 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
               </div>
             )}
 
-            {/* Manual invoice */}
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-2">Factura manual</div>
               <div className="grid grid-cols-2 gap-3">
@@ -476,11 +567,132 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
               )}
             </div>
 
-            {/* Generate invoice button */}
             {!linkedInvoice && !['cancelado', 'nuevo'].includes(order.status) && (
               <button onClick={() => onOpenInvoice(order)} className="w-full px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted flex items-center justify-center gap-2">
                 <FileText size={14} /> Generar factura desde sistema
               </button>
+            )}
+          </TabsContent>
+
+          {/* DOCUMENTS */}
+          <TabsContent value="documents" className="space-y-4 mt-3">
+            {!showDocGenerator ? (
+              <>
+                <button
+                  onClick={() => setShowDocGenerator(true)}
+                  className="w-full px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center justify-center gap-2"
+                >
+                  <FilePlus size={14} /> Generar documento
+                </button>
+
+                {orderDocs.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground">Documentos generados</div>
+                    {orderDocs.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                        <div>
+                          <div className="text-sm font-semibold">{DOC_TYPE_LABELS[doc.doc_type] || doc.doc_type}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Folio: <span className="font-mono font-medium">{doc.folio}</span> · {new Date(doc.created_at).toLocaleDateString('es-MX')} · {fmt(doc.total)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleRegenPdf(doc)}
+                            className="p-1.5 rounded-md hover:bg-muted text-primary"
+                            title="Ver / Descargar PDF"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleRegenPdf(doc)}
+                            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
+                            title="Regenerar PDF"
+                          >
+                            <RefreshCw size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground text-center py-6 border-2 border-dashed rounded-lg">
+                    Sin documentos generados para este pedido
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-sm font-medium">Generar documento comercial</div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Tipo de documento</label>
+                  <select
+                    value={selectedDocType}
+                    onChange={e => setSelectedDocType(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm"
+                  >
+                    {DOC_TYPES.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-lg bg-muted/50 text-xs space-y-1">
+                  <div className="font-medium text-sm mb-2">Resumen del pedido</div>
+                  {(order.items || []).map((it: any, i: number) => (
+                    <div key={i} className="flex justify-between">
+                      <span>{it.name || it.productName} x{it.qty}</span>
+                      <span>{fmt((it.qty || 0) * (it.unitPrice || 0))}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-1 mt-2 font-bold flex justify-between">
+                    <span>Total</span>
+                    <span>{fmt(order.total)}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Notas comerciales (opcional)</label>
+                  <textarea
+                    value={docNotes}
+                    onChange={e => setDocNotes(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm h-16 resize-none"
+                    placeholder="Ej. Garantía incluida por 12 meses..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Condiciones (opcional)</label>
+                  <input
+                    value={docConditions}
+                    onChange={e => setDocConditions(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm"
+                    placeholder="Ej. Pago a 30 días"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Texto legal (opcional)</label>
+                  <input
+                    value={docLegalText}
+                    onChange={e => setDocLegalText(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm"
+                    placeholder="Precios sujetos a cambio sin previo aviso"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowDocGenerator(false)} className="px-3 py-1.5 rounded-lg border text-xs hover:bg-muted">Cancelar</button>
+                  <button
+                    onClick={handleGenerateDoc}
+                    disabled={addDocMutation.isPending}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <FilePlus size={14} /> {addDocMutation.isPending ? 'Generando...' : 'Generar y descargar'}
+                  </button>
+                </div>
+              </div>
             )}
           </TabsContent>
 
