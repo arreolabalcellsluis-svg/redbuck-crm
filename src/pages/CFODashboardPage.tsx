@@ -45,6 +45,7 @@ const COLORS = ['hsl(142,71%,45%)', 'hsl(210,100%,52%)', 'hsl(38,92%,50%)', 'hsl
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 export default function CFODashboardPage() {
+  const navigate = useNavigate();
   const { data: dbExpenses } = useExpenses();
   const { data: dbAssets } = useAssets();
   const { data: dbPayables } = useAccountsPayable();
