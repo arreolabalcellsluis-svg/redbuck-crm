@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, AccountReceivable } from '@/types';
 import type { Payment } from '@/types/payments';
-import { useQuotations, useAddQuotation, useUpdateQuotationStatus } from '@/hooks/useQuotations';
+import { useQuotations, useAddQuotation, useUpdateQuotationStatus, useUpdateQuotation } from '@/hooks/useQuotations';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useAddOrder } from '@/hooks/useOrders';
