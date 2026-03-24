@@ -1057,16 +1057,24 @@ export type Database = {
           customer_id: string | null
           customer_name: string
           delivery_notes: string | null
+          edit_history: Json | null
+          fecha_envio: string | null
           folio: string
+          guia_numero: string | null
           id: string
+          invoice_date_manual: string | null
+          invoice_number_manual: string | null
+          invoice_pdf_url: string | null
           items: Json
           order_type: Database["public"]["Enums"]["order_type"]
           promise_date: string | null
           quotation_folio: string | null
           reserve_deadline: string | null
           scheduled_delivery_date: string | null
+          shipping_images: Json | null
           status: Database["public"]["Enums"]["order_status"]
           total: number
+          transportista: string | null
           updated_at: string
           user_id: string | null
           vendor_name: string
@@ -1079,16 +1087,24 @@ export type Database = {
           customer_id?: string | null
           customer_name: string
           delivery_notes?: string | null
+          edit_history?: Json | null
+          fecha_envio?: string | null
           folio: string
+          guia_numero?: string | null
           id?: string
+          invoice_date_manual?: string | null
+          invoice_number_manual?: string | null
+          invoice_pdf_url?: string | null
           items?: Json
           order_type?: Database["public"]["Enums"]["order_type"]
           promise_date?: string | null
           quotation_folio?: string | null
           reserve_deadline?: string | null
           scheduled_delivery_date?: string | null
+          shipping_images?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
+          transportista?: string | null
           updated_at?: string
           user_id?: string | null
           vendor_name?: string
@@ -1101,16 +1117,24 @@ export type Database = {
           customer_id?: string | null
           customer_name?: string
           delivery_notes?: string | null
+          edit_history?: Json | null
+          fecha_envio?: string | null
           folio?: string
+          guia_numero?: string | null
           id?: string
+          invoice_date_manual?: string | null
+          invoice_number_manual?: string | null
+          invoice_pdf_url?: string | null
           items?: Json
           order_type?: Database["public"]["Enums"]["order_type"]
           promise_date?: string | null
           quotation_folio?: string | null
           reserve_deadline?: string | null
           scheduled_delivery_date?: string | null
+          shipping_images?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
+          transportista?: string | null
           updated_at?: string
           user_id?: string | null
           vendor_name?: string
