@@ -50,10 +50,11 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
+  const { data: teamMembers = [] } = useTeamMembers();
   const [currentRole, setCurrentRole] = useState<UserRole>('director');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>(buildInitialSeries(demoUsers));
+  const [vendorSeries, setVendorSeries] = useState<VendorSeriesMap>({});
 
   // Shared state for orders, receivables, payments
   const [orders, setOrders] = useState<Order[]>([]);
