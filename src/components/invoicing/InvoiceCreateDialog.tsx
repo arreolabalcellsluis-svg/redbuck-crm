@@ -445,7 +445,7 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label>Serie</Label>
-                <Input value={series} onChange={e => setSeries(e.target.value.toUpperCase())} maxLength={5} />
+                <Input value={series} onChange={e => { const s = e.target.value.toUpperCase(); setSeries(s); setFolio(getNextFolioForSeries(s)); }} maxLength={5} />
               </div>
               <div className="space-y-1.5">
                 <Label>Folio (auto)</Label>
