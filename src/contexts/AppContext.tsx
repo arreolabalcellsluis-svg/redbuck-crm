@@ -86,11 +86,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const consumeFolio = useCallback((vendorId: string) => {
     setVendorSeries(prev => {
-      const vendor = demoUsers.find(u => u.id === vendorId);
+      const vendor = teamMembers.find(u => u.id === vendorId);
       const current = prev[vendorId] ?? vendor?.seriesStart ?? 1000;
       return { ...prev, [vendorId]: current + 1 };
     });
-  }, []);
+  }, [teamMembers]);
 
   const addQuotation = useCallback((q: Quotation) => {
     setQuotations(prev => {
