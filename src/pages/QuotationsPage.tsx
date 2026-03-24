@@ -899,7 +899,7 @@ export default function QuotationsPage() {
                 <select value={selectedVendorId} onChange={e => setSelectedVendorId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
                   <option value="">Seleccionar vendedor...</option>
                   {vendors.map(v => {
-                    const current = vendorSeries[v.id] ?? v.seriesStart ?? 1000;
+                    const current = getVendorCurrentNum(v.id);
                     return <option key={v.id} value={v.id}>{v.name} — Serie {v.seriesPrefix} (siguiente: {v.seriesPrefix}-{current + 1})</option>;
                   })}
                 </select>
