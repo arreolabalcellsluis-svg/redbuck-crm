@@ -60,9 +60,16 @@ export default function ImportsPage() {
       estimatedDeparture: imp.estimatedDeparture, estimatedArrival: imp.estimatedArrival,
       freightCost: imp.freightCost, customsCost: imp.customsCost, status: imp.status,
       exchangeRate: imp.exchangeRate,
-    });
-    setItems([...imp.items]);
-    setOpen(true);
+    setItems(imp.items.map((it: any) => ({
+      productId: it.productId || null,
+      productName: it.productName || '',
+      sku: it.sku || '',
+      category: it.category || '',
+      qty: it.qty || 1,
+      unitCost: it.unitCost || 0,
+      cbm: it.cbm || 0,
+      peso: it.peso || 0,
+    })));
   };
 
   const resetForm = () => {
