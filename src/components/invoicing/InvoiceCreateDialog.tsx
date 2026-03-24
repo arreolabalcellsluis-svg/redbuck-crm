@@ -27,6 +27,7 @@ const DOCUMENT_TYPES = [
   { code: 'N', label: 'Recibo de Honorarios' },
   { code: 'E', label: 'Nota de Crédito' },
   { code: 'D', label: 'Nota de Devolución' },
+  { code: 'V', label: 'Nota de Venta' },
 ] as const;
 
 
