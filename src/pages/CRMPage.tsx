@@ -121,6 +121,7 @@ export default function CRMPage() {
     return match || null;
   }, [form.phone, allCustomers, editingCustomer]);
 
+  const handleDeleteCustomer = () => {
     if (!editingCustomer) return;
     deleteCustomerMut.mutate(editingCustomer.id, {
       onSuccess: () => {
