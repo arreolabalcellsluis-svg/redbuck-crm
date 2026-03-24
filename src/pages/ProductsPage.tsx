@@ -275,7 +275,31 @@ export default function ProductsPage() {
     });
   };
 
-  const getWarehouseNames = (stock: Record<string, number>) => {
+  const handleGenerateDatasheet = async () => {
+    if (!datasheetProduct) return;
+    if (!datasheetSeller.name.trim() || !datasheetSeller.phone.trim()) {
+      toast.error('Nombre y teléfono del vendedor son obligatorios');
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      await generateProductDatasheet({
+        product: datasheetProduct,
+        exchangeRate,
+        sellerName: datasheetSeller.name,
+        sellerPhone: datasheetSeller.phone,
+        sellerEmail: datasheetSeller.email || undefined,
+        customNote: datasheetSeller.note || undefined,
+      });
+      toast.success('Ficha técnica generada');
+    } catch {
+      toast.error('Error al generar ficha técnica');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+
     return Object.entries(stock)
       .filter(([, qty]) => qty > 0)
       .map(([wId, qty]) => ({ name: warehouseMap[wId] || wId, qty }));
