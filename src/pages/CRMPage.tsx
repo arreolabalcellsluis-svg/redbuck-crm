@@ -591,6 +591,14 @@ export default function CRMPage() {
                 </div>
                 <div className="text-2xl font-bold">{onboardingConfig.enabled ? '✅ Activa' : '⏸️ Pausada'}</div>
                 <div className="text-[10px] text-muted-foreground mt-1">Días: {onboardingConfig.followUpDays.join(', ')}</div>
+                {currentRole === 'director' && (
+                  <button
+                    onClick={() => saveOnboardingConfig({ ...onboardingConfig, enabled: !onboardingConfig.enabled })}
+                    className={`mt-2 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${onboardingConfig.enabled ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                  >
+                    {onboardingConfig.enabled ? 'Desactivar' : 'Activar'}
+                  </button>
+                )}
               </div>
             </div>
 
