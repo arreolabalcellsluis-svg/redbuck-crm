@@ -86,12 +86,17 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
   const fiscalMap = useMemo(() => new Map((customerFiscal ?? []).map(f => [f.customer_id, f])), [customerFiscal]);
   const prodFiscalMap = useMemo(() => new Map((productFiscal ?? []).map(f => [f.product_id, f])), [productFiscal]);
 
-  // Auto-generate next folio number based on highest existing folio
-  const nextFolio = useMemo(() => {
-    const folios = (existingInvoices ?? []).map(inv => parseInt(inv.folio, 10)).filter(n => !isNaN(n));
+  // Auto-generate next folio number based on highest existing folio for the current series
+  const getNextFolioForSeries = (s: string) => {
+    const folios = (existingInvoices ?? [])
+      .filter(inv => inv.series === s)
+      .map(inv => parseInt(inv.folio, 10))
+      .filter(n => !isNaN(n));
     const maxFolio = folios.length > 0 ? Math.max(...folios) : 0;
     return String(maxFolio + 1).padStart(3, '0');
-  }, [existingInvoices]);
+  };
+
+  const nextFolio = useMemo(() => getNextFolioForSeries(series), [existingInvoices, series]);
 
   // Reset on open
   useEffect(() => {
@@ -440,11 +445,11 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label>Serie</Label>
-                <Input value={series} onChange={e => setSeries(e.target.value.toUpperCase())} maxLength={5} />
+                <Input value={series} onChange={e => { const s = e.target.value.toUpperCase(); setSeries(s); setFolio(getNextFolioForSeries(s)); }} maxLength={5} />
               </div>
               <div className="space-y-1.5">
-                <Label>Folio *</Label>
-                <Input value={folio} onChange={e => setFolio(e.target.value)} placeholder="001" />
+                <Label>Folio (auto)</Label>
+                <Input value={folio} readOnly className="bg-muted" />
               </div>
               <div className="space-y-1.5">
                 <Label>Forma de Pago</Label>
