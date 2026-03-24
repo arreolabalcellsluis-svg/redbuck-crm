@@ -21,6 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   Target, Trophy, TrendingUp, Users, FileText, ShoppingCart, DollarSign,
   ArrowUpDown, Save, BadgeDollarSign, Star, AlertTriangle, BarChart3, Settings2,
+  Briefcase, CreditCard, ShieldCheck,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
