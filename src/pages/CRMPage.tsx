@@ -331,9 +331,9 @@ export default function CRMPage() {
       })()}
 
       <div className="flex items-center gap-1 mb-4 border-b">
-        {(['clientes', 'pipeline'] as Tab[]).map(t => (
+        {(['clientes', 'pipeline', 'onboarding'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-            {t === 'clientes' ? 'Clientes' : 'Pipeline'}
+            {t === 'clientes' ? 'Clientes' : t === 'pipeline' ? 'Pipeline' : '⚡ Onboarding'}
           </button>
         ))}
       </div>
