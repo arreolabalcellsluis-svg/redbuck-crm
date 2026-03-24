@@ -703,6 +703,84 @@ export default function CRMPage() {
       })()}
 
 
+      {/* ═══ DUPLICADOS TAB ═══ */}
+      {tab === 'duplicados' && (
+        <div className="space-y-4">
+          <div className="bg-card rounded-xl border p-4">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
+              <Copy size={18} /> Detección de Duplicados
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Se escanearon {allCustomers.length} clientes — {globalDuplicates.length} grupo(s) de posibles duplicados.
+            </p>
+
+            {globalDuplicates.length === 0 && (
+              <div className="text-center text-muted-foreground py-12 border border-dashed rounded-xl">
+                <CheckCircle2 className="mx-auto mb-2 text-green-500" size={32} />
+                <p className="font-medium">Base de datos limpia</p>
+                <p className="text-xs">No se detectaron clientes duplicados</p>
+              </div>
+            )}
+
+            {globalDuplicates.map((group, gi) => (
+              <div key={gi} className="mb-4 border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 flex items-center gap-2 text-sm font-medium">
+                  <AlertTriangle size={14} className="text-yellow-600" />
+                  {group.reason}
+                  <span className="ml-auto text-xs text-muted-foreground">{group.customers.length} registros</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/30">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Nombre</th>
+                        <th className="px-3 py-2 text-left">Teléfono</th>
+                        <th className="px-3 py-2 text-left">Email</th>
+                        <th className="px-3 py-2 text-left">Vendedor</th>
+                        <th className="px-3 py-2 text-left">Registro</th>
+                        <th className="px-3 py-2 text-left">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {group.customers.map(c => (
+                        <tr key={c.id} className="hover:bg-muted/20">
+                          <td className="px-3 py-2 font-medium">{c.name}</td>
+                          <td className="px-3 py-2">{c.phone}</td>
+                          <td className="px-3 py-2">{c.email || '—'}</td>
+                          <td className="px-3 py-2">{resolveVendor(c.vendorId)}</td>
+                          <td className="px-3 py-2">{c.createdAt}</td>
+                          <td className="px-3 py-2">
+                            <button onClick={() => setViewingCustomer(c)} className="text-primary hover:underline text-xs">Ver</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {(currentRole === 'director' || currentRole === 'gerencia_comercial') && group.customers.length === 2 && (
+                  <div className="px-4 py-3 bg-muted/20 border-t flex items-center gap-2 flex-wrap">
+                    <Merge size={14} className="text-primary" />
+                    <span className="text-xs text-muted-foreground">Fusionar:</span>
+                    <button
+                      onClick={() => setMergeDialog({ primary: group.customers[0], secondary: group.customers[1] })}
+                      className="text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      Mantener "{group.customers[0].name}"
+                    </button>
+                    <button
+                      onClick={() => setMergeDialog({ primary: group.customers[1], secondary: group.customers[0] })}
+                      className="text-xs px-3 py-1 rounded-md border hover:bg-accent"
+                    >
+                      Mantener "{group.customers[1].name}"
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
