@@ -73,6 +73,9 @@ export default function CRMPage() {
   const { data: dbQuotations = [] } = useQuotations();
   const { data: dbOrders = [] } = useOrders();
   const { data: dbTeam = [] } = useTeamMembers();
+  const { data: dbActivities = [] } = useActivities();
+  const addActivityMut = useAddActivity();
+  const { config: onboardingConfig } = useOnboardingConfig();
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
