@@ -121,7 +121,7 @@ export async function generatePriceListPdf(
     const rowsHtml = items
       .map(
         (p, i) => {
-          const comDist = p.price_client > 0 ? p.price_client * 0.15 : 0;
+          const priceDistCalc = p.price_client > 0 ? p.price_client * 0.85 : 0;
           const comAdmin = p.price_client > 0 ? p.price_client * 0.025 : 0;
           return `
       <tr style="background:${i % 2 === 0 ? '#ffffff' : '#F5F5F5'};">
