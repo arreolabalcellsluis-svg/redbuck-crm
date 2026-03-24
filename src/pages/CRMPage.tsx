@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { exportCRMToExcel } from '@/lib/exportUtils';
