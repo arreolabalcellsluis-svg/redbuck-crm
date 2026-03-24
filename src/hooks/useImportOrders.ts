@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { ImportOrder, ImportStatus } from '@/types';
+import type { ImportOrder, ImportStatus, ImportExpenses } from '@/types';
+
+const DEFAULT_EXPENSES: ImportExpenses = {
+  fleteLocalChina: 0, fleteInternacionalMaritimo: 0, igi: 0, dta: 0, prevalidacion: 0,
+  gastosLocalesNaviera: 0, maniobrasPuerto: 0, seguro: 0, honorariosDespachoAduanal: 0,
+  comercializadora: 0, fleteTerrestreGdl: 0,
+};
 
 function dbToImport(row: any): ImportOrder {
   return {
@@ -23,6 +29,38 @@ function dbToImport(row: any): ImportOrder {
     customsCost: Number(row.customs_cost),
     totalLanded: Number(row.total_landed),
     daysInTransit: Number(row.days_in_transit),
+    expenses: {
+      fleteLocalChina: Number(row.flete_local_china ?? 0),
+      fleteInternacionalMaritimo: Number(row.flete_internacional_maritimo ?? 0),
+      igi: Number(row.igi ?? 0),
+      dta: Number(row.dta ?? 0),
+      prevalidacion: Number(row.prevalidacion ?? 0),
+      gastosLocalesNaviera: Number(row.gastos_locales_naviera ?? 0),
+      maniobrasPuerto: Number(row.maniobras_puerto ?? 0),
+      seguro: Number(row.seguro ?? 0),
+      honorariosDespachoAduanal: Number(row.honorarios_despacho_aduanal ?? 0),
+      comercializadora: Number(row.comercializadora ?? 0),
+      fleteTerrestreGdl: Number(row.flete_terrestre_gdl ?? 0),
+    },
+    pesoTotalKg: Number(row.peso_total_kg ?? 0),
+    volumenTotalCbm: Number(row.volumen_total_cbm ?? 0),
+    numeroContenedores: Number(row.numero_contenedores ?? 1),
+  };
+}
+
+function expensesToDb(exp: ImportExpenses) {
+  return {
+    flete_local_china: exp.fleteLocalChina,
+    flete_internacional_maritimo: exp.fleteInternacionalMaritimo,
+    igi: exp.igi,
+    dta: exp.dta,
+    prevalidacion: exp.prevalidacion,
+    gastos_locales_naviera: exp.gastosLocalesNaviera,
+    maniobras_puerto: exp.maniobrasPuerto,
+    seguro: exp.seguro,
+    honorarios_despacho_aduanal: exp.honorariosDespachoAduanal,
+    comercializadora: exp.comercializadora,
+    flete_terrestre_gdl: exp.fleteTerrestreGdl,
   };
 }
 
@@ -64,7 +102,11 @@ export function useAddImportOrder() {
         total_landed: imp.totalLanded,
         days_in_transit: imp.daysInTransit,
         user_id: user?.id ?? null,
-      });
+        peso_total_kg: imp.pesoTotalKg,
+        volumen_total_cbm: imp.volumenTotalCbm,
+        numero_contenedores: imp.numeroContenedores,
+        ...expensesToDb(imp.expenses),
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -97,6 +139,10 @@ export function useUpdateImportOrder() {
       if (imp.customsCost !== undefined) updates.customs_cost = imp.customsCost;
       if (imp.totalLanded !== undefined) updates.total_landed = imp.totalLanded;
       if (imp.daysInTransit !== undefined) updates.days_in_transit = imp.daysInTransit;
+      if (imp.pesoTotalKg !== undefined) updates.peso_total_kg = imp.pesoTotalKg;
+      if (imp.volumenTotalCbm !== undefined) updates.volumen_total_cbm = imp.volumenTotalCbm;
+      if (imp.numeroContenedores !== undefined) updates.numero_contenedores = imp.numeroContenedores;
+      if (imp.expenses !== undefined) Object.assign(updates, expensesToDb(imp.expenses));
       const { error } = await supabase.from('import_orders').update(updates).eq('id', id);
       if (error) throw error;
     },
