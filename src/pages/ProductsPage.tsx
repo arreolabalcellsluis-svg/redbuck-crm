@@ -44,7 +44,9 @@ function dbToProduct(db: DBProduct): Product {
   };
 }
 
-const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string } => ({
+type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string; capacity?: string; priceClient?: number; priceDistributor?: number; commissionDistributor?: number; commissionAdmin?: number };
+
+const emptyProduct = (): ProductForm => ({
   sku: '', name: '', category: 'elevadores', brand: 'Redbuck', model: '', description: '',
   images: [],
   listPrice: 0, minPrice: 0, cost: 0, currency: 'USD', deliveryDays: 5,
@@ -52,8 +54,6 @@ const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?:
   satProductKey: '', satUnitKey: '', taxObject: '02', taxFamily: '16',
   capacity: '', priceClient: 0, priceDistributor: 0, commissionDistributor: 0, commissionAdmin: 0,
 });
-
-type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string; capacity?: string; priceClient?: number; priceDistributor?: number; commissionDistributor?: number; commissionAdmin?: number };
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
