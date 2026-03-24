@@ -90,6 +90,34 @@ export default function ProductsPage() {
   const [datasheetProduct, setDatasheetProduct] = useState<Product | null>(null);
   const [datasheetSeller, setDatasheetSeller] = useState({ name: '', phone: '', email: '', note: '' });
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [generatingPriceList, setGeneratingPriceList] = useState(false);
+  const [priceListCategory, setPriceListCategory] = useState<string>('all');
+  const [showPriceListDialog, setShowPriceListDialog] = useState(false);
+
+  const handleGeneratePriceList = async () => {
+    setGeneratingPriceList(true);
+    try {
+      const priceProducts: PriceListProduct[] = (dbProducts ?? []).map(p => ({
+        sku: p.sku,
+        name: p.name,
+        capacity: (p as any).capacity || p.model || '',
+        image: p.image,
+        price_client: (p as any).price_client || p.list_price || 0,
+        price_distributor: (p as any).price_distributor || p.min_price || 0,
+        commission_distributor: (p as any).commission_distributor || 0,
+        commission_admin: (p as any).commission_admin || 0,
+        category: p.category,
+        active: p.active,
+      }));
+      await generatePriceListPdf(priceProducts, priceListCategory);
+      toast.success('Lista de precios generada');
+    } catch {
+      toast.error('Error al generar lista de precios');
+    } finally {
+      setGeneratingPriceList(false);
+      setShowPriceListDialog(false);
+    }
+  };
   
   const filtered = products.filter(p => {
     if (!p.active) return false;
