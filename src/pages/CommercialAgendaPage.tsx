@@ -325,34 +325,82 @@ export default function CommercialAgendaPage() {
   function ActivityFormFields() {
     // Smart title suggestions
     const hasQuotation = !!form.quotationId;
-    const stage: CustomerStage = form.customerId
+    const autoStage: CustomerStage = form.customerId
       ? detectCustomerStage(form.customerId, dbActivities as any[], hasQuotation)
       : 'nuevo';
+    const [manualStage, setManualStage] = useState<CustomerStage | null>(null);
+    const stage = manualStage ?? autoStage;
     const suggestions = suggestTitles(form.type, stage, form.productName, form.customerName);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
+    const stageOptions: { key: CustomerStage; label: string; emoji: string }[] = [
+      { key: 'nuevo', label: 'Nuevo', emoji: '🆕' },
+      { key: 'seguimiento', label: 'Seguimiento', emoji: '🔄' },
+      { key: 'cierre', label: 'Cierre', emoji: '🎯' },
+      { key: 'reactivacion', label: 'Reactivación', emoji: '🔥' },
+    ];
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Etapa del cliente */}
+        <div className="md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Etapa del cliente</label>
+          <div className="flex flex-wrap gap-2">
+            {stageOptions.map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  setManualStage(opt.key);
+                  setShowSuggestions(true);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  stage === opt.key
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50'
+                }`}
+              >
+                {opt.emoji} {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Título con sugerencias */}
         <div className="md:col-span-2 relative">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Título *</label>
-          <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-            onFocus={() => setShowSuggestions(true)}
-            className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Descripción de la actividad" />
+          <div className="flex gap-2">
+            <input
+              value={form.title}
+              onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              className="flex-1 px-3 py-2 rounded-lg border bg-card text-sm"
+              placeholder="Escribe el título o selecciona una sugerencia"
+            />
+            <button
+              type="button"
+              onClick={() => setShowSuggestions(!showSuggestions)}
+              className="px-3 py-2 rounded-lg border bg-muted/50 text-xs font-medium hover:bg-primary/10 transition-colors whitespace-nowrap"
+              title="Ver sugerencias"
+            >
+              💡 Sugerencias
+            </button>
+          </div>
           {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border rounded-lg shadow-lg max-h-52 overflow-y-auto">
               <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b bg-muted/50">
-                💡 Sugerencias de título ({stage === 'nuevo' ? 'Nuevo' : stage === 'seguimiento' ? 'Seguimiento' : stage === 'cierre' ? 'Cierre' : 'Reactivación'})
+                💡 Sugerencias — Etapa: {stageOptions.find(o => o.key === stage)?.emoji} {stageOptions.find(o => o.key === stage)?.label}
               </div>
               {suggestions.map((s, i) => (
                 <button key={i} type="button"
+                  onMouseDown={e => e.preventDefault()}
                   onClick={() => { setForm(p => ({ ...p, title: s })); setShowSuggestions(false); }}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors border-b last:border-b-0">
                   {s}
                 </button>
               ))}
-              <button type="button" onClick={() => setShowSuggestions(false)}
+              <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => setShowSuggestions(false)}
                 className="w-full text-center px-3 py-1.5 text-[10px] text-muted-foreground hover:bg-muted transition-colors">
-                Cerrar sugerencias
+                ✕ Cerrar
               </button>
             </div>
           )}
