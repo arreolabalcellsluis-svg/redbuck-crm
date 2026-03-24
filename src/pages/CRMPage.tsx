@@ -159,7 +159,7 @@ export default function CRMPage() {
   }, [dbQuotations, dbOrders, allCustomers, dbTeam]);
 
   const cities = useMemo(() => [...new Set(allCustomers.map(c => c.city).filter(Boolean))].sort(), [allCustomers]);
-  const vendors = useMemo(() => {
+  const filterVendorOptions = useMemo(() => {
     const ids = [...new Set(allCustomers.map(c => c.vendorId).filter(Boolean))];
     return ids.map(id => ({ id, name: dbTeam.find(t => t.id === id)?.name || id })).sort((a, b) => a.name.localeCompare(b.name));
   }, [allCustomers, dbTeam]);
