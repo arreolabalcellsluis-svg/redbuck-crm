@@ -476,6 +476,54 @@ export default function VendorGoalsPage() {
             <CommissionConfigEditor config={commissionConfig} onSave={(key, val) => updateConfig.mutate({ key, value: val })} />
           </TabsContent>
         )}
+
+        {/* ═══ GERENTE COMERCIAL ═══ */}
+        {isAdmin && (
+          <TabsContent value="gerente" className="space-y-4">
+            <AreaGoalsSection
+              area="gerente_comercial"
+              areaLabel="Gerente Comercial"
+              config={gerenteConfig}
+              ctx={areaCalcContext}
+              month={month}
+              year={year}
+              onSave={c => upsertAreaGoal.mutate(c)}
+              isSaving={upsertAreaGoal.isPending}
+            />
+          </TabsContent>
+        )}
+
+        {/* ═══ COBRANZA ═══ */}
+        {isAdmin && (
+          <TabsContent value="cobranza" className="space-y-4">
+            <AreaGoalsSection
+              area="cobranza"
+              areaLabel="Equipo de Cobranza"
+              config={cobranzaConfig}
+              ctx={areaCalcContext}
+              month={month}
+              year={year}
+              onSave={c => upsertAreaGoal.mutate(c)}
+              isSaving={upsertAreaGoal.isPending}
+            />
+          </TabsContent>
+        )}
+
+        {/* ═══ ADMINISTRACIÓN ═══ */}
+        {isAdmin && (
+          <TabsContent value="admin_area" className="space-y-4">
+            <AreaGoalsSection
+              area="administracion"
+              areaLabel="Administración"
+              config={adminConfig}
+              ctx={areaCalcContext}
+              month={month}
+              year={year}
+              onSave={c => upsertAreaGoal.mutate(c)}
+              isSaving={upsertAreaGoal.isPending}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
