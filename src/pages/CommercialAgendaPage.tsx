@@ -218,10 +218,12 @@ export default function CommercialAgendaPage() {
   const clearFilters = () => { setSearch(''); setFilterType(''); setFilterStatus(''); setFilterVendor(''); };
   const hasActiveFilters = !!(search || filterType || filterStatus || filterVendor);
 
-  // ─── KPIs ────────────────────────────────────────────────
-  const todayActs = getActivitiesForDate(filtered, TODAY);
-  const overdue = getOverdueActivities(filtered, TODAY);
-  const pending = getPendingActivities(filtered);
+  // ─── KPIs (always from unfiltered data) ───────────────────
+  const allTodayActs = getActivitiesForDate(dbActivities, TODAY);
+  const allOverdue = getOverdueActivities(dbActivities, TODAY);
+  const allPending = getPendingActivities(dbActivities);
+  const todayDoneCount = allTodayActs.filter(a => a.status === 'realizada').length;
+  const todayPendingCount = allTodayActs.filter(a => a.status === 'pendiente' || a.status === 'en_proceso').length;
 
   // ─── Sub-components ──────────────────────────────────────
   function PriorityDot({ p }: { p: string }) {
@@ -525,12 +527,20 @@ export default function CommercialAgendaPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — clickable, from real unfiltered data */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Hoy pendientes" value={todayActs.filter(a => a.status === 'pendiente').length} icon={Clock} variant="warning" />
-        <MetricCard title="Vencidas" value={overdue.length} icon={AlertTriangle} variant="danger" />
-        <MetricCard title="Realizadas hoy" value={todayActs.filter(a => a.status === 'realizada').length} icon={CheckCircle2} variant="success" />
-        <MetricCard title="Total pendientes" value={pending.length} icon={CalendarDays} variant="primary" />
+        <button onClick={() => { setView('daily'); setCurrentDate(TODAY); setFilterStatus('pendiente'); }} className="text-left">
+          <MetricCard title="Hoy pendientes" value={todayPendingCount} icon={Clock} variant="warning" />
+        </button>
+        <button onClick={() => { setView('pending'); setFilterStatus(''); }} className="text-left">
+          <MetricCard title="Vencidas" value={allOverdue.length} icon={AlertTriangle} variant="danger" />
+        </button>
+        <button onClick={() => { setView('daily'); setCurrentDate(TODAY); setFilterStatus('realizada'); }} className="text-left">
+          <MetricCard title="Realizadas hoy" value={todayDoneCount} icon={CheckCircle2} variant="success" />
+        </button>
+        <button onClick={() => { setView('pending'); setFilterStatus(''); }} className="text-left">
+          <MetricCard title="Total pendientes" value={allPending.length} icon={CalendarDays} variant="primary" />
+        </button>
       </div>
 
       {/* View toggle + search + filters */}
@@ -605,16 +615,26 @@ export default function CommercialAgendaPage() {
             </div>
             <button onClick={() => navigateDate(1)} className="p-2 rounded-lg hover:bg-muted"><ChevronRight size={18} /></button>
           </div>
-          <div className="space-y-2">
-            {getActivitiesForDate(filtered, currentDate).sort((a, b) => (a.time ?? '99:99').localeCompare(b.time ?? '99:99')).map(act => (
-              <ActivityCard key={act.id} act={act} />
-            ))}
-            {getActivitiesForDate(filtered, currentDate).length === 0 && (
+          {(() => {
+            const priorityOrder: Record<string, number> = { alta: 0, media: 1, baja: 2 };
+            const statusOrder: Record<string, number> = { pendiente: 0, en_proceso: 1, reagendada: 2, no_realizada: 3, realizada: 4, cancelada: 5 };
+            const dayActs = getActivitiesForDate(filtered, currentDate).sort((a, b) => {
+              const sd = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
+              if (sd !== 0) return sd;
+              const pd = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+              if (pd !== 0) return pd;
+              return (a.time ?? '99:99').localeCompare(b.time ?? '99:99');
+            });
+            return dayActs.length > 0 ? (
+              <div className="space-y-2">
+                {dayActs.map(act => <ActivityCard key={act.id} act={act} />)}
+              </div>
+            ) : (
               <div className="text-center text-muted-foreground py-12 border border-dashed rounded-xl">
                 Sin actividades para este día
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
 
@@ -705,15 +725,27 @@ export default function CommercialAgendaPage() {
       )}
 
       {/* ═══ PENDING LIST ═══ */}
-      {view === 'pending' && (
+      {view === 'pending' && (() => {
+        const priorityOrder = { alta: 0, media: 1, baja: 2 };
+        const statusOrder = { pendiente: 0, en_proceso: 1, reagendada: 2, no_realizada: 3, realizada: 4, cancelada: 5 };
+        const sortByPriority = (a: Activity, b: Activity) => {
+          const pd = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+          if (pd !== 0) return pd;
+          const sd = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
+          if (sd !== 0) return sd;
+          return a.date.localeCompare(b.date);
+        };
+        const overdueList = getOverdueActivities(filtered, TODAY).sort(sortByPriority);
+        const pendingList = getPendingActivities(filtered).filter(a => a.date >= TODAY).sort(sortByPriority);
+        return (
         <div>
-          {overdue.length > 0 && (
+          {overdueList.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-bold text-destructive flex items-center gap-2 mb-2">
-                <AlertTriangle size={14} /> Vencidas ({overdue.length})
+                <AlertTriangle size={14} /> Vencidas ({overdueList.length})
               </h3>
               <div className="space-y-2">
-                {overdue.map(act => (
+                {overdueList.map(act => (
                   <div key={act.id} className="border-l-2 border-l-destructive pl-3">
                     <ActivityCard act={act} />
                   </div>
@@ -722,23 +754,24 @@ export default function CommercialAgendaPage() {
             </div>
           )}
           <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
-            <Clock size={14} className="text-warning" /> Pendientes ({pending.filter(a => a.date >= TODAY).length})
+            <Clock size={14} className="text-warning" /> Pendientes ({pendingList.length})
           </h3>
           <div className="space-y-2">
-            {pending.filter(a => a.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)).map(act => (
+            {pendingList.map(act => (
               <div key={act.id} className="flex items-center gap-3">
                 <div className="text-[10px] text-muted-foreground w-16 shrink-0 text-right">{act.date.slice(5)}</div>
                 <div className="flex-1"><ActivityCard act={act} /></div>
               </div>
             ))}
-            {pending.filter(a => a.date >= TODAY).length === 0 && (
+            {pendingList.length === 0 && (
               <div className="text-center text-muted-foreground py-8 border border-dashed rounded-xl">
                 ¡Sin actividades pendientes!
               </div>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ═══ CREATE DIALOG ═══ */}
       <Dialog open={showCreate} onOpenChange={open => {
