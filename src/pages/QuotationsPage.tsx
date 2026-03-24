@@ -1334,8 +1334,8 @@ export default function QuotationsPage() {
                   </div>
                   <DialogFooter>
                     <button onClick={() => setOrderTypeStep(selectedOrderType === 'directo' ? 'select' : 'details')} className="px-4 py-2 rounded-lg border text-sm">Atrás</button>
-                    <button onClick={handleGenerateOrder} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2">
-                      <ShoppingCart size={16} /> Generar pedido
+                    <button onClick={handleGenerateOrder} disabled={addOrderMutation.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2 disabled:opacity-50">
+                      {addOrderMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />} {addOrderMutation.isPending ? 'Generando...' : 'Generar pedido'}
                     </button>
                   </DialogFooter>
                 </div>
