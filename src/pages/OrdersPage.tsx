@@ -639,72 +639,16 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ORDER DETAIL / ACCOUNT STATEMENT */}
-      <Dialog open={!!detailOrder} onOpenChange={() => setDetailOrder(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {detailOrder && (() => {
-            const paid = getTotalPaid(detailOrder.id);
-            const balance = Math.max(0, detailOrder.total - paid);
-            const orderPays = getOrderPayments(detailOrder.id);
-            return (
-              <>
-                <DialogHeader>
-                  <DialogTitle>Pedido {detailOrder.folio}</DialogTitle>
-                  <DialogDescription>{detailOrder.customerName} — {detailOrder.vendorName}</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="p-3 rounded-lg bg-muted/50 text-center">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
-                    <div className="font-bold text-lg">{fmt(detailOrder.total)}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-success/10 text-center">
-                    <div className="text-[10px] uppercase tracking-wider text-success">Pagado</div>
-                    <div className="font-bold text-lg text-success">{fmt(paid)}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-destructive/10 text-center">
-                    <div className="text-[10px] uppercase tracking-wider text-destructive">Saldo</div>
-                    <div className="font-bold text-lg text-destructive">{fmt(balance)}</div>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">Productos</div>
-                  <div className="space-y-1">
-                    {detailOrder.items.map((it, i) => (
-                      <div key={i} className="flex justify-between text-sm p-2 rounded bg-muted/30">
-                        <span>{it.productName} x{it.qty}</span>
-                        <span className="font-semibold">{fmt(it.qty * it.unitPrice)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">Historial de pagos</div>
-                  {detailOrder.advance > 0 && (
-                    <div className="flex justify-between text-xs p-2 rounded bg-success/5 mb-1">
-                      <span>Anticipo inicial</span>
-                      <span className="font-semibold text-success">{fmt(detailOrder.advance)}</span>
-                    </div>
-                  )}
-                  {orderPays.length > 0 ? orderPays.map(p => (
-                    <div key={p.id} className="flex justify-between text-xs p-2 rounded bg-success/5 mb-1">
-                      <span>{p.payment_date} · {p.method} {p.reference && `· Ref: ${p.reference}`}</span>
-                      <span className="font-semibold text-success">{fmt(p.amount)}</span>
-                    </div>
-                  )) : !detailOrder.advance && <div className="text-xs text-muted-foreground">Sin pagos registrados</div>}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => { setPaymentOrder(detailOrder); setDetailOrder(null); }} className="flex-1 px-3 py-2 rounded-lg bg-success text-success-foreground text-sm font-medium hover:opacity-90 flex items-center justify-center gap-2">
-                    <DollarSign size={14} /> Registrar pago
-                  </button>
-                  <button onClick={() => { setHistoryCustomerId(detailOrder.customerId); setDetailOrder(null); }} className="flex-1 px-3 py-2 rounded-lg border text-sm font-medium hover:bg-muted flex items-center justify-center gap-2">
-                    <History size={14} /> Estado de cuenta cliente
-                  </button>
-                </div>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* ORDER DETAIL */}
+      <OrderDetailDialog
+        order={detailOrder}
+        onClose={() => setDetailOrder(null)}
+        orderPayments={detailOrder ? getOrderPayments(detailOrder.id) : []}
+        totalPaid={detailOrder ? getTotalPaid(detailOrder.id) : 0}
+        onOpenPayment={(o) => { setPaymentOrder(dbToOrder(o)); setDetailOrder(null); }}
+        onOpenInvoice={(o) => { setInvoiceOrder(dbToOrder(o)); setDetailOrder(null); }}
+        products={dbProducts}
+      />
 
       {/* CUSTOMER HISTORY / ACCOUNT STATEMENT */}
       <Dialog open={!!historyCustomerId} onOpenChange={() => setHistoryCustomerId(null)}>
