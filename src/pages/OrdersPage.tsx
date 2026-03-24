@@ -162,7 +162,8 @@ export default function OrdersPage() {
 
   const getPaymentStatusLocal = (order: Order): PaymentStatus => {
     const paid = getTotalPaid(order.id);
-    if (paid >= order.total) return 'liquidado';
+    const bal = Math.round((order.total - paid) * 100) / 100;
+    if (bal <= 0) return 'liquidado';
     if (paid > 0 && paid < order.total * 0.5) return 'anticipo_recibido';
     if (paid > 0) return 'pago_parcial';
     return 'sin_pago';
