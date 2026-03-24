@@ -47,6 +47,35 @@ export default function QuotationsPage() {
   const updateProductMutation = useUpdateProduct();
   const { data: dbTeamMembers = [] } = useTeamMembers();
 
+  // Compute next folio from DB quotations for a given vendor
+  const getNextFolioFromDB = (vendorId: string): string => {
+    const vendor = dbTeamMembers.find(u => u.id === vendorId);
+    if (!vendor?.seriesPrefix) return `COT-${Date.now()}`;
+    const prefix = vendor.seriesPrefix;
+    let maxNum = vendor.seriesStart ?? 1000;
+    dbQuotations.forEach(q => {
+      if (q.folio && q.folio.startsWith(prefix + '-')) {
+        const numPart = parseInt(q.folio.replace(prefix + '-', ''), 10);
+        if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart;
+      }
+    });
+    return `${prefix}-${maxNum + 1}`;
+  };
+
+  const getVendorCurrentNum = (vendorId: string): number => {
+    const vendor = dbTeamMembers.find(u => u.id === vendorId);
+    if (!vendor?.seriesPrefix) return 0;
+    const prefix = vendor.seriesPrefix;
+    let maxNum = vendor.seriesStart ?? 1000;
+    dbQuotations.forEach(q => {
+      if (q.folio && q.folio.startsWith(prefix + '-')) {
+        const numPart = parseInt(q.folio.replace(prefix + '-', ''), 10);
+        if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart;
+      }
+    });
+    return maxNum;
+  };
+
   // Map DB quotations to local Quotation type
   const quotations: Quotation[] = useMemo(() => dbQuotations.map(q => ({
     id: q.id,
