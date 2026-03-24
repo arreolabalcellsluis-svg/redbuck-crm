@@ -92,7 +92,7 @@ export default function CRMPage() {
   const { data: dbTeam = [] } = useTeamMembers();
   const { data: dbActivities = [] } = useActivities();
   const addActivityMut = useAddActivity();
-  const { config: onboardingConfig } = useOnboardingConfig();
+  const { config: onboardingConfig, saveConfig: saveOnboardingConfig } = useOnboardingConfig();
   const { data: allFiscalData = [] } = useAllCustomerFiscalData();
   const saveFiscalMut = useSaveCustomerFiscalData();
 
