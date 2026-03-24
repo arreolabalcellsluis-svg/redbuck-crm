@@ -100,6 +100,11 @@ export function useAddProduct() {
         active: product.active,
         stock: product.stock as any,
         in_transit: product.in_transit,
+        capacity: product.capacity || '',
+        price_client: product.price_client || 0,
+        price_distributor: product.price_distributor || 0,
+        commission_distributor: product.commission_distributor || 0,
+        commission_admin: product.commission_admin || 0,
         user_id: user?.id ?? null,
       });
       if (error) throw error;
