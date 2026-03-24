@@ -322,28 +322,30 @@ export default function CFODashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3 mt-3 sm:mt-0">
           {/* Period selector */}
-          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-1.5">
-            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Periodo:</span>
-            <select
-              value={periodFrom}
-              onChange={e => setPeriodFrom(e.target.value)}
-              className="text-xs bg-transparent border-0 focus:ring-0 py-0.5 font-medium"
-            >
-              {availableMonths.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-            <span className="text-xs text-muted-foreground">a</span>
-            <select
-              value={periodTo}
-              onChange={e => setPeriodTo(e.target.value)}
-              className="text-xs bg-transparent border-0 focus:ring-0 py-0.5 font-medium"
-            >
-              {availableMonths.filter(m => m.value >= periodFrom).map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
+           <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-2">
+              <span className="text-sm text-muted-foreground font-medium whitespace-nowrap">Periodo:</span>
+              <Select value={periodFrom} onValueChange={setPeriodFrom}>
+                <SelectTrigger className="w-[160px] h-9 text-sm font-medium">
+                  <SelectValue placeholder="Desde" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonths.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">a</span>
+              <Select value={periodTo} onValueChange={setPeriodTo}>
+                <SelectTrigger className="w-[160px] h-9 text-sm font-medium">
+                  <SelectValue placeholder="Hasta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonths.filter(m => m.value >= periodFrom).map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           <Button onClick={handleExportAll} className="gap-2">
             <Download size={16} /> Exportar Excel
           </Button>
