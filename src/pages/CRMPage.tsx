@@ -1147,6 +1147,39 @@ export default function CRMPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ===================== MERGE CONFIRM DIALOG ===================== */}
+      <AlertDialog open={!!mergeDialog} onOpenChange={(open) => { if (!open) setMergeDialog(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><Merge size={18} /> Fusionar clientes</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Se mantendrá el registro principal y se transferirán todos los datos del registro duplicado:</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-lg border-2 border-primary bg-primary/5">
+                    <p className="text-[10px] font-bold text-primary mb-1">✅ SE MANTIENE</p>
+                    <p className="font-semibold">{mergeDialog?.primary.name}</p>
+                    <p className="text-xs text-muted-foreground">📞 {mergeDialog?.primary.phone}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-destructive/50 bg-destructive/5">
+                    <p className="text-[10px] font-bold text-destructive mb-1">❌ SE ELIMINA</p>
+                    <p className="font-semibold">{mergeDialog?.secondary.name}</p>
+                    <p className="text-xs text-muted-foreground">📞 {mergeDialog?.secondary.phone}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Se transferirán: pedidos, cotizaciones, actividades, facturas y cuentas por cobrar.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={merging}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMerge} disabled={merging} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {merging ? 'Fusionando...' : 'Confirmar fusión'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
