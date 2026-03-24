@@ -40,7 +40,7 @@ export default function ImportProductSelector({ items, onChange }: Props) {
         <label className="text-xs font-medium text-muted-foreground">Productos *</label>
         <button
           type="button"
-          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', qty: 1, unitCost: 0, cbm: 0, peso: 0 }])}
+          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', brand: '', model: '', description: '', listPrice: 0, minPrice: 0, warranty: '', qty: 1, unitCost: 0, cbm: 0, peso: 0 }])}
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           <Plus size={12} /> Agregar producto
