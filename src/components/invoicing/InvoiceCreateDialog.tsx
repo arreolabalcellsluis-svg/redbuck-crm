@@ -448,8 +448,8 @@ export default function InvoiceCreateDialog({ open, onOpenChange, preselectedOrd
                 <Input value={series} onChange={e => setSeries(e.target.value.toUpperCase())} maxLength={5} />
               </div>
               <div className="space-y-1.5">
-                <Label>Folio *</Label>
-                <Input value={folio} onChange={e => setFolio(e.target.value)} placeholder="001" />
+                <Label>Folio (auto)</Label>
+                <Input value={folio} readOnly className="bg-muted" />
               </div>
               <div className="space-y-1.5">
                 <Label>Forma de Pago</Label>
