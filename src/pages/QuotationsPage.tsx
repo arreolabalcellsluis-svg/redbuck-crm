@@ -769,7 +769,7 @@ export default function QuotationsPage() {
   const subtotalPreview = calcSubtotal();
   const taxPreview = Math.round(subtotalPreview * IVA_RATE * 100) / 100;
   const totalPreview = Math.round((subtotalPreview + taxPreview) * 100) / 100;
-  const nextFolioPreview = selectedVendorId ? getNextFolio(selectedVendorId) : null;
+  const nextFolioPreview = selectedVendorId ? getNextFolioFromDB(selectedVendorId) : null;
 
   return (
     <div>
