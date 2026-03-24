@@ -1,6 +1,7 @@
 import { useAppContext } from '@/contexts/AppContext';
 import ImportCostingSummary from '@/components/imports/ImportCostingSummary';
 import ImportExpensesDetail from '@/components/imports/ImportExpensesDetail';
+import ImportProductSelector, { type ImportItemData } from '@/components/imports/ImportProductSelector';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
@@ -43,18 +44,10 @@ export default function ImportsPage() {
     freightCost: 0, customsCost: 0, status: 'orden_enviada' as ImportStatus,
     exchangeRate: 17.2,
   });
-  const [items, setItems] = useState<{ productName: string; qty: number; unitCost: number }[]>([]);
+  const [items, setItems] = useState<ImportItemData[]>([]);
 
   const totalValue = imports.reduce((s, i) => s + i.totalLanded, 0);
-  const totalItems = imports.reduce((s, i) => s + i.items.reduce((a: number, it: any) => a + it.qty, 0), 0);
-
-  const addItem = () => setItems([...items, { productName: '', qty: 1, unitCost: 0 }]);
-  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
-  const updateItem = (i: number, field: string, value: any) => {
-    const updated = [...items];
-    (updated[i] as any)[field] = value;
-    setItems(updated);
-  };
+  const totalItems = imports.reduce((s, i) => s + i.items.reduce((a: number, it: any) => a + (it.qty || 0), 0), 0);
 
   const totalCost = items.reduce((s, it) => s + it.qty * it.unitCost, 0);
   const totalLanded = totalCost + form.freightCost + form.customsCost;
@@ -68,7 +61,16 @@ export default function ImportsPage() {
       freightCost: imp.freightCost, customsCost: imp.customsCost, status: imp.status,
       exchangeRate: imp.exchangeRate,
     });
-    setItems([...imp.items]);
+    setItems(imp.items.map((it: any) => ({
+      productId: it.productId || null,
+      productName: it.productName || '',
+      sku: it.sku || '',
+      category: it.category || '',
+      qty: it.qty || 1,
+      unitCost: it.unitCost || 0,
+      cbm: it.cbm || 0,
+      peso: it.peso || 0,
+    })));
     setOpen(true);
   };
 
@@ -84,6 +86,21 @@ export default function ImportsPage() {
       return;
     }
 
+    const pesoTotal = items.reduce((s, it) => s + (it.peso || 0) * it.qty, 0);
+    const cbmTotal = items.reduce((s, it) => s + (it.cbm || 0) * it.qty, 0);
+
+    // Save enriched items with productId, sku, cbm, peso
+    const saveItems = items.map(it => ({
+      productId: it.productId,
+      productName: it.productName,
+      sku: it.sku,
+      category: it.category,
+      qty: it.qty,
+      unitCost: it.unitCost,
+      cbm: it.cbm,
+      peso: it.peso,
+    }));
+
     if (editId) {
       updateMutation.mutate({
         id: editId,
@@ -92,7 +109,8 @@ export default function ImportsPage() {
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
         freightCost: form.freightCost, customsCost: form.customsCost, status: form.status,
         exchangeRate: form.exchangeRate,
-        items, totalCost, totalLanded,
+        items: saveItems as any, totalCost, totalLanded,
+        pesoTotalKg: pesoTotal, volumenTotalCbm: cbmTotal,
         daysInTransit: form.estimatedDeparture ? Math.max(0, Math.floor((Date.now() - new Date(form.estimatedDeparture).getTime()) / 86400000)) : 0,
       });
     } else {
@@ -103,11 +121,11 @@ export default function ImportsPage() {
         currency: 'USD', exchangeRate: form.exchangeRate,
         purchaseDate: form.purchaseDate, estimatedDeparture: form.estimatedDeparture,
         estimatedArrival: form.estimatedArrival, status: form.status,
-        items, totalCost, freightCost: form.freightCost, customsCost: form.customsCost,
+        items: saveItems as any, totalCost, freightCost: form.freightCost, customsCost: form.customsCost,
         totalLanded, daysInTransit: 0,
         expenses: DEFAULT_EXPENSES,
-        pesoTotalKg: 0,
-        volumenTotalCbm: 0,
+        pesoTotalKg: pesoTotal,
+        volumenTotalCbm: cbmTotal,
         numeroContenedores: 1,
       });
     }
@@ -216,11 +234,12 @@ export default function ImportsPage() {
               <div className="py-4 overflow-x-auto"><ImportTimeline currentStatus={imp.status} /></div>
               <div className="mt-4 rounded-lg border overflow-hidden">
                 <table className="data-table">
-                  <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
+                  <thead><tr><th>Producto</th><th>SKU</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
                   <tbody>
                     {imp.items.map((item: any, i: number) => (
                       <tr key={i}>
                         <td className="font-medium">{item.productName}</td>
+                        <td className="text-muted-foreground text-xs">{item.sku || '—'}</td>
                         <td>{item.qty}</td>
                         <td>{fmt(item.unitCost)}</td>
                         <td className="font-semibold">{fmt(item.qty * item.unitCost)}</td>
@@ -309,20 +328,7 @@ export default function ImportsPage() {
                 {IMPORT_STATUS_ORDER.map(s => <option key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</option>)}
               </select>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-muted-foreground">Productos *</label>
-                <button onClick={addItem} className="text-xs text-primary hover:underline">+ Agregar</button>
-              </div>
-              {items.map((it, i) => (
-                <div key={i} className="flex items-center gap-2 mb-2">
-                  <input value={it.productName} onChange={e => updateItem(i, 'productName', e.target.value)} placeholder="Producto" className="flex-1 px-2 py-1.5 rounded border bg-background text-sm" />
-                  <input type="number" min={1} value={it.qty} onChange={e => updateItem(i, 'qty', Number(e.target.value))} className="w-16 px-2 py-1.5 rounded border bg-background text-sm text-center" />
-                  <input type="number" value={it.unitCost} onChange={e => updateItem(i, 'unitCost', Number(e.target.value))} placeholder="USD" className="w-24 px-2 py-1.5 rounded border bg-background text-sm" />
-                  <button onClick={() => removeItem(i)} className="text-muted-foreground hover:text-destructive"><X size={14} /></button>
-                </div>
-              ))}
-            </div>
+            <ImportProductSelector items={items} onChange={setItems} />
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Flete (USD)</label>
