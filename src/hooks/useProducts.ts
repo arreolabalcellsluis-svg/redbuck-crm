@@ -22,6 +22,11 @@ export interface DBProduct {
   active: boolean;
   stock: Record<string, number>;
   in_transit: number;
+  capacity: string;
+  price_client: number;
+  price_distributor: number;
+  commission_distributor: number;
+  commission_admin: number;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +52,11 @@ function mapRow(row: any): DBProduct {
     active: row.active,
     stock: typeof row.stock === 'object' ? row.stock : {},
     in_transit: row.in_transit,
+    capacity: row.capacity || '',
+    price_client: Number(row.price_client || 0),
+    price_distributor: Number(row.price_distributor || 0),
+    commission_distributor: Number(row.commission_distributor || 0),
+    commission_admin: Number(row.commission_admin || 0),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -90,6 +100,11 @@ export function useAddProduct() {
         active: product.active,
         stock: product.stock as any,
         in_transit: product.in_transit,
+        capacity: product.capacity || '',
+        price_client: product.price_client || 0,
+        price_distributor: product.price_distributor || 0,
+        commission_distributor: product.commission_distributor || 0,
+        commission_admin: product.commission_admin || 0,
         user_id: user?.id ?? null,
       });
       if (error) throw error;
@@ -125,6 +140,11 @@ export function useUpdateProduct() {
       if (product.warranty !== undefined) updates.warranty = product.warranty;
       if (product.delivery_days !== undefined) updates.delivery_days = product.delivery_days;
       if (product.currency !== undefined) updates.currency = product.currency;
+      if (product.capacity !== undefined) updates.capacity = product.capacity;
+      if (product.price_client !== undefined) updates.price_client = product.price_client;
+      if (product.price_distributor !== undefined) updates.price_distributor = product.price_distributor;
+      if (product.commission_distributor !== undefined) updates.commission_distributor = product.commission_distributor;
+      if (product.commission_admin !== undefined) updates.commission_admin = product.commission_admin;
 
       const { error } = await supabase.from('products').update(updates).eq('id', id);
       if (error) throw error;

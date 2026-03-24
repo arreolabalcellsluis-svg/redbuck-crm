@@ -3,7 +3,8 @@ import { useWarehouses } from '@/hooks/useWarehouses';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { getProductImage } from '@/lib/productImages';
-import { Search, Plus, Package, Trash2, Pencil, Upload, X, Warehouse, FileText } from 'lucide-react';
+import { Search, Plus, Package, Trash2, Pencil, Upload, X, Warehouse, FileText, FileDown } from 'lucide-react';
+import { generatePriceListPdf, type PriceListProduct } from '@/lib/priceListPdf';
 import { generateProductDatasheet, type DatasheetConfig } from '@/lib/productDatasheetPdf';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -89,6 +90,34 @@ export default function ProductsPage() {
   const [datasheetProduct, setDatasheetProduct] = useState<Product | null>(null);
   const [datasheetSeller, setDatasheetSeller] = useState({ name: '', phone: '', email: '', note: '' });
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [generatingPriceList, setGeneratingPriceList] = useState(false);
+  const [priceListCategory, setPriceListCategory] = useState<string>('all');
+  const [showPriceListDialog, setShowPriceListDialog] = useState(false);
+
+  const handleGeneratePriceList = async () => {
+    setGeneratingPriceList(true);
+    try {
+      const priceProducts: PriceListProduct[] = (dbProducts ?? []).map(p => ({
+        sku: p.sku,
+        name: p.name,
+        capacity: (p as any).capacity || p.model || '',
+        image: p.image,
+        price_client: (p as any).price_client || p.list_price || 0,
+        price_distributor: (p as any).price_distributor || p.min_price || 0,
+        commission_distributor: (p as any).commission_distributor || 0,
+        commission_admin: (p as any).commission_admin || 0,
+        category: p.category,
+        active: p.active,
+      }));
+      await generatePriceListPdf(priceProducts, priceListCategory);
+      toast.success('Lista de precios generada');
+    } catch {
+      toast.error('Error al generar lista de precios');
+    } finally {
+      setGeneratingPriceList(false);
+      setShowPriceListDialog(false);
+    }
+  };
   
   const filtered = products.filter(p => {
     if (!p.active) return false;
@@ -171,6 +200,11 @@ export default function ProductsPage() {
       active: form.active,
       stock: form.stock,
       in_transit: form.inTransit,
+      capacity: '',
+      price_client: form.listPrice,
+      price_distributor: form.minPrice,
+      commission_distributor: 0,
+      commission_admin: 0,
     }, {
       onSuccess: () => {
         toast.success(`Producto "${form.name}" creado correctamente`);
@@ -457,9 +491,14 @@ export default function ProductsPage() {
           <h1 className="page-title">Catálogo de Productos</h1>
           <p className="page-subtitle">{isLoading ? '...' : products.filter(p => p.active).length} productos activos</p>
         </div>
-        <button onClick={() => { setForm(emptyProduct()); setImagePreview(null); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus size={16} /> Nuevo producto
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowPriceListDialog(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-accent transition-colors">
+            <FileDown size={16} /> Lista de Precios
+          </button>
+          <button onClick={() => { setForm(emptyProduct()); setImagePreview(null); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus size={16} /> Nuevo producto
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -721,6 +760,37 @@ export default function ProductsPage() {
             <button onClick={() => setDatasheetProduct(null)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button onClick={handleGenerateDatasheet} disabled={generatingPdf} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
               {generatingPdf ? 'Generando...' : '📄 Generar PDF'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Price List PDF Dialog */}
+      <Dialog open={showPriceListDialog} onOpenChange={setShowPriceListDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generar Lista de Precios PDF</DialogTitle>
+            <DialogDescription>Selecciona la categoría para generar el catálogo de precios profesional REDBUCK.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Categoría</label>
+              <select value={priceListCategory} onChange={e => setPriceListCategory(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+                <option value="all">Todas las categorías</option>
+                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <p>📋 Se incluirán solo productos <strong>activos</strong> con precio asignado.</p>
+              <p className="mt-1">📄 El PDF se generará en formato horizontal con diseño profesional.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowPriceListDialog(false)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={handleGeneratePriceList} disabled={generatingPriceList} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {generatingPriceList ? 'Generando...' : '📄 Generar Lista de Precios'}
             </button>
           </DialogFooter>
         </DialogContent>

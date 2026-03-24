@@ -1415,7 +1415,10 @@ export type Database = {
         Row: {
           active: boolean
           brand: string
+          capacity: string
           category: Database["public"]["Enums"]["product_category"]
+          commission_admin: number
+          commission_distributor: number
           cost: number
           created_at: string
           currency: Database["public"]["Enums"]["product_currency"]
@@ -1429,6 +1432,8 @@ export type Database = {
           min_price: number
           model: string
           name: string
+          price_client: number
+          price_distributor: number
           sku: string
           stock: Json
           supplier: string
@@ -1439,7 +1444,10 @@ export type Database = {
         Insert: {
           active?: boolean
           brand?: string
+          capacity?: string
           category?: Database["public"]["Enums"]["product_category"]
+          commission_admin?: number
+          commission_distributor?: number
           cost?: number
           created_at?: string
           currency?: Database["public"]["Enums"]["product_currency"]
@@ -1453,6 +1461,8 @@ export type Database = {
           min_price?: number
           model?: string
           name: string
+          price_client?: number
+          price_distributor?: number
           sku: string
           stock?: Json
           supplier?: string
@@ -1463,7 +1473,10 @@ export type Database = {
         Update: {
           active?: boolean
           brand?: string
+          capacity?: string
           category?: Database["public"]["Enums"]["product_category"]
+          commission_admin?: number
+          commission_distributor?: number
           cost?: number
           created_at?: string
           currency?: Database["public"]["Enums"]["product_currency"]
@@ -1477,6 +1490,8 @@ export type Database = {
           min_price?: number
           model?: string
           name?: string
+          price_client?: number
+          price_distributor?: number
           sku?: string
           stock?: Json
           supplier?: string
