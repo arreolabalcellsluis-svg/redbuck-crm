@@ -61,7 +61,7 @@ export function useAddCustomer() {
   return useMutation({
     mutationFn: async (customer: Omit<DBCustomer, 'id' | 'created_at' | 'updated_at'>) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('customers').insert({
+      const { data, error } = await supabase.from('customers').insert({
         name: customer.name,
         contact_name: customer.contact_name,
         trade_name: customer.trade_name,
@@ -76,8 +76,9 @@ export function useAddCustomer() {
         source: customer.source as any,
         priority: customer.priority as any,
         user_id: user?.id ?? null,
-      });
+      }).select('id').single();
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['customers'] });

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
+import { useAllCustomerFiscalData, useSaveCustomerFiscalData } from '@/hooks/useInvoicing';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
@@ -76,6 +77,8 @@ export default function CRMPage() {
   const { data: dbActivities = [] } = useActivities();
   const addActivityMut = useAddActivity();
   const { config: onboardingConfig } = useOnboardingConfig();
+  const { data: allFiscalData = [] } = useAllCustomerFiscalData();
+  const saveFiscalMut = useSaveCustomerFiscalData();
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
@@ -187,7 +190,20 @@ export default function CRMPage() {
       source: form.source,
       priority: form.priority,
     }, {
-      onSuccess: (_data, _vars, _ctx) => {
+      onSuccess: (data, _vars, _ctx) => {
+        // Save fiscal data if any field was filled
+        const hasFiscal = fiscal.legalName || fiscal.taxRegime || fiscal.fiscalZipCode || fiscal.invoiceEmail;
+        if (hasFiscal && data?.id) {
+          saveFiscalMut.mutate({
+            customer_id: data.id,
+            legal_name: fiscal.legalName,
+            rfc: form.rfc || '',
+            tax_regime: fiscal.taxRegime,
+            fiscal_zip_code: fiscal.fiscalZipCode,
+            cfdi_use_default: fiscal.cfdiUse || 'G03',
+            invoice_email: fiscal.invoiceEmail || null,
+          });
+        }
         toast.success(`Cliente "${form.name}" registrado correctamente`);
         // Trigger onboarding automation
         if (onboardingConfig.enabled && vendor) {
@@ -213,6 +229,7 @@ export default function CRMPage() {
         }
         setShowCreate(false);
         setForm(emptyCustomer());
+        setFiscal(emptyFiscal());
       },
     });
   };
@@ -221,6 +238,21 @@ export default function CRMPage() {
     setEditingCustomer(customer);
     const { id, createdAt, ...rest } = customer;
     setForm(rest);
+    // Load fiscal data for this customer
+    const existingFiscal = allFiscalData.find(f => f.customer_id === customer.id);
+    if (existingFiscal) {
+      setFiscal({
+        taxRegime: existingFiscal.tax_regime || '',
+        fiscalZipCode: existingFiscal.fiscal_zip_code || '',
+        cfdiUse: existingFiscal.cfdi_use_default || 'G03',
+        legalName: existingFiscal.legal_name || '',
+        invoiceEmail: existingFiscal.invoice_email || '',
+      });
+      setShowFiscal(true);
+    } else {
+      setFiscal(emptyFiscal());
+      setShowFiscal(false);
+    }
   };
 
   const handleUpdate = () => {
@@ -246,9 +278,23 @@ export default function CRMPage() {
       priority: form.priority,
     }, {
       onSuccess: () => {
+        // Save fiscal data
+        const hasFiscal = fiscal.legalName || fiscal.taxRegime || fiscal.fiscalZipCode || fiscal.invoiceEmail;
+        if (hasFiscal) {
+          saveFiscalMut.mutate({
+            customer_id: editingCustomer.id,
+            legal_name: fiscal.legalName,
+            rfc: form.rfc || '',
+            tax_regime: fiscal.taxRegime,
+            fiscal_zip_code: fiscal.fiscalZipCode,
+            cfdi_use_default: fiscal.cfdiUse || 'G03',
+            invoice_email: fiscal.invoiceEmail || null,
+          });
+        }
         toast.success(`Cliente "${form.name}" actualizado correctamente`);
         setEditingCustomer(null);
         setForm(emptyCustomer());
+        setFiscal(emptyFiscal());
       },
     });
   };
