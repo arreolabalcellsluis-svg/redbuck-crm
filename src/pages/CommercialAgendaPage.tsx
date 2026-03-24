@@ -218,10 +218,12 @@ export default function CommercialAgendaPage() {
   const clearFilters = () => { setSearch(''); setFilterType(''); setFilterStatus(''); setFilterVendor(''); };
   const hasActiveFilters = !!(search || filterType || filterStatus || filterVendor);
 
-  // ─── KPIs ────────────────────────────────────────────────
-  const todayActs = getActivitiesForDate(filtered, TODAY);
-  const overdue = getOverdueActivities(filtered, TODAY);
-  const pending = getPendingActivities(filtered);
+  // ─── KPIs (always from unfiltered data) ───────────────────
+  const allTodayActs = getActivitiesForDate(dbActivities, TODAY);
+  const allOverdue = getOverdueActivities(dbActivities, TODAY);
+  const allPending = getPendingActivities(dbActivities);
+  const todayDoneCount = allTodayActs.filter(a => a.status === 'realizada').length;
+  const todayPendingCount = allTodayActs.filter(a => a.status === 'pendiente' || a.status === 'en_proceso').length;
 
   // ─── Sub-components ──────────────────────────────────────
   function PriorityDot({ p }: { p: string }) {
