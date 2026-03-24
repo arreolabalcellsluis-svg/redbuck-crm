@@ -216,7 +216,7 @@ function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onU
         initialName={search}
         initialCost={item.unitCost}
         onCreated={(p) => {
-          onUpdate({ ...item, productId: p.id, productName: p.name, sku: p.sku, category: p.category, unitCost: p.cost || item.unitCost });
+          onUpdate({ ...item, productId: p.id, productName: p.name, sku: p.sku, category: p.category, brand: p.brand, model: p.model, description: p.description, listPrice: p.listPrice, minPrice: p.minPrice, warranty: p.warranty, unitCost: p.cost || item.unitCost });
           setSearch(p.name);
           setLinked(true);
           setShowNewForm(false);
