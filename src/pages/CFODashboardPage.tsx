@@ -1109,7 +1109,7 @@ export default function CFODashboardPage() {
             </div>
 
             {/* Capital Consuming Clients */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/cuentas-cobrar')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Eye size={16} /> Clientes que Consumen Capital
               </h3>
