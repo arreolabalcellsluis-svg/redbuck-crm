@@ -158,9 +158,29 @@ export default function CRMPage() {
     return [...quotationOpps, ...orderOpps];
   }, [dbQuotations, dbOrders, allCustomers, dbTeam]);
 
-  const filteredCustomers = allCustomers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) || c.city.toLowerCase().includes(search.toLowerCase())
-  );
+  const cities = useMemo(() => [...new Set(allCustomers.map(c => c.city).filter(Boolean))].sort(), [allCustomers]);
+  const vendors = useMemo(() => {
+    const ids = [...new Set(allCustomers.map(c => c.vendorId).filter(Boolean))];
+    return ids.map(id => ({ id, name: dbTeam.find(t => t.id === id)?.name || id })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allCustomers, dbTeam]);
+
+  const hasFilters = !!(filterType || filterCity || filterVendor || filterPriority || filterDateFrom || filterDateTo);
+  const clearFilters = () => { setFilterType(''); setFilterCity(''); setFilterVendor(''); setFilterPriority(''); setFilterDateFrom(''); setFilterDateTo(''); setSearch(''); };
+
+  const filteredCustomers = useMemo(() => {
+    let data = [...allCustomers];
+    if (search) {
+      const s = search.toLowerCase();
+      data = data.filter(c => c.name.toLowerCase().includes(s) || c.city.toLowerCase().includes(s));
+    }
+    if (filterType) data = data.filter(c => c.type === filterType);
+    if (filterCity) data = data.filter(c => c.city === filterCity);
+    if (filterVendor) data = data.filter(c => c.vendorId === filterVendor);
+    if (filterPriority) data = data.filter(c => c.priority === filterPriority);
+    if (filterDateFrom) data = data.filter(c => c.createdAt >= filterDateFrom);
+    if (filterDateTo) data = data.filter(c => c.createdAt <= filterDateTo);
+    return data;
+  }, [allCustomers, search, filterType, filterCity, filterVendor, filterPriority, filterDateFrom, filterDateTo]);
 
   const resolveVendor = (vendorId: string) => {
     const u = dbTeam.find(usr => usr.id === vendorId);
