@@ -190,7 +190,20 @@ export default function CRMPage() {
       source: form.source,
       priority: form.priority,
     }, {
-      onSuccess: (_data, _vars, _ctx) => {
+      onSuccess: (data, _vars, _ctx) => {
+        // Save fiscal data if any field was filled
+        const hasFiscal = fiscal.legalName || fiscal.taxRegime || fiscal.fiscalZipCode || fiscal.invoiceEmail;
+        if (hasFiscal && data?.id) {
+          saveFiscalMut.mutate({
+            customer_id: data.id,
+            legal_name: fiscal.legalName,
+            rfc: form.rfc || '',
+            tax_regime: fiscal.taxRegime,
+            fiscal_zip_code: fiscal.fiscalZipCode,
+            cfdi_use_default: fiscal.cfdiUse || 'G03',
+            invoice_email: fiscal.invoiceEmail || null,
+          });
+        }
         toast.success(`Cliente "${form.name}" registrado correctamente`);
         // Trigger onboarding automation
         if (onboardingConfig.enabled && vendor) {
@@ -216,6 +229,7 @@ export default function CRMPage() {
         }
         setShowCreate(false);
         setForm(emptyCustomer());
+        setFiscal(emptyFiscal());
       },
     });
   };
