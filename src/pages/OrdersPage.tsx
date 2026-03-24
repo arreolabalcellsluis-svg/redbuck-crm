@@ -437,7 +437,7 @@ export default function OrdersPage() {
               const balance = o.total - paid;
               const payStatus = getPaymentStatusLocal(o);
               return (
-                <tr key={o.id} className={o.status === 'cancelado' ? 'relative' : ''}>
+                <tr key={o.id} className={o.status === 'cancelado' ? 'relative opacity-60' : ''}>
                   {o.status === 'cancelado' && (
                     <td colSpan={0} className="absolute inset-x-0 top-0 h-0">
                       <div className="h-[3px] w-full bg-destructive rounded-full" />
