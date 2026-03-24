@@ -470,10 +470,19 @@ export default function QuotationsPage() {
     setShowWhatsApp(null);
   };
 
+  const normalizeImageSrc = (src: string) => {
+    if (!src || src === '/placeholder.svg') return '';
+    if (src.startsWith('data:') || src.startsWith('blob:')) return src;
+    if (src.startsWith('http://') || src.startsWith('https://')) return src;
+    return `${window.location.origin}${src.startsWith('/') ? src : `/${src}`}`;
+  };
+
   // Helper: convert image URL to base64 data URL
   const toBase64 = (url: string): Promise<string> => {
     return new Promise((resolve) => {
       if (!url || url === '/placeholder.svg') { resolve(''); return; }
+      if (url.startsWith('data:')) { resolve(url); return; }
+
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
@@ -487,7 +496,7 @@ export default function QuotationsPage() {
         } catch { resolve(''); }
       };
       img.onerror = () => resolve('');
-      img.src = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+      img.src = url;
     });
   };
 
@@ -498,9 +507,7 @@ export default function QuotationsPage() {
 
     // Pre-convert all product images to base64
     const imagePromises = q.items.map((item) => {
-      const imgSrc = item.productImage || '';
-      const absoluteImg = imgSrc.startsWith('http') ? imgSrc : (imgSrc ? `${window.location.origin}${imgSrc}` : '');
-      return toBase64(absoluteImg);
+      return toBase64(normalizeImageSrc(item.productImage || ''));
     });
     const base64Images = await Promise.all(imagePromises);
 
@@ -641,7 +648,34 @@ export default function QuotationsPage() {
     if (printWindow) {
       printWindow.document.write(html);
       printWindow.document.close();
-      setTimeout(() => { printWindow.print(); }, 300);
+
+      const printWhenReady = () => {
+        const images = Array.from(printWindow.document.images);
+        if (images.length === 0) {
+          printWindow.print();
+          return;
+        }
+
+        let pending = images.length;
+        const done = () => {
+          pending -= 1;
+          if (pending <= 0) {
+            setTimeout(() => printWindow.print(), 100);
+          }
+        };
+
+        images.forEach((image) => {
+          if (image.complete) {
+            done();
+            return;
+          }
+
+          image.addEventListener('load', done, { once: true });
+          image.addEventListener('error', done, { once: true });
+        });
+      };
+
+      printWindow.addEventListener('load', printWhenReady, { once: true });
     } else {
       toast.error('Permite las ventanas emergentes para descargar el PDF.');
     }
