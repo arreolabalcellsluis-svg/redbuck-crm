@@ -5,7 +5,7 @@ import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -13,10 +13,13 @@ import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, typ
 import { useQuotations } from '@/hooks/useQuotations';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useActivities, useAddActivity } from '@/hooks/useActivities';
+import { useOnboardingConfig } from '@/hooks/useOnboardingConfig';
+import { generateOnboardingActivities, buildWhatsAppLink } from '@/lib/onboardingEngine';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-type Tab = 'clientes' | 'pipeline';
+type Tab = 'clientes' | 'pipeline' | 'onboarding';
 
 type FiscalData = {
   taxRegime: string;
