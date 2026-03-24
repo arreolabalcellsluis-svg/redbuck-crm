@@ -506,7 +506,8 @@ export default function QuotationsPage() {
 
       setConvertQuotation(null);
     } catch (err: any) {
-      toast.error('Error al generar pedido: ' + (err?.message || 'Intenta de nuevo'));
+      console.error('Error generating order:', err);
+      toast.error('Error al generar pedido: ' + (err?.message || JSON.stringify(err) || 'Intenta de nuevo'));
     }
   };
 
