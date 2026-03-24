@@ -527,12 +527,20 @@ export default function CommercialAgendaPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — clickable, from real unfiltered data */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Hoy pendientes" value={todayActs.filter(a => a.status === 'pendiente').length} icon={Clock} variant="warning" />
-        <MetricCard title="Vencidas" value={overdue.length} icon={AlertTriangle} variant="danger" />
-        <MetricCard title="Realizadas hoy" value={todayActs.filter(a => a.status === 'realizada').length} icon={CheckCircle2} variant="success" />
-        <MetricCard title="Total pendientes" value={pending.length} icon={CalendarDays} variant="primary" />
+        <button onClick={() => { setView('daily'); setCurrentDate(TODAY); setFilterStatus('pendiente'); }} className="text-left">
+          <MetricCard title="Hoy pendientes" value={todayPendingCount} icon={Clock} variant="warning" />
+        </button>
+        <button onClick={() => { setView('pending'); setFilterStatus(''); }} className="text-left">
+          <MetricCard title="Vencidas" value={allOverdue.length} icon={AlertTriangle} variant="danger" />
+        </button>
+        <button onClick={() => { setView('daily'); setCurrentDate(TODAY); setFilterStatus('realizada'); }} className="text-left">
+          <MetricCard title="Realizadas hoy" value={todayDoneCount} icon={CheckCircle2} variant="success" />
+        </button>
+        <button onClick={() => { setView('pending'); setFilterStatus(''); }} className="text-left">
+          <MetricCard title="Total pendientes" value={allPending.length} icon={CalendarDays} variant="primary" />
+        </button>
       </div>
 
       {/* View toggle + search + filters */}
