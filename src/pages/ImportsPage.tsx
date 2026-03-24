@@ -60,6 +60,7 @@ export default function ImportsPage() {
       estimatedDeparture: imp.estimatedDeparture, estimatedArrival: imp.estimatedArrival,
       freightCost: imp.freightCost, customsCost: imp.customsCost, status: imp.status,
       exchangeRate: imp.exchangeRate,
+    });
     setItems(imp.items.map((it: any) => ({
       productId: it.productId || null,
       productName: it.productName || '',
@@ -70,6 +71,7 @@ export default function ImportsPage() {
       cbm: it.cbm || 0,
       peso: it.peso || 0,
     })));
+    setOpen(true);
   };
 
   const resetForm = () => {
