@@ -468,21 +468,51 @@ export default function QuotationsPage() {
     setShowWhatsApp(null);
   };
 
+  // Helper: convert image URL to base64 data URL
+  const toBase64 = (url: string): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!url || url === '/placeholder.svg') { resolve(''); return; }
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } catch { resolve(''); }
+      };
+      img.onerror = () => resolve('');
+      img.src = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+    });
+  };
+
   // PDF that replicates QuotationPreview exactly
-  const handleDownloadPdf = (q: Quotation) => {
+  const handleDownloadPdf = async (q: Quotation) => {
     const company = demoCompanyInfo;
     const conditions = demoSalesConditions;
 
-    const itemsHtml = q.items.map((item) => {
+    // Pre-convert all product images to base64
+    const imagePromises = q.items.map((item) => {
+      const imgSrc = item.productImage || '';
+      const absoluteImg = imgSrc.startsWith('http') ? imgSrc : (imgSrc ? `${window.location.origin}${imgSrc}` : '');
+      return toBase64(absoluteImg);
+    });
+    const base64Images = await Promise.all(imagePromises);
+
+    const itemsHtml = q.items.map((item, idx) => {
       const lineTotal = item.qty * item.unitPrice * (1 - (item.discount || 0) / 100);
-      const imgSrc = item.productImage || '/placeholder.svg';
-      // Use absolute URL for images
-      const absoluteImg = imgSrc.startsWith('http') ? imgSrc : `${window.location.origin}${imgSrc}`;
+      const b64 = base64Images[idx];
+      const imgTag = b64
+        ? `<img src="${b64}" alt="${item.productName}" style="width:100%;height:100%;object-fit:cover;" />`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:hsl(0,0%,70%);font-size:11px;">Sin imagen</div>`;
       return `
         <div style="border-radius:12px;overflow:hidden;border:1px solid hsl(0,0%,90%);margin-bottom:16px;page-break-inside:avoid;">
           <div style="display:flex;">
             <div style="width:180px;height:140px;flex-shrink:0;overflow:hidden;background:hsl(0,0%,95%);">
-              <img src="${absoluteImg}" alt="${item.productName}" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.location.origin}/placeholder.svg'" />
+              ${imgTag}
             </div>
             <div style="flex:1;padding:16px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;">
               <div>
@@ -609,8 +639,7 @@ export default function QuotationsPage() {
     if (printWindow) {
       printWindow.document.write(html);
       printWindow.document.close();
-      // Wait for images to load
-      setTimeout(() => { printWindow.print(); }, 800);
+      setTimeout(() => { printWindow.print(); }, 300);
     } else {
       toast.error('Permite las ventanas emergentes para descargar el PDF.');
     }
