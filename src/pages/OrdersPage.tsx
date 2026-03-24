@@ -441,12 +441,12 @@ export default function OrdersPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <MetricCard title="Total pedidos" value={orders.length} icon={ShoppingCart} />
-        <MetricCard title="Entregados" value={orders.filter(o => o.status === 'entregado').length} icon={PackageCheck} variant="success" />
-        <MetricCard title="En entrega" value={orders.filter(o => o.status === 'en_entrega').length} icon={Truck} variant="warning" />
-        <MetricCard title="En reparto" value={orders.filter(o => o.status === 'en_reparto').length} icon={Package} variant="warning" />
-        <MetricCard title="Entrega programada" value={orders.filter(o => o.status === 'entrega_programada').length} icon={CalendarClock} variant="primary" />
-        <MetricCard title="Valor total" value={fmt(orders.reduce((s, o) => s + o.total, 0))} icon={ShoppingCart} variant="primary" />
+        <MetricCard title="Total pedidos" value={orders.length} icon={ShoppingCart} onClick={() => setFilterStatus('')} />
+        <MetricCard title="Entregados" value={orders.filter(o => o.status === 'entregado').length} icon={PackageCheck} variant="success" onClick={() => setFilterStatus('entregado')} />
+        <MetricCard title="En entrega" value={orders.filter(o => o.status === 'en_entrega').length} icon={Truck} variant="warning" onClick={() => setFilterStatus('en_entrega')} />
+        <MetricCard title="En reparto" value={orders.filter(o => o.status === 'en_reparto').length} icon={Package} variant="warning" onClick={() => setFilterStatus('en_reparto')} />
+        <MetricCard title="Entrega programada" value={orders.filter(o => o.status === 'entrega_programada').length} icon={CalendarClock} variant="primary" onClick={() => setFilterStatus('entrega_programada')} />
+        <MetricCard title="Valor total" value={fmt(orders.reduce((s, o) => s + o.total, 0))} icon={ShoppingCart} variant="primary" onClick={() => setFilterStatus('')} />
       </div>
 
       <div className="flex items-center gap-3 mb-4 flex-wrap">
