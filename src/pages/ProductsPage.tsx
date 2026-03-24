@@ -3,7 +3,8 @@ import { useWarehouses } from '@/hooks/useWarehouses';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { getProductImage } from '@/lib/productImages';
-import { Search, Plus, Package, Trash2, Pencil, Upload, X, Warehouse } from 'lucide-react';
+import { Search, Plus, Package, Trash2, Pencil, Upload, X, Warehouse, FileText } from 'lucide-react';
+import { generateProductDatasheet, type DatasheetConfig } from '@/lib/productDatasheetPdf';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -80,6 +81,11 @@ export default function ProductsPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  
+  // Datasheet PDF state
+  const [datasheetProduct, setDatasheetProduct] = useState<Product | null>(null);
+  const [datasheetSeller, setDatasheetSeller] = useState({ name: '', phone: '', email: '', note: '' });
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   
   const filtered = products.filter(p => {
     if (!p.active) return false;
@@ -269,7 +275,31 @@ export default function ProductsPage() {
     });
   };
 
-  const getWarehouseNames = (stock: Record<string, number>) => {
+  const handleGenerateDatasheet = async () => {
+    if (!datasheetProduct) return;
+    if (!datasheetSeller.name.trim() || !datasheetSeller.phone.trim()) {
+      toast.error('Nombre y teléfono del vendedor son obligatorios');
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      await generateProductDatasheet({
+        product: datasheetProduct,
+        exchangeRate,
+        sellerName: datasheetSeller.name,
+        sellerPhone: datasheetSeller.phone,
+        sellerEmail: datasheetSeller.email || undefined,
+        customNote: datasheetSeller.note || undefined,
+      });
+      toast.success('Ficha técnica generada');
+    } catch {
+      toast.error('Error al generar ficha técnica');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+
     return Object.entries(stock)
       .filter(([, qty]) => qty > 0)
       .map(([wId, qty]) => ({ name: warehouseMap[wId] || wId, qty }));
@@ -493,6 +523,12 @@ export default function ProductsPage() {
 
                 <div className="flex gap-2 mt-3">
                   <button
+                    onClick={(e) => { e.stopPropagation(); setDatasheetProduct(p); }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <FileText size={12} /> Ficha PDF
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); openEdit(p); }}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted transition-colors"
                   >
@@ -638,6 +674,40 @@ export default function ProductsPage() {
       />
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
+
+      {/* ===================== DATASHEET PDF DIALOG ===================== */}
+      <Dialog open={!!datasheetProduct} onOpenChange={(open) => { if (!open) setDatasheetProduct(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generar Ficha Técnica</DialogTitle>
+            <DialogDescription>Personaliza la ficha comercial de <strong>{datasheetProduct?.name}</strong> antes de generar el PDF.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre del vendedor *</label>
+              <input value={datasheetSeller.name} onChange={e => setDatasheetSeller(s => ({ ...s, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Tu nombre completo" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono / WhatsApp *</label>
+              <input value={datasheetSeller.phone} onChange={e => setDatasheetSeller(s => ({ ...s, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="33 1234 5678" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Email (opcional)</label>
+              <input value={datasheetSeller.email} onChange={e => setDatasheetSeller(s => ({ ...s, email: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="vendedor@redbuck.com" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nota personalizada (opcional)</label>
+              <textarea value={datasheetSeller.note} onChange={e => setDatasheetSeller(s => ({ ...s, note: e.target.value }))} rows={2} className="w-full px-3 py-2 rounded-lg border bg-card text-sm resize-y" placeholder="Ej: Precio especial válido esta semana..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setDatasheetProduct(null)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={handleGenerateDatasheet} disabled={generatingPdf} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {generatingPdf ? 'Generando...' : '📄 Generar PDF'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
