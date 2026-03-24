@@ -417,6 +417,14 @@ export default function QuotationsPage() {
       scheduled_delivery_date: selectedOrderType === 'entrega_futura' ? scheduledDate : null,
       delivery_notes: deliveryNotes || null,
       reserve_deadline: selectedOrderType === 'apartado' ? reserveDeadline : null,
+      transportista: '',
+      guia_numero: '',
+      fecha_envio: null,
+      shipping_images: [],
+      invoice_number_manual: '',
+      invoice_date_manual: null,
+      invoice_pdf_url: '',
+      edit_history: [],
     });
 
     // Auto-create receivable in DB

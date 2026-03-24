@@ -220,6 +220,14 @@ export default function OrdersPage() {
       scheduled_delivery_date: null,
       delivery_notes: null,
       reserve_deadline: null,
+      transportista: '',
+      guia_numero: '',
+      fecha_envio: null,
+      shipping_images: [],
+      invoice_number_manual: '',
+      invoice_date_manual: null,
+      invoice_pdf_url: '',
+      edit_history: [],
     });
 
     // Auto-create receivable in DB
