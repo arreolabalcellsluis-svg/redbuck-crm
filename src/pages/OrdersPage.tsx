@@ -23,7 +23,7 @@ import AuthorizationDialog from '@/components/shared/AuthorizationDialog';
 import InvoiceCreateDialog from '@/components/invoicing/InvoiceCreateDialog';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
-const vendors = demoUsers.filter(u => u.role === 'vendedor');
+// vendors will be populated inside the component from useTeamMembers
 const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'nuevo', label: 'Nuevo' },
   { value: 'por_confirmar', label: 'Por confirmar' },
