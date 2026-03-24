@@ -537,12 +537,43 @@ function CommissionDetail({ c }: { c: CommissionBreakdown }) {
 
 function CommissionConfigEditor({ config, onSave }: { config: any; onSave: (key: string, val: any) => void }) {
   const [baseRate, setBaseRate] = useState(config?.baseRate ?? 5);
+  const [ncb, setNcb] = useState(config?.newCustomerBonus ?? 500);
+  const [cbr, setCbr] = useState(config?.collectionBonusRate ?? 1);
+
+  const defaultMargin = [
+    { min_margin: 20, bonus: 1 },
+    { min_margin: 25, bonus: 2 },
+    { min_margin: 30, bonus: 3 },
+  ];
+  const defaultGoal = [
+    { min_pct: 100, bonus: 3 },
+    { min_pct: 120, bonus: 5 },
+  ];
+
+  const [marginBonuses, setMarginBonuses] = useState<{ min_margin: number; bonus: number }[]>(
+    config?.marginBonuses?.length ? config.marginBonuses : defaultMargin
+  );
+  const [goalBonuses, setGoalBonuses] = useState<{ min_pct: number; bonus: number }[]>(
+    config?.goalBonuses?.length ? config.goalBonuses : defaultGoal
+  );
+
+  const updateMarginTier = (idx: number, field: 'min_margin' | 'bonus', value: number) => {
+    setMarginBonuses(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  };
+  const addMarginTier = () => setMarginBonuses(prev => [...prev, { min_margin: 0, bonus: 0 }]);
+  const removeMarginTier = (idx: number) => setMarginBonuses(prev => prev.filter((_, i) => i !== idx));
+
+  const updateGoalTier = (idx: number, field: 'min_pct' | 'bonus', value: number) => {
+    setGoalBonuses(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  };
+  const addGoalTier = () => setGoalBonuses(prev => [...prev, { min_pct: 0, bonus: 0 }]);
+  const removeGoalTier = (idx: number) => setGoalBonuses(prev => prev.filter((_, i) => i !== idx));
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader><CardTitle className="text-base">Configuración de comisiones</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="grid md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium">Comisión base (%)</label>
@@ -554,35 +585,71 @@ function CommissionConfigEditor({ config, onSave }: { config: any; onSave: (key:
             <div>
               <label className="text-sm font-medium">Bono cliente nuevo ($)</label>
               <div className="flex gap-2 mt-1">
-                <Input type="number" defaultValue={config?.newCustomerBonus ?? 500} id="ncb" className="h-8" />
-                <Button size="sm" onClick={() => onSave('new_customer_bonus', { amount: Number((document.getElementById('ncb') as HTMLInputElement).value) })}><Save size={14} /></Button>
+                <Input type="number" value={ncb} onChange={e => setNcb(Number(e.target.value))} className="h-8" />
+                <Button size="sm" onClick={() => onSave('new_customer_bonus', { amount: ncb })}><Save size={14} /></Button>
               </div>
             </div>
             <div>
               <label className="text-sm font-medium">Bono cobranza (%)</label>
               <div className="flex gap-2 mt-1">
-                <Input type="number" defaultValue={config?.collectionBonusRate ?? 1} id="cbr" className="h-8" />
-                <Button size="sm" onClick={() => onSave('collection_bonus', { rate: Number((document.getElementById('cbr') as HTMLInputElement).value) })}><Save size={14} /></Button>
+                <Input type="number" value={cbr} onChange={e => setCbr(Number(e.target.value))} className="h-8" />
+                <Button size="sm" onClick={() => onSave('collection_bonus', { rate: cbr })}><Save size={14} /></Button>
               </div>
             </div>
           </div>
 
+          {/* Editable Margin Bonuses */}
           <div>
-            <label className="text-sm font-medium">Bonos por margen</label>
-            <p className="text-xs text-muted-foreground mb-2">Rangos de margen → porcentaje de bono adicional sobre ventas</p>
-            <div className="space-y-1">
-              {(config?.marginBonuses ?? []).map((tier: any, i: number) => (
-                <div key={i} className="text-sm">Margen ≥ {tier.min_margin}% → Bono +{tier.bonus}%</div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <label className="text-sm font-medium">Bonos por margen</label>
+                <p className="text-xs text-muted-foreground">Rangos de margen → porcentaje de bono adicional sobre ventas</p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={addMarginTier} className="text-xs h-7">+ Agregar nivel</Button>
+                <Button size="sm" onClick={() => onSave('margin_bonuses', marginBonuses)}><Save size={14} className="mr-1" />Guardar</Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {marginBonuses.map((tier, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Margen ≥</span>
+                  <Input type="number" value={tier.min_margin} onChange={e => updateMarginTier(i, 'min_margin', Number(e.target.value))} className="h-8 w-20" />
+                  <span className="text-xs text-muted-foreground">% → Bono +</span>
+                  <Input type="number" value={tier.bonus} onChange={e => updateMarginTier(i, 'bonus', Number(e.target.value))} className="h-8 w-20" />
+                  <span className="text-xs text-muted-foreground">%</span>
+                  {marginBonuses.length > 1 && (
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => removeMarginTier(i)}>✕</Button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
 
+          {/* Editable Goal Bonuses */}
           <div>
-            <label className="text-sm font-medium">Bonos por meta</label>
-            <p className="text-xs text-muted-foreground mb-2">Cumplimiento de meta → porcentaje de bono adicional</p>
-            <div className="space-y-1">
-              {(config?.goalBonuses ?? []).map((tier: any, i: number) => (
-                <div key={i} className="text-sm">Meta ≥ {tier.min_pct}% → Bono +{tier.bonus}%</div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <label className="text-sm font-medium">Bonos por meta</label>
+                <p className="text-xs text-muted-foreground">Cumplimiento de meta → porcentaje de bono adicional</p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={addGoalTier} className="text-xs h-7">+ Agregar nivel</Button>
+                <Button size="sm" onClick={() => onSave('goal_bonuses', goalBonuses)}><Save size={14} className="mr-1" />Guardar</Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {goalBonuses.map((tier, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Meta ≥</span>
+                  <Input type="number" value={tier.min_pct} onChange={e => updateGoalTier(i, 'min_pct', Number(e.target.value))} className="h-8 w-20" />
+                  <span className="text-xs text-muted-foreground">% → Bono +</span>
+                  <Input type="number" value={tier.bonus} onChange={e => updateGoalTier(i, 'bonus', Number(e.target.value))} className="h-8 w-20" />
+                  <span className="text-xs text-muted-foreground">%</span>
+                  {goalBonuses.length > 1 && (
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => removeGoalTier(i)}>✕</Button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
