@@ -44,18 +44,10 @@ export default function ImportsPage() {
     freightCost: 0, customsCost: 0, status: 'orden_enviada' as ImportStatus,
     exchangeRate: 17.2,
   });
-  const [items, setItems] = useState<{ productName: string; qty: number; unitCost: number }[]>([]);
+  const [items, setItems] = useState<ImportItemData[]>([]);
 
   const totalValue = imports.reduce((s, i) => s + i.totalLanded, 0);
-  const totalItems = imports.reduce((s, i) => s + i.items.reduce((a: number, it: any) => a + it.qty, 0), 0);
-
-  const addItem = () => setItems([...items, { productName: '', qty: 1, unitCost: 0 }]);
-  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
-  const updateItem = (i: number, field: string, value: any) => {
-    const updated = [...items];
-    (updated[i] as any)[field] = value;
-    setItems(updated);
-  };
+  const totalItems = imports.reduce((s, i) => s + i.items.reduce((a: number, it: any) => a + (it.qty || 0), 0), 0);
 
   const totalCost = items.reduce((s, it) => s + it.qty * it.unitCost, 0);
   const totalLanded = totalCost + form.freightCost + form.customsCost;
