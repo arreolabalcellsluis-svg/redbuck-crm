@@ -1,12 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
+import { classifyAllCustomers, type CustomerClassification, type ValueThresholds } from '@/lib/customerClassificationEngine';
 import { useAppContext } from '@/contexts/AppContext';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import { findDuplicates, scanGlobalDuplicates, type DuplicateMatch, type DuplicateGroup } from '@/lib/duplicateDetectionEngine';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye, Merge, Copy, FileText, Package, CreditCard, CalendarDays, ArrowRight, Phone, Mail, MapPin, History, ShoppingCart, ExternalLink } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye, Merge, Copy, FileText, Package, CreditCard, CalendarDays, ArrowRight, Phone, Mail, MapPin, History, ShoppingCart, ExternalLink, Crown, Star, UserCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -75,6 +76,9 @@ export default function CRMPage() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterContactType, setFilterContactType] = useState('');
+  const [filterClientLevel, setFilterClientLevel] = useState('');
+  const [filterClientValue, setFilterClientValue] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
@@ -97,6 +101,11 @@ export default function CRMPage() {
   const { data: dbCommDocs = [] } = useAllCommercialDocuments();
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
+
+  // Classification engine
+  const classificationMap = useMemo(() => {
+    return classifyAllCustomers(customers, dbOrders as any);
+  }, [customers, dbOrders]);
 
   const canExport = true;
   const isVendedor = currentRole === 'vendedor';
@@ -224,8 +233,8 @@ export default function CRMPage() {
     return ids.map(id => ({ id, name: dbTeam.find(t => t.id === id)?.name || id })).sort((a, b) => a.name.localeCompare(b.name));
   }, [allCustomers, dbTeam]);
 
-  const hasFilters = !!(filterType || filterCity || filterVendor || filterPriority || filterDateFrom || filterDateTo);
-  const clearFilters = () => { setFilterType(''); setFilterCity(''); setFilterVendor(''); setFilterPriority(''); setFilterDateFrom(''); setFilterDateTo(''); setSearch(''); };
+  const hasFilters = !!(filterType || filterCity || filterVendor || filterPriority || filterDateFrom || filterDateTo || filterContactType || filterClientLevel || filterClientValue);
+  const clearFilters = () => { setFilterType(''); setFilterCity(''); setFilterVendor(''); setFilterPriority(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterContactType(''); setFilterClientLevel(''); setFilterClientValue(''); setSearch(''); };
 
   const filteredCustomers = useMemo(() => {
     let data = [...allCustomers];
@@ -239,8 +248,11 @@ export default function CRMPage() {
     if (filterPriority) data = data.filter(c => c.priority === filterPriority);
     if (filterDateFrom) data = data.filter(c => c.createdAt >= filterDateFrom);
     if (filterDateTo) data = data.filter(c => c.createdAt <= filterDateTo);
+    if (filterContactType) data = data.filter(c => classificationMap.get(c.id)?.contactType === filterContactType);
+    if (filterClientLevel) data = data.filter(c => classificationMap.get(c.id)?.clientLevel === filterClientLevel);
+    if (filterClientValue) data = data.filter(c => classificationMap.get(c.id)?.clientValue === filterClientValue);
     return data;
-  }, [allCustomers, search, filterType, filterCity, filterVendor, filterPriority, filterDateFrom, filterDateTo]);
+  }, [allCustomers, search, filterType, filterCity, filterVendor, filterPriority, filterDateFrom, filterDateTo, filterContactType, filterClientLevel, filterClientValue, classificationMap]);
 
   const resolveVendor = (vendorId: string) => {
     const u = dbTeam.find(usr => usr.id === vendorId);
@@ -408,57 +420,76 @@ export default function CRMPage() {
         const pipelineTotal = allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0);
         const cierreGanado = allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0);
         const activeOps = allOpportunities.filter(o => !['cierre_ganado', 'cierre_perdido'].includes(o.stage));
+        const clsValues = [...classificationMap.values()];
+        const prospectos = clsValues.filter(c => c.contactType === 'prospecto').length;
+        const clientes = clsValues.filter(c => c.contactType === 'cliente').length;
+        const recurrentes = clsValues.filter(c => c.clientLevel === 'recurrente').length;
+        const vips = clsValues.filter(c => c.clientValue === 'vip').length;
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+          <>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <button onClick={() => { setFilterContactType(''); setFilterClientLevel(''); setFilterClientValue(''); setTab('clientes'); clearFilters(); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Users size={14} /> {isVendedor ? 'Mis clientes' : 'Clientes'}
+                <Users size={14} /> Total contactos
               </div>
               <div className="text-xl font-bold">{isLoading ? '...' : allCustomers.length}</div>
               <div className="space-y-0.5 mt-2 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Alta prioridad:</span> <span className="font-semibold">{allCustomers.filter(c => c.priority === 'alta').length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Nuevos este mes:</span> <span className="font-semibold">{allCustomers.filter(c => c.createdAt >= new Date().toISOString().slice(0, 7)).length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Prospectos:</span> <span className="font-semibold text-yellow-600">{prospectos}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Clientes:</span> <span className="font-semibold text-green-600">{clientes}</span></div>
               </div>
-            </div>
+            </button>
 
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+            <button onClick={() => { setTab('clientes'); clearFilters(); setFilterContactType('prospecto'); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Target size={14} /> {isVendedor ? 'Mis oportunidades' : 'Oportunidades'}
+                <Clock size={14} /> Prospectos
               </div>
-              <div className="text-xl font-bold">{allOpportunities.length}</div>
-              <div className="space-y-0.5 mt-2 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Activas:</span> <span className="font-semibold">{activeOps.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Ganadas:</span> <span className="font-semibold text-success">{allOpportunities.filter(o => o.stage === 'cierre_ganado').length}</span></div>
-              </div>
-            </div>
+              <div className="text-xl font-bold text-yellow-600">{prospectos}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Sin pedidos</div>
+            </button>
 
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+            <button onClick={() => { setTab('clientes'); clearFilters(); setFilterClientLevel('recurrente'); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Star size={14} /> Recurrentes
+              </div>
+              <div className="text-xl font-bold">{recurrentes}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">2+ pedidos</div>
+            </button>
+
+            <button onClick={() => { setTab('clientes'); clearFilters(); setFilterClientValue('vip'); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--accent))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Crown size={14} /> VIP
+              </div>
+              <div className="text-xl font-bold text-purple-600">{vips}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">&gt;$100,000 en compras</div>
+            </button>
+
+            <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <TrendingUp size={14} /> Pipeline activo
               </div>
               <div className="text-xl font-bold">{fmt(pipelineTotal)}</div>
               <div className="space-y-0.5 mt-2 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Promedio/op:</span> <span className="font-medium">{fmt(activeOps.length > 0 ? Math.round(activeOps.reduce((s, o) => s + o.estimatedAmount, 0) / activeOps.length) : 0)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">En negociación:</span> <span className="font-semibold">{allOpportunities.filter(o => o.stage === 'negociacion').length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Activas:</span> <span className="font-semibold">{activeOps.length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ganadas:</span> <span className="font-semibold text-green-600">{allOpportunities.filter(o => o.stage === 'cierre_ganado').length}</span></div>
               </div>
             </div>
 
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+            <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <UserPlus size={14} /> Cierre ganado
               </div>
-              <div className="text-xl font-bold text-success">{fmt(cierreGanado)}</div>
+              <div className="text-xl font-bold text-green-600">{fmt(cierreGanado)}</div>
               {pipelineTotal > 0 && (
                 <div className="flex items-center justify-between mt-2">
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${Math.min(Math.round((cierreGanado / pipelineTotal) * 100), 100)}%` }} />
+                    <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${Math.min(Math.round((cierreGanado / pipelineTotal) * 100), 100)}%` }} />
                   </div>
                   <span className="text-xs font-bold ml-2 whitespace-nowrap">{Math.round((cierreGanado / pipelineTotal) * 100)}%</span>
                 </div>
               )}
-              <div className="text-[10px] text-muted-foreground mt-1">del pipeline total</div>
             </div>
           </div>
+          </>
         );
       })()}
 
@@ -484,6 +515,22 @@ export default function CRMPage() {
                 <Search size={14} className="absolute left-2.5 top-2 text-muted-foreground" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..." className="w-full pl-8 pr-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
+              <select value={filterContactType} onChange={e => setFilterContactType(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Prospectos y Clientes</option>
+                <option value="prospecto">Solo Prospectos</option>
+                <option value="cliente">Solo Clientes</option>
+              </select>
+              <select value={filterClientLevel} onChange={e => setFilterClientLevel(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos los niveles</option>
+                <option value="nuevo">Cliente nuevo</option>
+                <option value="recurrente">Cliente recurrente</option>
+              </select>
+              <select value={filterClientValue} onChange={e => setFilterClientValue(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos los valores</option>
+                <option value="vip">VIP (&gt;$100k)</option>
+                <option value="medio">Medio ($20k–$100k)</option>
+                <option value="bajo">Bajo (&lt;$20k)</option>
+              </select>
               <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
                 <option value="">Todos los tipos</option>
                 {Object.entries(CUSTOMER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -511,7 +558,7 @@ export default function CRMPage() {
                 <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="px-2 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
             </div>
-            <div className="text-xs text-muted-foreground">{filteredCustomers.length} de {allCustomers.length} clientes</div>
+            <div className="text-xs text-muted-foreground">{filteredCustomers.length} de {allCustomers.length} contactos</div>
           </div>
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Cargando clientes...</div>
@@ -519,24 +566,56 @@ export default function CRMPage() {
           <div className="bg-card rounded-xl border overflow-x-auto">
             <table className="data-table">
               <thead>
-                <tr><th>Cliente</th><th>Tipo</th><th>Ciudad</th><th>Vendedor</th><th>Prioridad</th><th>Desde</th><th className="w-10"></th></tr>
+                <tr><th>Cliente</th><th>Clasificación</th><th>Tipo</th><th>Ciudad</th><th>Vendedor</th><th>Pedidos</th><th>Total comprado</th><th>Último pedido</th><th className="w-10"></th></tr>
               </thead>
               <tbody>
-                {filteredCustomers.map(c => (
+                {filteredCustomers.map(c => {
+                  const cls = classificationMap.get(c.id);
+                  return (
                   <tr key={c.id} className="cursor-pointer">
                     <td className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingCustomer(c)}>{c.name}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {cls?.contactType === 'prospecto' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                            <Clock size={10} /> Prospecto
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                            <UserCheck size={10} /> Cliente
+                          </span>
+                        )}
+                        {cls?.clientLevel === 'recurrente' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            <Star size={10} /> Recurrente
+                          </span>
+                        )}
+                        {cls?.clientValue === 'vip' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                            <Crown size={10} /> VIP
+                          </span>
+                        )}
+                        {cls?.clientValue === 'medio' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
+                            Medio
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td><span className="text-xs">{CUSTOMER_TYPE_LABELS[c.type]}</span></td>
                     <td className="text-muted-foreground">{c.city}, {c.state}</td>
                     <td className="text-muted-foreground">{resolveVendor(c.vendorId)}</td>
-                    <td><StatusBadge status={c.priority} type="priority" /></td>
-                    <td className="text-muted-foreground text-xs">{c.createdAt}</td>
+                    <td className="text-center font-semibold">{cls?.totalOrders ?? 0}</td>
+                    <td className="font-semibold">{fmt(cls?.totalPurchased ?? 0)}</td>
+                    <td className="text-muted-foreground text-xs">{cls?.lastOrderDate ?? '—'}</td>
                     <td>
                       <button onClick={() => handleEdit(c)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Editar cliente">
                         <Pencil size={14} />
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -829,7 +908,41 @@ export default function CRMPage() {
       <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">{viewingCustomer?.name} {viewingCustomer && <StatusBadge status={viewingCustomer.priority} type="priority" />}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              {viewingCustomer?.name}
+              {viewingCustomer && <StatusBadge status={viewingCustomer.priority} type="priority" />}
+              {viewingCustomer && (() => {
+                const cls = classificationMap.get(viewingCustomer.id);
+                return (
+                  <div className="flex gap-1 flex-wrap">
+                    {cls?.contactType === 'prospecto' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                        <Clock size={10} /> Prospecto
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <UserCheck size={10} /> Cliente {cls?.clientLevel === 'nuevo' ? 'nuevo' : 'recurrente'}
+                      </span>
+                    )}
+                    {cls?.clientValue === 'vip' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                        <Crown size={10} /> VIP
+                      </span>
+                    )}
+                    {cls?.clientValue === 'medio' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
+                        Medio
+                      </span>
+                    )}
+                    {cls?.clientValue === 'bajo' && cls?.contactType === 'cliente' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                        Bajo
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            </DialogTitle>
             <DialogDescription>Historial completo del cliente</DialogDescription>
           </DialogHeader>
           {viewingCustomer && (() => {
