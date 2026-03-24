@@ -121,7 +121,20 @@ export default function CRMPage() {
 
   const allCustomers = customers;
 
-  // Map quotation status → pipeline stage for display
+  // Duplicate phone detection
+  const phoneDuplicate = useMemo(() => {
+    const normalized = normalizePhone(form.phone);
+    if (!normalized || normalized.length < 7) return null;
+    const match = allCustomers.find(c => {
+      if (editingCustomer && c.id === editingCustomer.id) return false;
+      const cNorm = normalizePhone(c.phone);
+      if (cNorm === normalized) return true;
+      if (c.whatsapp && normalizePhone(c.whatsapp) === normalized) return true;
+      return false;
+    });
+    return match || null;
+  }, [form.phone, allCustomers, editingCustomer]);
+
   const quotationToPipelineStage = (status: string): string => {
     switch (status) {
       case 'borrador': return 'cotizacion_enviada';
