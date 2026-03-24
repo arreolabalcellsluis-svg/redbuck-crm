@@ -67,7 +67,7 @@ export default function VendorPerformanceReportPage() {
       kpis: [
         { label: 'Total ventas equipo', value: fmt(totalVentas), color: 'primary' },
         { label: 'Vendedores', value: records.length },
-        { label: 'Ticket promedio', value: fmt(dashboardMetrics.avgTicket) },
+        { label: 'Ticket promedio', value: fmt(avgTicket) },
       ],
       sections: [
         { title: 'Ventas vs Meta (gráfica)', headers: ['Vendedor', 'Ventas', 'Meta', 'Cumpl. %'], rows: records.map(r => [r.vendedor, fmt(r.ventasTotales), fmt(r.meta), `${r.cumplimiento.toFixed(0)}%`]) },
