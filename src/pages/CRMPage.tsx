@@ -7,7 +7,7 @@ import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import { findDuplicates, scanGlobalDuplicates, type DuplicateMatch, type DuplicateGroup } from '@/lib/duplicateDetectionEngine';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye, Merge, Copy, FileText, Package, CreditCard, CalendarDays, ArrowRight, Phone, Mail, MapPin, History, ShoppingCart, ExternalLink } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye, Merge, Copy, FileText, Package, CreditCard, CalendarDays, ArrowRight, Phone, Mail, MapPin, History, ShoppingCart, ExternalLink, Crown, Star, UserCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
