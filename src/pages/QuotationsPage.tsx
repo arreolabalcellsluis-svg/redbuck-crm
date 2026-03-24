@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, AccountReceivable } from '@/types';
 import type { Payment } from '@/types/payments';
-import { useQuotations, useAddQuotation, useUpdateQuotationStatus } from '@/hooks/useQuotations';
+import { useQuotations, useAddQuotation, useUpdateQuotationStatus, useUpdateQuotation } from '@/hooks/useQuotations';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useAddOrder } from '@/hooks/useOrders';
@@ -38,6 +38,7 @@ export default function QuotationsPage() {
   const { data: dbQuotations = [], isLoading: quotationsLoading } = useQuotations();
   const addQuotationMutation = useAddQuotation();
   const updateQuotationStatusMutation = useUpdateQuotationStatus();
+  const updateQuotationMutation = useUpdateQuotation();
   const { data: dbOrders = [] } = useOrders();
   const addOrderMutation = useAddOrder();
   const { data: dbCustomers = [] } = useCustomers();
@@ -308,9 +309,22 @@ export default function QuotationsPage() {
       validUntil: fmtDate(validDate),
     };
 
-    // Note: full edit requires useUpdateQuotation hook - for now just update status
-    updateQuotationStatusMutation.mutate({ id: editingQuotation.id, status: editingQuotation.status });
-    toast.success(`Cotización ${editingQuotation.folio} actualizada`);
+    updateQuotationMutation.mutate({
+      id: editingQuotation.id,
+      customer_id: updated.customerId || null,
+      customer_name: updated.customerName,
+      customer_phone: updated.customerPhone || null,
+      customer_whatsapp: updated.customerWhatsapp || null,
+      vendor_id: updated.vendorId || null,
+      vendor_name: updated.vendorName,
+      vendor_phone: updated.vendorPhone || null,
+      vendor_email: updated.vendorEmail || null,
+      items: updated.items,
+      subtotal: updated.subtotal,
+      tax: updated.tax,
+      total: updated.total,
+      valid_until: updated.validUntil,
+    });
     setShowCreate(false);
     resetForm();
   };
