@@ -874,7 +874,9 @@ export default function QuotationsPage() {
                 <td>
                   <div className="flex items-center gap-1">
                     {q.status === 'aceptada' && (
-                      <button onClick={() => openConversion(q)} className="p-1.5 rounded-md hover:bg-primary/10 text-primary" title="Generar pedido"><ShoppingCart size={14} /></button>
+                      foliosWithOrder.has(q.folio)
+                        ? <span className="p-1.5 rounded-md bg-green-500/20 text-green-600" title="Pedido ya generado"><ShoppingCart size={14} /></span>
+                        : <button onClick={() => openConversion(q)} className="p-1.5 rounded-md hover:bg-primary/10 text-primary" title="Generar pedido"><ShoppingCart size={14} /></button>
                     )}
                     <button onClick={() => setShowPreview(q)} className="p-1.5 rounded-md hover:bg-muted" title="Vista previa"><Eye size={14} /></button>
                     <button onClick={() => openEditQuotation(q)} className="p-1.5 rounded-md hover:bg-muted text-amber-600" title="Editar cotización"><Pencil size={14} /></button>
