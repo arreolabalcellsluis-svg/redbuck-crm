@@ -3,12 +3,14 @@ import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Custom
 import { useAppContext } from '@/contexts/AppContext';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
+import { findDuplicates, scanGlobalDuplicates, type DuplicateMatch, type DuplicateGroup } from '@/lib/duplicateDetectionEngine';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye, Merge, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
 import { useAllCustomerFiscalData, useSaveCustomerFiscalData } from '@/hooks/useInvoicing';
 import { useQuotations } from '@/hooks/useQuotations';
@@ -17,10 +19,11 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useActivities, useAddActivity } from '@/hooks/useActivities';
 import { useOnboardingConfig } from '@/hooks/useOnboardingConfig';
 import { generateOnboardingActivities, buildWhatsAppLink } from '@/lib/onboardingEngine';
+import { useQueryClient } from '@tanstack/react-query';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-type Tab = 'clientes' | 'pipeline' | 'onboarding';
+type Tab = 'clientes' | 'pipeline' | 'onboarding' | 'duplicados';
 
 type FiscalData = {
   taxRegime: string;
@@ -57,15 +60,6 @@ function dbToCustomer(db: DBCustomer): Customer {
   };
 }
 
-/** Normalize phone: strip spaces, dashes, parentheses, country code prefixes */
-function normalizePhone(phone: string): string {
-  let p = phone.replace(/[\s\-\(\)\.\+]/g, '');
-  // Remove Mexico country code variants
-  if (p.startsWith('521') && p.length > 10) p = p.slice(p.length - 10);
-  else if (p.startsWith('52') && p.length > 10) p = p.slice(p.length - 10);
-  else if (p.startsWith('1') && p.length === 11) p = p.slice(1);
-  return p;
-}
 
 export default function CRMPage() {
   const { currentRole } = useAppContext();
@@ -121,19 +115,56 @@ export default function CRMPage() {
 
   const allCustomers = customers;
 
-  // Duplicate phone detection
-  const phoneDuplicate = useMemo(() => {
-    const normalized = normalizePhone(form.phone);
-    if (!normalized || normalized.length < 7) return null;
-    const match = allCustomers.find(c => {
-      if (editingCustomer && c.id === editingCustomer.id) return false;
-      const cNorm = normalizePhone(c.phone);
-      if (cNorm === normalized) return true;
-      if (c.whatsapp && normalizePhone(c.whatsapp) === normalized) return true;
-      return false;
-    });
-    return match || null;
-  }, [form.phone, allCustomers, editingCustomer]);
+  // Multi-field duplicate detection
+  const duplicateMatches = useMemo(() => {
+    if (!form.phone && !form.email && !form.name) return [];
+    return findDuplicates(
+      { phone: form.phone, email: form.email, name: form.name, whatsapp: form.whatsapp },
+      allCustomers,
+      editingCustomer?.id,
+    );
+  }, [form.phone, form.email, form.name, form.whatsapp, allCustomers, editingCustomer]);
+
+  const phoneDuplicate = duplicateMatches.length > 0 ? duplicateMatches[0].customer : null;
+
+  // Global duplicate scanner
+  const globalDuplicates = useMemo(() => scanGlobalDuplicates(allCustomers), [allCustomers]);
+
+  // Merge state
+  const [mergeDialog, setMergeDialog] = useState<{ primary: Customer; secondary: Customer } | null>(null);
+  const [merging, setMerging] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleMerge = async () => {
+    if (!mergeDialog) return;
+    setMerging(true);
+    const { primary, secondary } = mergeDialog;
+    try {
+      // Transfer orders
+      await supabase.from('orders').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer quotations
+      await supabase.from('quotations').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer activities
+      await supabase.from('activities').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer accounts receivable
+      await supabase.from('accounts_receivable').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer invoices
+      await supabase.from('invoices').update({ customer_id: primary.id } as any).eq('customer_id', secondary.id);
+      // Delete the duplicate
+      await supabase.from('customers').delete().eq('id', secondary.id);
+      // Invalidate caches
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success(`Clientes fusionados. "${secondary.name}" fue absorbido por "${primary.name}"`);
+      setMergeDialog(null);
+    } catch (e: any) {
+      toast.error(`Error al fusionar: ${e.message}`);
+    } finally {
+      setMerging(false);
+    }
+  };
 
   const quotationToPipelineStage = (status: string): string => {
     switch (status) {
@@ -426,9 +457,9 @@ export default function CRMPage() {
       })()}
 
       <div className="flex items-center gap-1 mb-4 border-b">
-        {(['clientes', 'pipeline', 'onboarding'] as Tab[]).map(t => (
+        {(['clientes', 'pipeline', 'onboarding', 'duplicados'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-            {t === 'clientes' ? 'Clientes' : t === 'pipeline' ? 'Pipeline' : '⚡ Onboarding'}
+            {t === 'clientes' ? 'Clientes' : t === 'pipeline' ? 'Pipeline' : t === 'onboarding' ? '⚡ Onboarding' : `🔍 Duplicados${globalDuplicates.length > 0 ? ` (${globalDuplicates.length})` : ''}`}
           </button>
         ))}
       </div>
@@ -672,6 +703,84 @@ export default function CRMPage() {
       })()}
 
 
+      {/* ═══ DUPLICADOS TAB ═══ */}
+      {tab === 'duplicados' && (
+        <div className="space-y-4">
+          <div className="bg-card rounded-xl border p-4">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
+              <Copy size={18} /> Detección de Duplicados
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Se escanearon {allCustomers.length} clientes — {globalDuplicates.length} grupo(s) de posibles duplicados.
+            </p>
+
+            {globalDuplicates.length === 0 && (
+              <div className="text-center text-muted-foreground py-12 border border-dashed rounded-xl">
+                <CheckCircle2 className="mx-auto mb-2 text-green-500" size={32} />
+                <p className="font-medium">Base de datos limpia</p>
+                <p className="text-xs">No se detectaron clientes duplicados</p>
+              </div>
+            )}
+
+            {globalDuplicates.map((group, gi) => (
+              <div key={gi} className="mb-4 border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 flex items-center gap-2 text-sm font-medium">
+                  <AlertTriangle size={14} className="text-yellow-600" />
+                  {group.reason}
+                  <span className="ml-auto text-xs text-muted-foreground">{group.customers.length} registros</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/30">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Nombre</th>
+                        <th className="px-3 py-2 text-left">Teléfono</th>
+                        <th className="px-3 py-2 text-left">Email</th>
+                        <th className="px-3 py-2 text-left">Vendedor</th>
+                        <th className="px-3 py-2 text-left">Registro</th>
+                        <th className="px-3 py-2 text-left">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {group.customers.map(c => (
+                        <tr key={c.id} className="hover:bg-muted/20">
+                          <td className="px-3 py-2 font-medium">{c.name}</td>
+                          <td className="px-3 py-2">{c.phone}</td>
+                          <td className="px-3 py-2">{c.email || '—'}</td>
+                          <td className="px-3 py-2">{resolveVendor(c.vendorId)}</td>
+                          <td className="px-3 py-2">{c.createdAt}</td>
+                          <td className="px-3 py-2">
+                            <button onClick={() => setViewingCustomer(c)} className="text-primary hover:underline text-xs">Ver</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {(currentRole === 'director' || currentRole === 'gerencia_comercial') && group.customers.length === 2 && (
+                  <div className="px-4 py-3 bg-muted/20 border-t flex items-center gap-2 flex-wrap">
+                    <Merge size={14} className="text-primary" />
+                    <span className="text-xs text-muted-foreground">Fusionar:</span>
+                    <button
+                      onClick={() => setMergeDialog({ primary: group.customers[0], secondary: group.customers[1] })}
+                      className="text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      Mantener "{group.customers[0].name}"
+                    </button>
+                    <button
+                      onClick={() => setMergeDialog({ primary: group.customers[1], secondary: group.customers[0] })}
+                      className="text-xs px-3 py-1 rounded-md border hover:bg-accent"
+                    >
+                      Mantener "{group.customers[1].name}"
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -750,29 +859,42 @@ export default function CRMPage() {
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} placeholder="811-234-5678" />
-              {phoneDuplicate && (
-                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
-                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Este número ya está registrado en el sistema
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
-                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
-                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
-                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
-                  </div>
-                  <div className="flex gap-2 mt-2 ml-6">
-                    <button type="button" onClick={() => { setShowCreate(false); setViewingCustomer(phoneDuplicate); }} className="text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1">
-                      <Eye className="w-3 h-3" /> Ver cliente existente
-                    </button>
-                    <button type="button" onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="text-xs px-3 py-1 rounded-md border hover:bg-accent">
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${duplicateMatches.length > 0 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} placeholder="811-234-5678" />
             </div>
+            {/* Multi-field duplicate detection panel */}
+            {duplicateMatches.length > 0 && (
+              <div className="md:col-span-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm space-y-2">
+                <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Posibles clientes existentes ({duplicateMatches.length})
+                </div>
+                {duplicateMatches.slice(0, 5).map(dm => (
+                  <div key={dm.customer.id} className="ml-6 p-2 rounded-md bg-background/60 border text-xs space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{dm.customer.name}</span>
+                      <span className="flex gap-1 flex-wrap">
+                        {dm.matchReasons.map(r => (
+                          <span key={r} className="px-1.5 py-0.5 rounded bg-yellow-200 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-[10px]">{r}</span>
+                        ))}
+                      </span>
+                    </div>
+                    <div className="flex gap-4 text-muted-foreground">
+                      <span>📞 {dm.customer.phone}</span>
+                      {dm.customer.email && <span>✉ {dm.customer.email}</span>}
+                      <span>👤 {resolveVendor(dm.customer.vendorId)}</span>
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                      <button type="button" onClick={() => { setShowCreate(false); setViewingCustomer(dm.customer); }} className="text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1">
+                        <Eye className="w-3 h-3" /> Ver existente
+                      </button>
+                      <button type="button" onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="text-[10px] px-2 py-1 rounded border hover:bg-accent">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
               <input value={form.whatsapp || ''} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="5218112345678" />
@@ -887,21 +1009,23 @@ export default function CRMPage() {
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} />
-              {phoneDuplicate && (
-                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
-                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Este número ya está registrado en el sistema
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
-                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
-                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
-                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
-                  </div>
-                </div>
-              )}
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${duplicateMatches.length > 0 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} />
             </div>
+            {duplicateMatches.length > 0 && (
+              <div className="md:col-span-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
+                <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Posibles duplicados ({duplicateMatches.length})
+                </div>
+                {duplicateMatches.slice(0, 3).map(dm => (
+                  <div key={dm.customer.id} className="ml-6 p-2 rounded-md bg-background/60 border text-xs mb-1">
+                    <span className="font-semibold">{dm.customer.name}</span>
+                    <span className="text-muted-foreground ml-2">📞 {dm.customer.phone}</span>
+                    <span className="ml-2">{dm.matchReasons.join(', ')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
               <input value={form.whatsapp || ''} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
@@ -1019,6 +1143,39 @@ export default function CRMPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleteCustomerMut.isPending ? 'Eliminando...' : 'Sí, eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ===================== MERGE CONFIRM DIALOG ===================== */}
+      <AlertDialog open={!!mergeDialog} onOpenChange={(open) => { if (!open) setMergeDialog(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><Merge size={18} /> Fusionar clientes</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Se mantendrá el registro principal y se transferirán todos los datos del registro duplicado:</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-lg border-2 border-primary bg-primary/5">
+                    <p className="text-[10px] font-bold text-primary mb-1">✅ SE MANTIENE</p>
+                    <p className="font-semibold">{mergeDialog?.primary.name}</p>
+                    <p className="text-xs text-muted-foreground">📞 {mergeDialog?.primary.phone}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-destructive/50 bg-destructive/5">
+                    <p className="text-[10px] font-bold text-destructive mb-1">❌ SE ELIMINA</p>
+                    <p className="font-semibold">{mergeDialog?.secondary.name}</p>
+                    <p className="text-xs text-muted-foreground">📞 {mergeDialog?.secondary.phone}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Se transferirán: pedidos, cotizaciones, actividades, facturas y cuentas por cobrar.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={merging}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMerge} disabled={merging} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {merging ? 'Fusionando...' : 'Confirmar fusión'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
