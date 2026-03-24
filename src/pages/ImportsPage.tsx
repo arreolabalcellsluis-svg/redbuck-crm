@@ -234,11 +234,12 @@ export default function ImportsPage() {
               <div className="py-4 overflow-x-auto"><ImportTimeline currentStatus={imp.status} /></div>
               <div className="mt-4 rounded-lg border overflow-hidden">
                 <table className="data-table">
-                  <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
+                  <thead><tr><th>Producto</th><th>SKU</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
                   <tbody>
                     {imp.items.map((item: any, i: number) => (
                       <tr key={i}>
                         <td className="font-medium">{item.productName}</td>
+                        <td className="text-muted-foreground text-xs">{item.sku || '—'}</td>
                         <td>{item.qty}</td>
                         <td>{fmt(item.unitCost)}</td>
                         <td className="font-semibold">{fmt(item.qty * item.unitCost)}</td>
