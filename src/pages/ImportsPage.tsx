@@ -5,9 +5,12 @@ import ImportProductSelector, { type ImportItemData } from '@/components/imports
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
-import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet, PackageCheck, Loader2 } from 'lucide-react';
 import { exportImportPdf, exportImportExcel } from '@/lib/importExport';
 import { useState } from 'react';
+import { useProducts } from '@/hooks/useProducts';
+import { useWarehouses } from '@/hooks/useWarehouses';
+import { addAuditLog } from '@/lib/auditLog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ImportStatus, IMPORT_STATUS_LABELS, IMPORT_STATUS_ORDER } from '@/types';
 import type { ImportExpenses } from '@/types';
@@ -33,9 +36,12 @@ export default function ImportsPage() {
 
   const { data: imports = [], isLoading } = useImportOrders();
   const { data: suppliers = [] } = useSuppliers();
+  const { data: dbProducts = [] } = useProducts();
+  const { data: warehouses = [] } = useWarehouses();
   const addMutation = useAddImportOrder();
   const updateMutation = useUpdateImportOrder();
   const qc = useQueryClient();
+  const [processing, setProcessing] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -71,6 +77,12 @@ export default function ImportsPage() {
       sku: it.sku || '',
       skuFabrica: it.skuFabrica || '',
       category: it.category || '',
+      brand: it.brand || '',
+      model: it.model || '',
+      description: it.description || '',
+      listPrice: it.listPrice || 0,
+      minPrice: it.minPrice || 0,
+      warranty: it.warranty || '',
       qty: it.qty || 1,
       unitCost: it.unitCost || 0,
       cbm: it.cbm || 0,
@@ -121,6 +133,12 @@ export default function ImportsPage() {
       sku: it.sku,
       skuFabrica: it.skuFabrica || '',
       category: it.category,
+      brand: it.brand || '',
+      model: it.model || '',
+      description: it.description || '',
+      listPrice: it.listPrice || 0,
+      minPrice: it.minPrice || 0,
+      warranty: it.warranty || '',
       qty: it.qty,
       unitCost: it.unitCost,
       cbm: it.cbm,
@@ -159,6 +177,169 @@ export default function ImportsPage() {
     }
     setOpen(false);
     resetForm();
+  };
+
+  // ---- PROCESAR IMPORTACIÓN ----
+  const handleProcessImport = async (imp: any) => {
+    if (imp.status === 'procesado') {
+      toast.error('Esta importación ya fue procesada');
+      return;
+    }
+    if (imp.status !== 'llego_bodega' && imp.status !== 'inventario_disponible') {
+      toast.error('Solo se puede procesar una importación con estatus "Llegó a bodega" o "Inventario disponible"');
+      return;
+    }
+
+    const ok = window.confirm(`¿Procesar importación ${imp.orderNumber}?\n\nEsto creará productos nuevos (si no existen), actualizará inventario y generará movimientos. Esta acción no se puede revertir.`);
+    if (!ok) return;
+
+    setProcessing(imp.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id ?? null;
+      const importItems = imp.items as any[];
+      let productosCreados = 0;
+      let productosExistentes = 0;
+      let movimientosGenerados = 0;
+
+      // Check if already processed (double-check via DB)
+      const { data: existingMovements } = await supabase
+        .from('inventory_movements')
+        .select('id')
+        .eq('reference_type', 'import')
+        .eq('reference_id', imp.id)
+        .limit(1);
+      if (existingMovements && existingMovements.length > 0) {
+        toast.error('Esta importación ya tiene movimientos registrados. No se puede reprocesar.');
+        setProcessing(null);
+        return;
+      }
+
+      // Default warehouse
+      const defaultWarehouse = warehouses.length > 0 ? warehouses[0].name : 'Principal';
+      const updatedItems = [...importItems];
+
+      for (let i = 0; i < importItems.length; i++) {
+        const item = importItems[i];
+        let productId = item.productId;
+
+        // 1. VALIDATE/CREATE PRODUCT
+        if (!productId) {
+          // Try to find by SKU first
+          if (item.sku) {
+            const { data: bySkuProduct } = await supabase
+              .from('products').select('id').eq('sku', item.sku.trim()).maybeSingle();
+            if (bySkuProduct) {
+              productId = bySkuProduct.id;
+              productosExistentes++;
+            }
+          }
+          // Fallback: find by name
+          if (!productId && item.productName) {
+            const normalizedName = item.productName.trim().toLowerCase();
+            const found = dbProducts.find(p =>
+              p.name.trim().toLowerCase() === normalizedName
+            );
+            if (found) {
+              productId = found.id;
+              productosExistentes++;
+            }
+          }
+          // Create new product if not found
+          if (!productId) {
+            const newSku = item.sku || `IMP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+            const { data: newProduct, error: createErr } = await supabase.from('products').insert({
+              sku: newSku,
+              name: item.productName || 'Producto importado',
+              category: (item.category || 'otros') as any,
+              brand: item.brand || '',
+              model: item.model || '',
+              description: item.description || '',
+              cost: item.unitCost || 0,
+              list_price: item.listPrice || 0,
+              min_price: item.minPrice || 0,
+              currency: 'USD' as any,
+              delivery_days: 0,
+              supplier: imp.supplier || '',
+              warranty: item.warranty || '',
+              active: true,
+              stock: {} as any,
+              in_transit: 0,
+              images: [] as any,
+              user_id: userId,
+            }).select('id').single();
+
+            if (createErr) throw createErr;
+            productId = newProduct.id;
+            productosCreados++;
+          }
+        } else {
+          productosExistentes++;
+        }
+
+        // Update item with productId
+        updatedItems[i] = { ...item, productId };
+
+        // 2. GENERATE INVENTORY MOVEMENT
+        const { error: mvError } = await supabase.from('inventory_movements').insert({
+          product_id: productId,
+          warehouse_id: defaultWarehouse,
+          quantity: item.qty || 0,
+          unit_cost: item.unitCost || 0,
+          total_cost: (item.qty || 0) * (item.unitCost || 0),
+          movement_type: 'import_in',
+          reference_type: 'import',
+          reference_id: imp.id,
+          notes: `Importación ${imp.orderNumber}`,
+          user_id: userId,
+        } as any);
+        if (mvError) throw mvError;
+        movimientosGenerados++;
+
+        // 3. UPDATE STOCK on product
+        const { data: currentProduct } = await supabase
+          .from('products').select('stock, in_transit').eq('id', productId).maybeSingle();
+        if (currentProduct) {
+          const currentStock = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null)
+            ? currentProduct.stock as Record<string, number>
+            : {};
+          const newStock = { ...currentStock, [defaultWarehouse]: ((currentStock as any)[defaultWarehouse] || 0) + (item.qty || 0) };
+          const newInTransit = Math.max(0, (currentProduct.in_transit || 0) - (item.qty || 0));
+          await supabase.from('products').update({
+            stock: newStock as any,
+            in_transit: newInTransit,
+            updated_at: new Date().toISOString(),
+          }).eq('id', productId);
+        }
+      }
+
+      // 4. Update import status to 'procesado' and save updated items with productIds
+      await supabase.from('import_orders').update({
+        status: 'procesado',
+        items: updatedItems as any,
+        updated_at: new Date().toISOString(),
+      }).eq('id', imp.id);
+
+      // 5. AUDIT LOG
+      addAuditLog({
+        userId: userId || 'system',
+        userName: 'Usuario actual',
+        userRole: currentRole,
+        module: 'importaciones',
+        action: 'procesar_importacion',
+        entityId: imp.id,
+        newValue: `Productos creados: ${productosCreados}, existentes: ${productosExistentes}, movimientos: ${movimientosGenerados}`,
+        comment: `Importación ${imp.orderNumber} procesada`,
+      });
+
+      qc.invalidateQueries({ queryKey: ['import_orders'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success(`✅ Importación procesada: ${productosCreados} productos creados, ${productosExistentes} existentes, ${movimientosGenerados} movimientos generados`);
+    } catch (e: any) {
+      toast.error('Error al procesar: ' + e.message);
+    } finally {
+      setProcessing(null);
+    }
   };
 
   const handleImportsExcel = () => {
@@ -256,6 +437,22 @@ export default function ImportsPage() {
                     <button onClick={() => exportImportExcel(imp)} className="p-1.5 rounded-md hover:bg-muted text-green-600" title="Exportar Excel">
                       <FileSpreadsheet size={14} />
                     </button>
+                    {canEdit && imp.status !== 'procesado' && (imp.status === 'llego_bodega' || imp.status === 'inventario_disponible') && (
+                      <button
+                        onClick={() => handleProcessImport(imp)}
+                        disabled={processing === imp.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-success/10 text-success hover:bg-success/20 text-xs font-medium disabled:opacity-50"
+                        title="Procesar importación: crear productos e inventario"
+                      >
+                        {processing === imp.id ? <Loader2 size={12} className="animate-spin" /> : <PackageCheck size={12} />}
+                        {processing === imp.id ? 'Procesando...' : 'Procesar'}
+                      </button>
+                    )}
+                    {imp.status === 'procesado' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-success/10 text-success text-xs font-medium">
+                        <PackageCheck size={12} /> Procesado
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{imp.supplier} · {imp.country}</p>
                 </div>
