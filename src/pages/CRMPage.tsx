@@ -889,7 +889,41 @@ export default function CRMPage() {
       <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">{viewingCustomer?.name} {viewingCustomer && <StatusBadge status={viewingCustomer.priority} type="priority" />}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              {viewingCustomer?.name}
+              {viewingCustomer && <StatusBadge status={viewingCustomer.priority} type="priority" />}
+              {viewingCustomer && (() => {
+                const cls = classificationMap.get(viewingCustomer.id);
+                return (
+                  <div className="flex gap-1 flex-wrap">
+                    {cls?.contactType === 'prospecto' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                        <Clock size={10} /> Prospecto
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <UserCheck size={10} /> Cliente {cls?.clientLevel === 'nuevo' ? 'nuevo' : 'recurrente'}
+                      </span>
+                    )}
+                    {cls?.clientValue === 'vip' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                        <Crown size={10} /> VIP
+                      </span>
+                    )}
+                    {cls?.clientValue === 'medio' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
+                        Medio
+                      </span>
+                    )}
+                    {cls?.clientValue === 'bajo' && cls?.contactType === 'cliente' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                        Bajo
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            </DialogTitle>
             <DialogDescription>Historial completo del cliente</DialogDescription>
           </DialogHeader>
           {viewingCustomer && (() => {
