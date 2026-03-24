@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, Trash2, CalendarIcon, FileSpreadsheet } from 'lucide-react';
+import { Warehouse, Package, ArrowLeftRight, AlertTriangle, Search, Plus, Pencil, Trash2, CalendarIcon, FileSpreadsheet, FileText } from 'lucide-react';
+import { getCompanyLogoUrl } from '@/hooks/useCompanyLogo';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -159,6 +160,100 @@ export default function InventoryPage() {
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, `Auditoria_Inventario_${format(inventoryDate, 'yyyy-MM-dd')}.xlsx`);
     toast.success('Excel de auditoría descargado');
+  };
+
+  const handleExportDistributorPdf = () => {
+    const logoUrl = getCompanyLogoUrl();
+    const pw = window.open('', '_blank');
+    if (!pw) return;
+
+    const dateStr = format(inventoryDate, "d 'de' MMMM yyyy", { locale: es });
+
+    const whHeaders = warehouses.map(w => `<th class="r">${w.name}</th>`).join('');
+
+    const rows = filtered.map(p => {
+      const total = Object.values(p.stock).reduce((a, b) => a + b, 0);
+      const whCells = warehouses.map(w => {
+        const qty = p.stock[w.id] || 0;
+        return `<td class="r ${qty === 0 ? 'zero' : ''}">${qty}</td>`;
+      }).join('');
+      return `<tr>
+        <td class="prod">${p.name}</td>
+        <td class="sku">${p.sku}</td>
+        <td class="r cat">${CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] || p.category}</td>
+        ${whCells}
+        <td class="r total">${total}</td>
+        <td class="r transit">${p.inTransit > 0 ? p.inTransit : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    pw.document.write(`<!DOCTYPE html><html><head><title>Inventario REDBUCK - ${dateStr}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:30px;color:#1a1a1a;font-size:11px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:3px solid #c41e2a;padding-bottom:12px}
+.brand{font-size:20px;font-weight:800;color:#c41e2a;letter-spacing:1px}
+.logo{max-height:50px;object-fit:contain}
+.subtitle{font-size:11px;color:#666;margin-top:4px}
+.date-badge{background:#f5f5f5;padding:8px 16px;border-radius:8px;text-align:center}
+.date-badge .label{font-size:9px;color:#888;text-transform:uppercase}
+.date-badge .value{font-size:14px;font-weight:700;margin-top:2px}
+.summary{display:flex;gap:12px;margin-bottom:16px}
+.summary-card{background:#f9f9f9;padding:10px 16px;border-radius:8px;text-align:center;flex:1;border:1px solid #eee}
+.summary-card .num{font-size:18px;font-weight:800;color:#c41e2a}
+.summary-card .lbl{font-size:9px;color:#888;text-transform:uppercase;margin-top:2px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px}
+th{background:#1a1a1a;color:#fff;font-size:8px;text-transform:uppercase;letter-spacing:0.5px;padding:6px 8px;text-align:left;white-space:nowrap}
+th.r{text-align:right}
+td{padding:5px 8px;border-bottom:1px solid #eee;font-size:10px}
+td.r{text-align:right}
+td.prod{font-weight:600}
+td.sku{font-family:monospace;font-size:9px;color:#666}
+td.cat{font-size:9px;color:#888}
+td.total{font-weight:700;font-size:11px}
+td.transit{color:#2563eb;font-weight:600}
+td.zero{color:#dc2626;font-weight:600}
+.footer{margin-top:20px;border-top:1px solid #ddd;padding-top:8px;font-size:9px;color:#888;text-align:center}
+.note{margin-top:12px;padding:10px 14px;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;font-size:10px;color:#92400e}
+@media print{body{padding:15px}@page{margin:8mm;size:landscape}}
+</style></head><body>
+<div class="header">
+  <div>
+    ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div class="brand">REDBUCK</div>'}
+    <div class="subtitle">Disponibilidad de Inventario para Distribuidores</div>
+  </div>
+  <div class="date-badge">
+    <div class="label">Fecha de corte</div>
+    <div class="value">${dateStr}</div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="summary-card"><div class="num">${filtered.length}</div><div class="lbl">Productos</div></div>
+  <div class="summary-card"><div class="num">${totalUnits}</div><div class="lbl">Unidades totales</div></div>
+  <div class="summary-card"><div class="num">${inTransitCount}</div><div class="lbl">En tránsito</div></div>
+  <div class="summary-card"><div class="num">${warehouses.length}</div><div class="lbl">Bodegas</div></div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Producto</th><th>SKU</th><th class="r">Categoría</th>
+    ${whHeaders}
+    <th class="r">Total</th><th class="r">Tránsito</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="note">
+  <strong>Nota:</strong> Las cantidades mostradas están sujetas a disponibilidad. Confirme existencias con su ejecutivo de ventas antes de realizar pedidos. Los productos en tránsito tienen fecha estimada de llegada variable.
+</div>
+
+<div class="footer">Generado el ${format(new Date(), "d 'de' MMMM yyyy, HH:mm", { locale: es })} · REDBUCK ERP — Documento confidencial para uso de distribuidores autorizados</div>
+</body></html>`);
+
+    pw.document.close();
+    setTimeout(() => { pw.print(); }, 500);
+    toast.success('PDF de inventario generado');
   };
 
   const resetForm = () => {
@@ -326,6 +421,9 @@ export default function InventoryPage() {
           </Popover>
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setInventoryDate(new Date())}>
             Hoy
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 text-sm" onClick={handleExportDistributorPdf}>
+            <FileText size={16} /> PDF Distribuidores
           </Button>
           <Button variant="outline" size="sm" className="gap-2 text-sm" onClick={handleExportAuditExcel}>
             <FileSpreadsheet size={16} /> Auditoría Excel
