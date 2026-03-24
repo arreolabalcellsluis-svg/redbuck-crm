@@ -668,6 +668,40 @@ export default function ProductsPage() {
       />
 
       <AuthorizationDialog request={authRequest} onClose={closeAuth} />
+
+      {/* ===================== DATASHEET PDF DIALOG ===================== */}
+      <Dialog open={!!datasheetProduct} onOpenChange={(open) => { if (!open) setDatasheetProduct(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generar Ficha Técnica</DialogTitle>
+            <DialogDescription>Personaliza la ficha comercial de <strong>{datasheetProduct?.name}</strong> antes de generar el PDF.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre del vendedor *</label>
+              <input value={datasheetSeller.name} onChange={e => setDatasheetSeller(s => ({ ...s, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Tu nombre completo" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono / WhatsApp *</label>
+              <input value={datasheetSeller.phone} onChange={e => setDatasheetSeller(s => ({ ...s, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="33 1234 5678" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Email (opcional)</label>
+              <input value={datasheetSeller.email} onChange={e => setDatasheetSeller(s => ({ ...s, email: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="vendedor@redbuck.com" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nota personalizada (opcional)</label>
+              <textarea value={datasheetSeller.note} onChange={e => setDatasheetSeller(s => ({ ...s, note: e.target.value }))} rows={2} className="w-full px-3 py-2 rounded-lg border bg-card text-sm resize-y" placeholder="Ej: Precio especial válido esta semana..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setDatasheetProduct(null)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={handleGenerateDatasheet} disabled={generatingPdf} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {generatingPdf ? 'Generando...' : '📄 Generar PDF'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
