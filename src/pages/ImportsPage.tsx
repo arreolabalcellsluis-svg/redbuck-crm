@@ -311,20 +311,7 @@ export default function ImportsPage() {
                 {IMPORT_STATUS_ORDER.map(s => <option key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</option>)}
               </select>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-muted-foreground">Productos *</label>
-                <button onClick={addItem} className="text-xs text-primary hover:underline">+ Agregar</button>
-              </div>
-              {items.map((it, i) => (
-                <div key={i} className="flex items-center gap-2 mb-2">
-                  <input value={it.productName} onChange={e => updateItem(i, 'productName', e.target.value)} placeholder="Producto" className="flex-1 px-2 py-1.5 rounded border bg-background text-sm" />
-                  <input type="number" min={1} value={it.qty} onChange={e => updateItem(i, 'qty', Number(e.target.value))} className="w-16 px-2 py-1.5 rounded border bg-background text-sm text-center" />
-                  <input type="number" value={it.unitCost} onChange={e => updateItem(i, 'unitCost', Number(e.target.value))} placeholder="USD" className="w-24 px-2 py-1.5 rounded border bg-background text-sm" />
-                  <button onClick={() => removeItem(i)} className="text-muted-foreground hover:text-destructive"><X size={14} /></button>
-                </div>
-              ))}
-            </div>
+            <ImportProductSelector items={items} onChange={setItems} />
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Flete (USD)</label>
