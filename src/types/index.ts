@@ -303,7 +303,7 @@ export const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
 export const IMPORT_STATUS_ORDER: ImportStatus[] = [
   'orden_enviada', 'anticipo_pagado', 'produccion', 'flete_local_china',
   'puerto_china', 'embarcado', 'transito_maritimo', 'puerto_mexico',
-  'aduana', 'liberado_aduana', 'transito_local', 'llego_bodega', 'inventario_disponible',
+  'aduana', 'liberado_aduana', 'transito_local', 'llego_bodega', 'inventario_disponible', 'procesado',
 ];
 
 export const PIPELINE_LABELS: Record<PipelineStage, string> = {
