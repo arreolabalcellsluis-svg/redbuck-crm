@@ -111,6 +111,53 @@ export function useUpdateQuotationStatus() {
   });
 }
 
+export function useUpdateQuotation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...fields }: {
+      id: string;
+      customer_id?: string | null;
+      customer_name?: string;
+      customer_phone?: string | null;
+      customer_whatsapp?: string | null;
+      vendor_id?: string | null;
+      vendor_name?: string;
+      vendor_phone?: string | null;
+      vendor_email?: string | null;
+      items?: any[];
+      subtotal?: number;
+      tax?: number;
+      total?: number;
+      status?: string;
+      valid_until?: string;
+    }) => {
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (fields.customer_id !== undefined) updates.customer_id = fields.customer_id;
+      if (fields.customer_name !== undefined) updates.customer_name = fields.customer_name;
+      if (fields.customer_phone !== undefined) updates.customer_phone = fields.customer_phone;
+      if (fields.customer_whatsapp !== undefined) updates.customer_whatsapp = fields.customer_whatsapp;
+      if (fields.vendor_id !== undefined) updates.vendor_id = fields.vendor_id;
+      if (fields.vendor_name !== undefined) updates.vendor_name = fields.vendor_name;
+      if (fields.vendor_phone !== undefined) updates.vendor_phone = fields.vendor_phone;
+      if (fields.vendor_email !== undefined) updates.vendor_email = fields.vendor_email;
+      if (fields.items !== undefined) updates.items = fields.items as any;
+      if (fields.subtotal !== undefined) updates.subtotal = fields.subtotal;
+      if (fields.tax !== undefined) updates.tax = fields.tax;
+      if (fields.total !== undefined) updates.total = fields.total;
+      if (fields.status !== undefined) updates.status = fields.status as any;
+      if (fields.valid_until !== undefined) updates.valid_until = fields.valid_until;
+
+      const { error } = await supabase.from('quotations').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quotations'] });
+      toast({ title: 'Cotización actualizada' });
+    },
+    onError: (e: any) => toast({ title: 'Error al actualizar cotización', description: e.message, variant: 'destructive' }),
+  });
+}
+
 export function useDeleteQuotation() {
   const qc = useQueryClient();
   return useMutation({
