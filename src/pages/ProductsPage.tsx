@@ -486,9 +486,14 @@ export default function ProductsPage() {
           <h1 className="page-title">Catálogo de Productos</h1>
           <p className="page-subtitle">{isLoading ? '...' : products.filter(p => p.active).length} productos activos</p>
         </div>
-        <button onClick={() => { setForm(emptyProduct()); setImagePreview(null); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus size={16} /> Nuevo producto
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowPriceListDialog(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-accent transition-colors">
+            <FileDown size={16} /> Lista de Precios
+          </button>
+          <button onClick={() => { setForm(emptyProduct()); setImagePreview(null); setShowCreate(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus size={16} /> Nuevo producto
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
