@@ -140,6 +140,11 @@ export function useUpdateProduct() {
       if (product.warranty !== undefined) updates.warranty = product.warranty;
       if (product.delivery_days !== undefined) updates.delivery_days = product.delivery_days;
       if (product.currency !== undefined) updates.currency = product.currency;
+      if (product.capacity !== undefined) updates.capacity = product.capacity;
+      if (product.price_client !== undefined) updates.price_client = product.price_client;
+      if (product.price_distributor !== undefined) updates.price_distributor = product.price_distributor;
+      if (product.commission_distributor !== undefined) updates.commission_distributor = product.commission_distributor;
+      if (product.commission_admin !== undefined) updates.commission_admin = product.commission_admin;
 
       const { error } = await supabase.from('products').update(updates).eq('id', id);
       if (error) throw error;
