@@ -44,6 +44,7 @@ export default function QuotationsPage() {
   const addOrderMutation = useAddOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const updateProductMutation = useUpdateProduct();
   const { data: dbTeamMembers = [] } = useTeamMembers();
 
   // Map DB quotations to local Quotation type
