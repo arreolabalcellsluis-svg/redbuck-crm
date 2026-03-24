@@ -179,6 +179,169 @@ export default function ImportsPage() {
     resetForm();
   };
 
+  // ---- PROCESAR IMPORTACIÓN ----
+  const handleProcessImport = async (imp: any) => {
+    if (imp.status === 'procesado') {
+      toast.error('Esta importación ya fue procesada');
+      return;
+    }
+    if (imp.status !== 'llego_bodega' && imp.status !== 'inventario_disponible') {
+      toast.error('Solo se puede procesar una importación con estatus "Llegó a bodega" o "Inventario disponible"');
+      return;
+    }
+
+    const ok = window.confirm(`¿Procesar importación ${imp.orderNumber}?\n\nEsto creará productos nuevos (si no existen), actualizará inventario y generará movimientos. Esta acción no se puede revertir.`);
+    if (!ok) return;
+
+    setProcessing(imp.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id ?? null;
+      const importItems = imp.items as any[];
+      let productosCreados = 0;
+      let productosExistentes = 0;
+      let movimientosGenerados = 0;
+
+      // Check if already processed (double-check via DB)
+      const { data: existingMovements } = await supabase
+        .from('inventory_movements')
+        .select('id')
+        .eq('reference_type', 'import')
+        .eq('reference_id', imp.id)
+        .limit(1);
+      if (existingMovements && existingMovements.length > 0) {
+        toast.error('Esta importación ya tiene movimientos registrados. No se puede reprocesar.');
+        setProcessing(null);
+        return;
+      }
+
+      // Default warehouse
+      const defaultWarehouse = warehouses.length > 0 ? warehouses[0].name : 'Principal';
+      const updatedItems = [...importItems];
+
+      for (let i = 0; i < importItems.length; i++) {
+        const item = importItems[i];
+        let productId = item.productId;
+
+        // 1. VALIDATE/CREATE PRODUCT
+        if (!productId) {
+          // Try to find by SKU first
+          if (item.sku) {
+            const { data: bySkuProduct } = await supabase
+              .from('products').select('id').eq('sku', item.sku.trim()).maybeSingle();
+            if (bySkuProduct) {
+              productId = bySkuProduct.id;
+              productosExistentes++;
+            }
+          }
+          // Fallback: find by name
+          if (!productId && item.productName) {
+            const normalizedName = item.productName.trim().toLowerCase();
+            const found = dbProducts.find(p =>
+              p.name.trim().toLowerCase() === normalizedName
+            );
+            if (found) {
+              productId = found.id;
+              productosExistentes++;
+            }
+          }
+          // Create new product if not found
+          if (!productId) {
+            const newSku = item.sku || `IMP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+            const { data: newProduct, error: createErr } = await supabase.from('products').insert({
+              sku: newSku,
+              name: item.productName || 'Producto importado',
+              category: (item.category || 'otros') as any,
+              brand: item.brand || '',
+              model: item.model || '',
+              description: item.description || '',
+              cost: item.unitCost || 0,
+              list_price: item.listPrice || 0,
+              min_price: item.minPrice || 0,
+              currency: 'USD' as any,
+              delivery_days: 0,
+              supplier: imp.supplier || '',
+              warranty: item.warranty || '',
+              active: true,
+              stock: {} as any,
+              in_transit: 0,
+              images: [] as any,
+              user_id: userId,
+            }).select('id').single();
+
+            if (createErr) throw createErr;
+            productId = newProduct.id;
+            productosCreados++;
+          }
+        } else {
+          productosExistentes++;
+        }
+
+        // Update item with productId
+        updatedItems[i] = { ...item, productId };
+
+        // 2. GENERATE INVENTORY MOVEMENT
+        const { error: mvError } = await supabase.from('inventory_movements').insert({
+          product_id: productId,
+          warehouse_id: defaultWarehouse,
+          quantity: item.qty || 0,
+          unit_cost: item.unitCost || 0,
+          total_cost: (item.qty || 0) * (item.unitCost || 0),
+          movement_type: 'import_in',
+          reference_type: 'import',
+          reference_id: imp.id,
+          notes: `Importación ${imp.orderNumber}`,
+          user_id: userId,
+        } as any);
+        if (mvError) throw mvError;
+        movimientosGenerados++;
+
+        // 3. UPDATE STOCK on product
+        const { data: currentProduct } = await supabase
+          .from('products').select('stock, in_transit').eq('id', productId).maybeSingle();
+        if (currentProduct) {
+          const currentStock = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null)
+            ? currentProduct.stock as Record<string, number>
+            : {};
+          const newStock = { ...currentStock, [defaultWarehouse]: ((currentStock as any)[defaultWarehouse] || 0) + (item.qty || 0) };
+          const newInTransit = Math.max(0, (currentProduct.in_transit || 0) - (item.qty || 0));
+          await supabase.from('products').update({
+            stock: newStock as any,
+            in_transit: newInTransit,
+            updated_at: new Date().toISOString(),
+          }).eq('id', productId);
+        }
+      }
+
+      // 4. Update import status to 'procesado' and save updated items with productIds
+      await supabase.from('import_orders').update({
+        status: 'procesado',
+        items: updatedItems as any,
+        updated_at: new Date().toISOString(),
+      }).eq('id', imp.id);
+
+      // 5. AUDIT LOG
+      addAuditLog({
+        userId: userId || 'system',
+        userName: 'Usuario actual',
+        userRole: currentRole,
+        module: 'importaciones',
+        action: 'procesar_importacion',
+        entityId: imp.id,
+        newValue: `Productos creados: ${productosCreados}, existentes: ${productosExistentes}, movimientos: ${movimientosGenerados}`,
+        comment: `Importación ${imp.orderNumber} procesada`,
+      });
+
+      qc.invalidateQueries({ queryKey: ['import_orders'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success(`✅ Importación procesada: ${productosCreados} productos creados, ${productosExistentes} existentes, ${movimientosGenerados} movimientos generados`);
+    } catch (e: any) {
+      toast.error('Error al procesar: ' + e.message);
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   const handleImportsExcel = () => {
     if (!dlDateFrom || !dlDateTo) { toast.error('Selecciona un rango de fechas'); return; }
     if (dlDateFrom > dlDateTo) { toast.error('La fecha inicial no puede ser mayor a la final'); return; }
