@@ -188,7 +188,8 @@ export type ImportStatus =
   | 'liberado_aduana'
   | 'transito_local'
   | 'llego_bodega'
-  | 'inventario_disponible';
+  | 'inventario_disponible'
+  | 'procesado';
 
 export interface ImportExpenses {
   fleteLocalChina: number;
