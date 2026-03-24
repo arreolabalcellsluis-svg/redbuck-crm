@@ -77,8 +77,6 @@ function sendServiceReportWhatsApp(so: ExtendedServiceOrder) {
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
 
-const technicians = demoUsers.filter(u => u.role === 'tecnico');
-
 export default function ServicePage() {
   const { currentRole } = useAppContext();
   const canEdit = currentRole === 'director' || currentRole === 'tecnico' || currentRole === 'administracion';
@@ -86,13 +84,16 @@ export default function ServicePage() {
   const { data: services = [], isLoading } = useServiceOrders();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
   const addMutation = useAddServiceOrder();
   const updateMutation = useUpdateServiceOrder();
+
+  const technicians = dbTeamMembers.filter(u => u.role === 'tecnico' && u.active);
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    customerId: '', productName: '', technicianName: technicians[0]?.name || '',
+    customerId: '', productName: '', technicianName: '',
     type: 'instalacion' as ServiceType, scheduledDate: '', description: '',
     status: 'pendiente' as ServiceStatus,
     diagnosis: '', actionsPerformed: '', completedDate: '', observations: '',
