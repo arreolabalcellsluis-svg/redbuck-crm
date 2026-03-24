@@ -242,6 +242,51 @@ export type Database = {
         }
         Relationships: []
       }
+      area_goals: {
+        Row: {
+          area: string
+          bonus_base: number
+          bonus_overperformance_rate: number
+          created_at: string
+          id: string
+          kpi_config: Json
+          manual_kpi_values: Json
+          month: number
+          updated_at: string
+          user_id: string | null
+          user_name: string
+          year: number
+        }
+        Insert: {
+          area: string
+          bonus_base?: number
+          bonus_overperformance_rate?: number
+          created_at?: string
+          id?: string
+          kpi_config?: Json
+          manual_kpi_values?: Json
+          month: number
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string
+          year: number
+        }
+        Update: {
+          area?: string
+          bonus_base?: number
+          bonus_overperformance_rate?: number
+          created_at?: string
+          id?: string
+          kpi_config?: Json
+          manual_kpi_values?: Json
+          month?: number
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string
+          year?: number
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           categoria: Database["public"]["Enums"]["asset_category"]

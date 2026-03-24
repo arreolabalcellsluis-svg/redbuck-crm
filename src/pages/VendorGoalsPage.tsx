@@ -6,7 +6,10 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useProducts } from '@/hooks/useProducts';
 import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { useSalesGoals, useUpsertSalesGoal, useCommissionConfig, useUpdateCommissionConfig } from '@/hooks/useSalesGoals';
+import { useAreaGoals, useUpsertAreaGoal } from '@/hooks/useAreaGoals';
 import { calcAllVendorKPIs, generateAlerts, type VendorKPI, type CommissionBreakdown, type TeamMember, type ProductLookup, type ARRecord } from '@/lib/vendorKPIsEngine';
+import { type AreaCalcContext } from '@/lib/areaGoalsEngine';
+import AreaGoalsSection from '@/components/goals/AreaGoalsSection';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   Target, Trophy, TrendingUp, Users, FileText, ShoppingCart, DollarSign,
   ArrowUpDown, Save, BadgeDollarSign, Star, AlertTriangle, BarChart3, Settings2,
+  Briefcase, CreditCard, ShieldCheck,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -75,6 +79,24 @@ export default function VendorGoalsPage() {
 
   const alerts = useMemo(() => generateAlerts(allKPIs), [allKPIs]);
   const selectedKPI = selectedVendor ? allKPIs.find(k => k.vendorId === selectedVendor) : null;
+
+  // ─── Area Goals ────────────────────────────────────────────────
+  const { data: areaGoals = [] } = useAreaGoals(month, year);
+  const upsertAreaGoal = useUpsertAreaGoal();
+
+  const areaCalcContext: AreaCalcContext = useMemo(() => ({
+    vendorKPIs: allKPIs,
+    orders,
+    quotations,
+    accountsReceivable,
+    teamMembers,
+    month,
+    year,
+  }), [allKPIs, orders, quotations, accountsReceivable, teamMembers, month, year]);
+
+  const gerenteConfig = areaGoals.find(g => g.area === 'gerente_comercial');
+  const cobranzaConfig = areaGoals.find(g => g.area === 'cobranza');
+  const adminConfig = areaGoals.find(g => g.area === 'administracion');
 
   // Goal editing
   const [goalEdits, setGoalEdits] = useState<Record<string, Record<string, number>>>({});
@@ -150,6 +172,9 @@ export default function VendorGoalsPage() {
             {alerts.length > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-[10px]">{alerts.length}</Badge>}
           </TabsTrigger>
           {isAdmin && <TabsTrigger value="config"><Settings2 size={14} className="mr-1" />Config</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="gerente"><Briefcase size={14} className="mr-1" />Gerente</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="cobranza"><CreditCard size={14} className="mr-1" />Cobranza</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="admin_area"><ShieldCheck size={14} className="mr-1" />Administración</TabsTrigger>}
         </TabsList>
 
         {/* ═══ EXECUTIVE ═══ */}
@@ -449,6 +474,54 @@ export default function VendorGoalsPage() {
         {isAdmin && (
           <TabsContent value="config" className="space-y-4">
             <CommissionConfigEditor config={commissionConfig} onSave={(key, val) => updateConfig.mutate({ key, value: val })} />
+          </TabsContent>
+        )}
+
+        {/* ═══ GERENTE COMERCIAL ═══ */}
+        {isAdmin && (
+          <TabsContent value="gerente" className="space-y-4">
+            <AreaGoalsSection
+              area="gerente_comercial"
+              areaLabel="Gerente Comercial"
+              config={gerenteConfig}
+              ctx={areaCalcContext}
+              month={month}
+              year={year}
+              onSave={c => upsertAreaGoal.mutate(c)}
+              isSaving={upsertAreaGoal.isPending}
+            />
+          </TabsContent>
+        )}
+
+        {/* ═══ COBRANZA ═══ */}
+        {isAdmin && (
+          <TabsContent value="cobranza" className="space-y-4">
+            <AreaGoalsSection
+              area="cobranza"
+              areaLabel="Equipo de Cobranza"
+              config={cobranzaConfig}
+              ctx={areaCalcContext}
+              month={month}
+              year={year}
+              onSave={c => upsertAreaGoal.mutate(c)}
+              isSaving={upsertAreaGoal.isPending}
+            />
+          </TabsContent>
+        )}
+
+        {/* ═══ ADMINISTRACIÓN ═══ */}
+        {isAdmin && (
+          <TabsContent value="admin_area" className="space-y-4">
+            <AreaGoalsSection
+              area="administracion"
+              areaLabel="Administración"
+              config={adminConfig}
+              ctx={areaCalcContext}
+              month={month}
+              year={year}
+              onSave={c => upsertAreaGoal.mutate(c)}
+              isSaving={upsertAreaGoal.isPending}
+            />
           </TabsContent>
         )}
       </Tabs>
