@@ -148,7 +148,7 @@ export default function QuotationsPage() {
     return true;
   });
 
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
 
   const addItem = (productId: string) => {
     const product = dbProducts.find(p => p.id === productId);
