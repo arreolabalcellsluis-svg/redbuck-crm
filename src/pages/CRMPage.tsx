@@ -60,15 +60,6 @@ function dbToCustomer(db: DBCustomer): Customer {
   };
 }
 
-/** Normalize phone: strip spaces, dashes, parentheses, country code prefixes */
-function normalizePhone(phone: string): string {
-  let p = phone.replace(/[\s\-\(\)\.\+]/g, '');
-  // Remove Mexico country code variants
-  if (p.startsWith('521') && p.length > 10) p = p.slice(p.length - 10);
-  else if (p.startsWith('52') && p.length > 10) p = p.slice(p.length - 10);
-  else if (p.startsWith('1') && p.length === 11) p = p.slice(1);
-  return p;
-}
 
 export default function CRMPage() {
   const { currentRole } = useAppContext();
