@@ -108,7 +108,10 @@ export default function OrderHistoryPage() {
   const pageSize = 10;
 
   const customerNames = [...new Set(allRecords.map(r => r.customerName))].sort();
-  const categories = [...new Set(allRecords.map(r => r.category))];
+  const categories = useMemo(() => {
+    const productCats = [...new Set(dbProducts.map(p => CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] || p.category))].filter(Boolean).sort();
+    return productCats.length > 0 ? productCats : [...new Set(allRecords.map(r => r.category))].sort();
+  }, [dbProducts, allRecords]);
 
   const filtered = useMemo(() => {
     let data = [...allRecords];
