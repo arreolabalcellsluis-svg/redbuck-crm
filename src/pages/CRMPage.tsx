@@ -115,19 +115,56 @@ export default function CRMPage() {
 
   const allCustomers = customers;
 
-  // Duplicate phone detection
-  const phoneDuplicate = useMemo(() => {
-    const normalized = normalizePhone(form.phone);
-    if (!normalized || normalized.length < 7) return null;
-    const match = allCustomers.find(c => {
-      if (editingCustomer && c.id === editingCustomer.id) return false;
-      const cNorm = normalizePhone(c.phone);
-      if (cNorm === normalized) return true;
-      if (c.whatsapp && normalizePhone(c.whatsapp) === normalized) return true;
-      return false;
-    });
-    return match || null;
-  }, [form.phone, allCustomers, editingCustomer]);
+  // Multi-field duplicate detection
+  const duplicateMatches = useMemo(() => {
+    if (!form.phone && !form.email && !form.name) return [];
+    return findDuplicates(
+      { phone: form.phone, email: form.email, name: form.name, whatsapp: form.whatsapp },
+      allCustomers,
+      editingCustomer?.id,
+    );
+  }, [form.phone, form.email, form.name, form.whatsapp, allCustomers, editingCustomer]);
+
+  const phoneDuplicate = duplicateMatches.length > 0 ? duplicateMatches[0].customer : null;
+
+  // Global duplicate scanner
+  const globalDuplicates = useMemo(() => scanGlobalDuplicates(allCustomers), [allCustomers]);
+
+  // Merge state
+  const [mergeDialog, setMergeDialog] = useState<{ primary: Customer; secondary: Customer } | null>(null);
+  const [merging, setMerging] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleMerge = async () => {
+    if (!mergeDialog) return;
+    setMerging(true);
+    const { primary, secondary } = mergeDialog;
+    try {
+      // Transfer orders
+      await supabase.from('orders').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer quotations
+      await supabase.from('quotations').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer activities
+      await supabase.from('activities').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer accounts receivable
+      await supabase.from('accounts_receivable').update({ customer_id: primary.id, customer_name: primary.name } as any).eq('customer_id', secondary.id);
+      // Transfer invoices
+      await supabase.from('invoices').update({ customer_id: primary.id } as any).eq('customer_id', secondary.id);
+      // Delete the duplicate
+      await supabase.from('customers').delete().eq('id', secondary.id);
+      // Invalidate caches
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success(`Clientes fusionados. "${secondary.name}" fue absorbido por "${primary.name}"`);
+      setMergeDialog(null);
+    } catch (e: any) {
+      toast.error(`Error al fusionar: ${e.message}`);
+    } finally {
+      setMerging(false);
+    }
+  };
 
   const quotationToPipelineStage = (status: string): string => {
     switch (status) {
