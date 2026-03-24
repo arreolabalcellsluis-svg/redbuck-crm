@@ -422,6 +422,9 @@ td.zero{color:#dc2626;font-weight:600}
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setInventoryDate(new Date())}>
             Hoy
           </Button>
+          <Button variant="outline" size="sm" className="gap-2 text-sm" onClick={handleExportDistributorPdf}>
+            <FileText size={16} /> PDF Distribuidores
+          </Button>
           <Button variant="outline" size="sm" className="gap-2 text-sm" onClick={handleExportAuditExcel}>
             <FileSpreadsheet size={16} /> Auditoría Excel
           </Button>
