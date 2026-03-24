@@ -297,6 +297,7 @@ export const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
   transito_local: 'Tránsito local',
   llego_bodega: 'Llegó a bodega',
   inventario_disponible: 'Inventario disponible',
+  procesado: 'Procesado',
 };
 
 export const IMPORT_STATUS_ORDER: ImportStatus[] = [
