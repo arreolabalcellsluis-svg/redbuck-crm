@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ROLE_LABELS, UserRole, User, Warehouse } from '@/types';
+import { useOnboardingConfig } from '@/hooks/useOnboardingConfig';
+import { DEFAULT_ONBOARDING_CONFIG, type OnboardingConfig } from '@/lib/onboardingEngine';
 import { useAppContext } from '@/contexts/AppContext';
 import { Users, Warehouse as WarehouseIcon, Shield, Building2, FileText, MessageCircle, Hash, Pencil, Plus, Trash2, X, Check, Upload, Image, FileUp, Loader2 } from 'lucide-react';
 import { useCompanyLogo } from '@/hooks/useCompanyLogo';
