@@ -76,6 +76,9 @@ export default function CRMPage() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterContactType, setFilterContactType] = useState('');
+  const [filterClientLevel, setFilterClientLevel] = useState('');
+  const [filterClientValue, setFilterClientValue] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
