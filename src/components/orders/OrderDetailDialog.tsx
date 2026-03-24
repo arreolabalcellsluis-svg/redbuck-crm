@@ -53,9 +53,9 @@ export default function OrderDetailDialog({ order, onClose, orderPayments, total
 
   if (!order) return null;
 
-  const balance = Math.max(0, order.total - totalPaid);
-  const payStatus = totalPaid >= order.total ? 'Pagado completo' : totalPaid > 0 ? 'Pago parcial' : 'Pendiente';
-  const payColor = totalPaid >= order.total ? 'text-success bg-success/10' : totalPaid > 0 ? 'text-warning bg-warning/10' : 'text-destructive bg-destructive/10';
+  const balance = Math.max(0, Math.round((order.total - totalPaid) * 100) / 100);
+  const payStatus = balance <= 0 ? 'Pagado completo' : totalPaid > 0 ? 'Pago parcial' : 'Pendiente';
+  const payColor = balance <= 0 ? 'text-success bg-success/10' : totalPaid > 0 ? 'text-warning bg-warning/10' : 'text-destructive bg-destructive/10';
   const isModified = (order.edit_history || []).length > 0;
   const hasPayments = totalPaid > 0;
 
