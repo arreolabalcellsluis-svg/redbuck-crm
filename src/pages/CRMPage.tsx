@@ -238,6 +238,21 @@ export default function CRMPage() {
     setEditingCustomer(customer);
     const { id, createdAt, ...rest } = customer;
     setForm(rest);
+    // Load fiscal data for this customer
+    const existingFiscal = allFiscalData.find(f => f.customer_id === customer.id);
+    if (existingFiscal) {
+      setFiscal({
+        taxRegime: existingFiscal.tax_regime || '',
+        fiscalZipCode: existingFiscal.fiscal_zip_code || '',
+        cfdiUse: existingFiscal.cfdi_use_default || 'G03',
+        legalName: existingFiscal.legal_name || '',
+        invoiceEmail: existingFiscal.invoice_email || '',
+      });
+      setShowFiscal(true);
+    } else {
+      setFiscal(emptyFiscal());
+      setShowFiscal(false);
+    }
   };
 
   const handleUpdate = () => {
