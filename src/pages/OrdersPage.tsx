@@ -424,7 +424,7 @@ export default function OrdersPage() {
               return (
                 <tr key={o.id}>
                   <td>
-                    <button onClick={() => setDetailOrder(o)} className="font-mono text-xs font-semibold text-primary hover:underline cursor-pointer">{o.folio}</button>
+                    <button onClick={() => { const db = dbOrders.find(d => d.id === o.id); if (db) setDetailOrder(db); }} className="font-mono text-xs font-semibold text-primary hover:underline cursor-pointer">{o.folio}</button>
                   </td>
                   <td>
                     <button onClick={() => { setHistoryCustomerId(o.customerId); setHistoryDateFrom(''); setHistoryDateTo(''); }} className="font-medium text-primary hover:underline cursor-pointer">{o.customerName}</button>
