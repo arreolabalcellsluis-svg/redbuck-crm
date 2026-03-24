@@ -126,28 +126,39 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
                   <th className="text-right">Precio s/IVA</th>
                   <th className="text-right">Precio c/IVA</th>
                   <th className="text-right">Comisión</th>
+                  <th className="text-right">Gasto admin</th>
                   <th className="text-right">Margen</th>
                 </tr>
               </thead>
               <tbody>
-                {costing.items.map((it, i) => (
-                  <tr key={i}>
-                    <td className="font-medium">{it.productName}</td>
-                    <td className="text-right">{it.qty}</td>
-                    <td className="text-right">{fmtUSD(it.unitCost)}</td>
-                    <td className="text-right">{fmtUSD(it.subtotalFob)}</td>
-                    <td className="text-right text-muted-foreground">{fmtPct(it.fobShare)}</td>
-                    <td className="text-right">{fmtUSD(it.importExpenseAllocated)}</td>
-                    <td className="text-right font-semibold">{fmtUSD(it.totalLanded)}</td>
-                    <td className="text-right font-semibold text-primary">{fmtUSD(it.unitLanded / (1 + params.ivaRate))}</td>
-                    <td className="text-right">{fmtUSD(it.priceBeforeIva)}</td>
-                    <td className="text-right font-bold">{fmtUSD(it.priceWithIva)}</td>
-                    <td className="text-right text-muted-foreground">{fmtUSD(it.commissionAmount)}</td>
-                    <td className={`text-right font-semibold ${it.marginPercent >= 0.2 ? 'text-success' : it.marginPercent >= 0.1 ? 'text-warning' : 'text-destructive'}`}>
-                      {fmtPct(it.marginPercent)}
-                    </td>
-                  </tr>
-                ))}
+                {costing.items.map((it, i) => {
+                  const unitLandedSinIva = it.unitLanded / (1 + params.ivaRate);
+                  const precioSinIva = unitLandedSinIva * params.markupFactor;
+                  const precioConIva = precioSinIva * (1 + params.ivaRate);
+                  const comision = precioSinIva * params.commissionRate;
+                  const admin = precioSinIva * params.adminRate;
+                  const netMargin = precioSinIva - unitLandedSinIva - comision - admin;
+                  const marginPct = precioSinIva > 0 ? netMargin / precioSinIva : 0;
+                  return (
+                    <tr key={i}>
+                      <td className="font-medium">{it.productName}</td>
+                      <td className="text-right">{it.qty}</td>
+                      <td className="text-right">{fmtUSD(it.unitCost)}</td>
+                      <td className="text-right">{fmtUSD(it.subtotalFob)}</td>
+                      <td className="text-right text-muted-foreground">{fmtPct(it.fobShare)}</td>
+                      <td className="text-right">{fmtUSD(it.importExpenseAllocated)}</td>
+                      <td className="text-right font-semibold">{fmtUSD(it.totalLanded)}</td>
+                      <td className="text-right font-semibold text-primary">{fmtUSD(unitLandedSinIva)}</td>
+                      <td className="text-right">{fmtUSD(precioSinIva)}</td>
+                      <td className="text-right font-bold">{fmtUSD(precioConIva)}</td>
+                      <td className="text-right text-muted-foreground">{fmtUSD(comision)}</td>
+                      <td className="text-right text-muted-foreground">{fmtUSD(admin)}</td>
+                      <td className={`text-right font-semibold ${marginPct >= 0.2 ? 'text-success' : marginPct >= 0.1 ? 'text-warning' : 'text-destructive'}`}>
+                        {fmtPct(marginPct)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
