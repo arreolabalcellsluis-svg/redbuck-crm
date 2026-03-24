@@ -176,6 +176,45 @@ export default function OrdersPage() {
     if (!order) return;
     const oldStatus = order.status;
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
+
+    // Restore stock when cancelling a non-cancelled order
+    if (newStatus === 'cancelado' && oldStatus !== 'cancelado') {
+      const dbOrder = dbOrders.find(d => d.id === orderId);
+      if (dbOrder) {
+        const orderItems = dbOrder.items as any[];
+        for (const item of orderItems) {
+          if (!item.productId) continue;
+          const product = dbProducts.find(p => p.id === item.productId);
+          if (!product) continue;
+          const warehouseKey = dbOrder.warehouse || 'Bodega Principal';
+          const currentStock = product.stock[warehouseKey] ?? 0;
+          const restoredStock = currentStock + (item.qty || 0);
+          const updatedStock = { ...product.stock, [warehouseKey]: restoredStock };
+          updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+        }
+        toast.success(`Inventario restaurado para pedido ${order.folio}`);
+      }
+    }
+
+    // Deduct stock when un-cancelling (moving from cancelado to another status)
+    if (oldStatus === 'cancelado' && newStatus !== 'cancelado') {
+      const dbOrder = dbOrders.find(d => d.id === orderId);
+      if (dbOrder) {
+        const orderItems = dbOrder.items as any[];
+        for (const item of orderItems) {
+          if (!item.productId) continue;
+          const product = dbProducts.find(p => p.id === item.productId);
+          if (!product) continue;
+          const warehouseKey = dbOrder.warehouse || 'Bodega Principal';
+          const currentStock = product.stock[warehouseKey] ?? 0;
+          const newStock = Math.max(0, currentStock - (item.qty || 0));
+          const updatedStock = { ...product.stock, [warehouseKey]: newStock };
+          updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+        }
+        toast.success(`Inventario descontado para pedido ${order.folio}`);
+      }
+    }
+
     addAuditLog({ action: 'Cambio de estatus de pedido', module: 'Pedidos', userId: '', userName: 'Usuario actual', userRole: currentRole, entityId: order.id, previousValue: oldStatus, newValue: newStatus, comment: `Pedido ${order.folio}: ${oldStatus} → ${newStatus}` });
   };
 
