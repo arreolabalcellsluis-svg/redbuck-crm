@@ -83,7 +83,10 @@ export function useAddOrder() {
   return useMutation({
     mutationFn: async (order: Omit<DBOrder, 'id' | 'created_at' | 'updated_at'>) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from('orders').insert({
+      const timestamp = new Date().toISOString();
+      const orderId = crypto.randomUUID();
+      const payload = {
+        id: orderId,
         folio: order.folio,
         customer_id: order.customer_id,
         customer_name: order.customer_name,
@@ -101,9 +104,10 @@ export function useAddOrder() {
         delivery_notes: order.delivery_notes,
         reserve_deadline: order.reserve_deadline,
         user_id: user?.id ?? null,
-      }).select().single();
+      };
+      const { error } = await supabase.from('orders').insert(payload);
       if (error) throw error;
-      return mapRow(data);
+      return mapRow({ ...payload, created_at: timestamp, updated_at: timestamp });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['orders'] });

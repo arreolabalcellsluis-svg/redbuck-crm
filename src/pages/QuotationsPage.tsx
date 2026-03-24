@@ -155,6 +155,7 @@ export default function QuotationsPage() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [reserveDeadline, setReserveDeadline] = useState('');
+  const [isGeneratingOrder, setIsGeneratingOrder] = useState(false);
 
   const isVendedor = currentRole === 'vendedor';
   const vendorId = DEMO_VENDEDOR_ID;
@@ -394,6 +395,7 @@ export default function QuotationsPage() {
     setScheduledDate('');
     setDeliveryNotes('');
     setReserveDeadline('');
+    setIsGeneratingOrder(false);
   };
 
   const getOrderStatusForType = (type: OrderType): Order['status'] => {
@@ -413,7 +415,7 @@ export default function QuotationsPage() {
   ];
 
   const handleGenerateOrder = async () => {
-    if (!convertQuotation || !selectedOrderType) return;
+    if (!convertQuotation || !selectedOrderType || isGeneratingOrder) return;
     const q = convertQuotation;
 
     if (selectedOrderType === 'anticipo' && advanceAmount <= 0) {
@@ -430,6 +432,7 @@ export default function QuotationsPage() {
     const balance = q.total - advance;
     const today = new Date().toISOString().slice(0, 10);
 
+    setIsGeneratingOrder(true);
     try {
       const createdOrder = await addOrderMutation.mutateAsync({
         folio,
@@ -458,7 +461,6 @@ export default function QuotationsPage() {
         edit_history: [],
       });
 
-      // Auto-create receivable in DB with the real order ID
       const receivableStatus = advance >= q.total ? 'liquidado' : advance > 0 ? 'al_corriente' : selectedOrderType === 'apartado' ? 'por_vencer' : 'al_corriente';
       const dueDate = selectedOrderType === 'apartado' && reserveDeadline ? reserveDeadline : selectedOrderType === 'entrega_futura' ? scheduledDate : today;
       addReceivableMutation.mutate({
@@ -474,7 +476,6 @@ export default function QuotationsPage() {
         status: receivableStatus,
       });
 
-      // Audit
       addAuditLog({
         userId: 'current', userName: 'Usuario actual', userRole: currentRole,
         module: 'cotizaciones', action: 'convertir_a_pedido', entityId: q.id,
@@ -482,7 +483,6 @@ export default function QuotationsPage() {
         comment: `Cotización ${q.folio} convertida a pedido ${folio} — Tipo: ${selectedOrderType}${advance > 0 ? ` — Anticipo: ${fmt(advance)}` : ''}`,
       });
 
-      // Deduct stock from inventory for each product
       const warehouse = 'Bodega Principal';
       for (const item of q.items) {
         if (!item.productId) continue;
@@ -494,7 +494,6 @@ export default function QuotationsPage() {
         updateProductMutation.mutate({ id: product.id, stock: updatedStock });
       }
 
-      // Update quotation status to reflect conversion
       updateQuotationStatusMutation.mutate({ id: q.id, status: 'aceptada' });
 
       toast.success(
@@ -508,6 +507,8 @@ export default function QuotationsPage() {
     } catch (err: any) {
       console.error('Error generating order:', err);
       toast.error('Error al generar pedido: ' + (err?.message || JSON.stringify(err) || 'Intenta de nuevo'));
+    } finally {
+      setIsGeneratingOrder(false);
     }
   };
 
@@ -1335,8 +1336,8 @@ export default function QuotationsPage() {
                   </div>
                   <DialogFooter>
                     <button onClick={() => setOrderTypeStep(selectedOrderType === 'directo' ? 'select' : 'details')} className="px-4 py-2 rounded-lg border text-sm">Atrás</button>
-                    <button onClick={handleGenerateOrder} disabled={addOrderMutation.isPending} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2 disabled:opacity-50">
-                      {addOrderMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />} {addOrderMutation.isPending ? 'Generando...' : 'Generar pedido'}
+                    <button onClick={handleGenerateOrder} disabled={isGeneratingOrder} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2 disabled:opacity-50">
+                      {isGeneratingOrder ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />} {isGeneratingOrder ? 'Generando...' : 'Generar pedido'}
                     </button>
                   </DialogFooter>
                 </div>
