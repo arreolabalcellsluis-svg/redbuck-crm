@@ -23,7 +23,7 @@ import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, Accou
 import type { Payment } from '@/types/payments';
 import { useQuotations, useAddQuotation, useUpdateQuotationStatus, useUpdateQuotation } from '@/hooks/useQuotations';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import { useAddOrder } from '@/hooks/useOrders';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
