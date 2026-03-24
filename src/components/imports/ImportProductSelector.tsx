@@ -174,12 +174,12 @@ function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onU
       {/* Inline fields */}
       <div className="grid grid-cols-6 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground">SKU</label>
-          <input value={item.sku} readOnly={linked} className="w-full px-2 py-1 rounded border bg-background text-xs" onChange={e => onUpdate({ ...item, sku: e.target.value })} />
-        </div>
-        <div>
           <label className="text-[10px] text-muted-foreground">SKU Fábrica</label>
           <input value={item.skuFabrica || ''} className="w-full px-2 py-1 rounded border bg-background text-xs" placeholder="Ref. fábrica" onChange={e => onUpdate({ ...item, skuFabrica: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">SKU</label>
+          <input value={item.sku} readOnly={linked} className="w-full px-2 py-1 rounded border bg-background text-xs" onChange={e => onUpdate({ ...item, sku: e.target.value })} />
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground">Cantidad *</label>
