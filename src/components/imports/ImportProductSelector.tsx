@@ -9,6 +9,7 @@ export interface ImportItemData {
   productId: string | null;
   productName: string;
   sku: string;
+  skuFabrica: string;
   category: string;
   qty: number;
   unitCost: number;
@@ -33,7 +34,7 @@ export default function ImportProductSelector({ items, onChange }: Props) {
         <label className="text-xs font-medium text-muted-foreground">Productos *</label>
         <button
           type="button"
-          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', category: '', qty: 1, unitCost: 0, cbm: 0, peso: 0 }])}
+          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', qty: 1, unitCost: 0, cbm: 0, peso: 0 }])}
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           <Plus size={12} /> Agregar producto
@@ -171,10 +172,14 @@ function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onU
       </div>
 
       {/* Inline fields */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground">SKU</label>
           <input value={item.sku} readOnly={linked} className="w-full px-2 py-1 rounded border bg-background text-xs" onChange={e => onUpdate({ ...item, sku: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">SKU Fábrica</label>
+          <input value={item.skuFabrica || ''} className="w-full px-2 py-1 rounded border bg-background text-xs" placeholder="Ref. fábrica" onChange={e => onUpdate({ ...item, skuFabrica: e.target.value })} />
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground">Cantidad *</label>
