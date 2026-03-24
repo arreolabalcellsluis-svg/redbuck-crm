@@ -4,7 +4,9 @@ import { ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportFilterBar, { exportToExcel } from '@/components/shared/ReportFilterBar';
 import { exportFullExcel, exportFullPdf } from '@/lib/fullReportExport';
-import { demoOrders, demoProducts, salesByVendor } from '@/data/demo-data';
+import { useOrders } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useAppContext } from '@/contexts/AppContext';
 import { DEMO_VENDEDOR_NAME } from '@/lib/rolePermissions';
 import { CATEGORY_LABELS } from '@/types';
@@ -17,6 +19,11 @@ export default function VendorDetailReportPage() {
   const [searchParams] = useSearchParams();
   const vendorParam = searchParams.get('nombre') || '';
 
+  const { data: dbOrders = [] } = useOrders();
+  const { data: dbProducts = [] } = useProducts();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
+
   const [filters, setFilters] = useState<Record<string, any>>({
     search: '',
     vendedor: isVendedor ? DEMO_VENDEDOR_NAME : vendorParam,
@@ -24,31 +31,30 @@ export default function VendorDetailReportPage() {
     dateTo: undefined,
   });
 
-  // For vendedor, only show their own vendor option
   const vendorOptions = isVendedor
     ? [{ value: DEMO_VENDEDOR_NAME, label: DEMO_VENDEDOR_NAME }]
-    : salesByVendor.map(v => ({ value: v.name, label: v.name }));
+    : vendors.map(v => ({ value: v.name, label: v.name }));
 
   const records = useMemo(() => {
-    return demoOrders.flatMap(o =>
-      o.items.map((item, idx) => {
-        const product = demoProducts.find(p => p.name === item.productName || item.productName.includes(p.name.split(' ')[0]));
+    return dbOrders.flatMap(o =>
+      (Array.isArray(o.items) ? (o.items as any[]) : []).map((item: any, idx: number) => {
+        const product = dbProducts.find(p => p.name === (item.productName || item.name));
         return {
           id: `${o.id}-${idx}`,
-          fecha: o.createdAt,
+          fecha: o.created_at?.slice(0, 10) || '',
           folio: o.folio,
-          cliente: o.customerName,
-          vendedor: o.vendorName,
+          cliente: o.customer_name,
+          vendedor: o.vendor_name,
           sku: product?.sku || 'N/A',
-          producto: item.productName,
-          cantidad: item.qty,
-          precio: item.unitPrice,
-          total: item.qty * item.unitPrice,
+          producto: item.productName || item.name || '',
+          cantidad: item.qty || 0,
+          precio: item.unitPrice || 0,
+          total: (item.qty || 0) * (item.unitPrice || 0),
           canal: 'Directo',
         };
       })
     );
-  }, []);
+  }, [dbOrders, dbProducts]);
 
   const filtered = useMemo(() => {
     return records.filter(r => {
