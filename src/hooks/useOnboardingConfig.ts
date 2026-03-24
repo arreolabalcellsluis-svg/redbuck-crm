@@ -9,11 +9,12 @@ export function useOnboardingConfig() {
   const saveSetting = useSaveSetting();
 
   const config: OnboardingConfig = useMemo(() => {
-    const row = settings.find((s: any) => s.setting_key === SETTING_KEY);
-    if (!row) return DEFAULT_ONBOARDING_CONFIG;
+    if (!settings || typeof settings !== 'object') return DEFAULT_ONBOARDING_CONFIG;
+    const val = settings[SETTING_KEY];
+    if (!val) return DEFAULT_ONBOARDING_CONFIG;
     try {
-      const val = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
-      return { ...DEFAULT_ONBOARDING_CONFIG, ...val };
+      const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+      return { ...DEFAULT_ONBOARDING_CONFIG, ...parsed };
     } catch {
       return DEFAULT_ONBOARDING_CONFIG;
     }
