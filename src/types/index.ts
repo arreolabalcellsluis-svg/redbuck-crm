@@ -190,6 +190,20 @@ export type ImportStatus =
   | 'llego_bodega'
   | 'inventario_disponible';
 
+export interface ImportExpenses {
+  fleteLocalChina: number;
+  fleteInternacionalMaritimo: number;
+  igi: number;
+  dta: number;
+  prevalidacion: number;
+  gastosLocalesNaviera: number;
+  maniobrasPuerto: number;
+  seguro: number;
+  honorariosDespachoAduanal: number;
+  comercializadora: number;
+  fleteTerrestreGdl: number;
+}
+
 export interface ImportOrder {
   id: string;
   orderNumber: string;
@@ -209,6 +223,10 @@ export interface ImportOrder {
   customsCost: number;
   totalLanded: number;
   daysInTransit: number;
+  expenses: ImportExpenses;
+  pesoTotalKg: number;
+  volumenTotalCbm: number;
+  numeroContenedores: number;
 }
 
 export type ServiceType = 'instalacion' | 'garantia' | 'mantenimiento' | 'reparacion' | 'visita_tecnica' | 'capacitacion';
