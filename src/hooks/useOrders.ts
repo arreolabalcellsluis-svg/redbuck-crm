@@ -20,6 +20,14 @@ export interface DBOrder {
   scheduled_delivery_date: string | null;
   delivery_notes: string | null;
   reserve_deadline: string | null;
+  transportista: string;
+  guia_numero: string;
+  fecha_envio: string | null;
+  shipping_images: string[];
+  invoice_number_manual: string;
+  invoice_date_manual: string | null;
+  invoice_pdf_url: string;
+  edit_history: any[];
   created_at: string;
   updated_at: string;
 }
