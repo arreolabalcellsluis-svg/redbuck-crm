@@ -741,30 +741,44 @@ export default function CommercialAgendaPage() {
       )}
 
       {/* ═══ CREATE DIALOG ═══ */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <Dialog open={showCreate} onOpenChange={open => {
+        setShowCreate(open);
+        if (!open) {
+          setForm(emptyActivity());
+          setManualStage(null);
+          setShowSuggestions(false);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nueva Actividad</DialogTitle>
             <DialogDescription>Programa una actividad comercial. Los campos con * son obligatorios.</DialogDescription>
           </DialogHeader>
-          <ActivityFormFields />
+          {renderActivityFormFields()}
           <DialogFooter>
-            <button onClick={() => { setShowCreate(false); setForm(emptyActivity()); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={() => { setShowCreate(false); setForm(emptyActivity()); setManualStage(null); setShowSuggestions(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">Crear actividad</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ═══ EDIT DIALOG ═══ */}
-      <Dialog open={!!editingActivity} onOpenChange={open => { if (!open) { setEditingActivity(null); setForm(emptyActivity()); } }}>
+      <Dialog open={!!editingActivity} onOpenChange={open => {
+        if (!open) {
+          setEditingActivity(null);
+          setForm(emptyActivity());
+          setManualStage(null);
+          setShowSuggestions(false);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{form.status === 'reagendada' ? 'Reagendar Actividad' : 'Editar Actividad'}</DialogTitle>
             <DialogDescription>Modifica los datos de la actividad.</DialogDescription>
           </DialogHeader>
-          <ActivityFormFields />
+          {renderActivityFormFields()}
           <DialogFooter>
-            <button onClick={() => { setEditingActivity(null); setForm(emptyActivity()); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={() => { setEditingActivity(null); setForm(emptyActivity()); setManualStage(null); setShowSuggestions(false); }} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
             <button onClick={handleUpdate} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">
               {form.status === 'reagendada' ? 'Reagendar' : 'Guardar cambios'}
             </button>
