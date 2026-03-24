@@ -51,10 +51,10 @@ export function useUpsertAreaGoal() {
       };
 
       if (config.id) {
-        const { error } = await supabase.from('area_goals' as any).update(payload).eq('id', config.id);
+        const { error } = await supabase.from('area_goals').update(payload).eq('id', config.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('area_goals' as any).upsert(payload as any, { onConflict: 'area,month,year' });
+        const { error } = await supabase.from('area_goals').upsert(payload, { onConflict: 'area,month,year' });
         if (error) throw error;
       }
     },
