@@ -3,7 +3,8 @@ import { useWarehouses } from '@/hooks/useWarehouses';
 import { CATEGORY_LABELS, ProductCategory, Product } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { getProductImage } from '@/lib/productImages';
-import { Search, Plus, Package, Trash2, Pencil, Upload, X, Warehouse, FileText } from 'lucide-react';
+import { Search, Plus, Package, Trash2, Pencil, Upload, X, Warehouse, FileText, FileDown } from 'lucide-react';
+import { generatePriceListPdf, type PriceListProduct } from '@/lib/priceListPdf';
 import { generateProductDatasheet, type DatasheetConfig } from '@/lib/productDatasheetPdf';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
