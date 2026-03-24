@@ -22,6 +22,11 @@ export interface DBProduct {
   active: boolean;
   stock: Record<string, number>;
   in_transit: number;
+  capacity: string;
+  price_client: number;
+  price_distributor: number;
+  commission_distributor: number;
+  commission_admin: number;
   created_at: string;
   updated_at: string;
 }
