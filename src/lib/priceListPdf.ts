@@ -139,7 +139,6 @@ export async function generatePriceListPdf(
     `;
         }
       )
-      )
       .join('');
 
     sectionsHtml += `
