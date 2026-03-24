@@ -172,6 +172,9 @@ export default function VendorGoalsPage() {
             {alerts.length > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-[10px]">{alerts.length}</Badge>}
           </TabsTrigger>
           {isAdmin && <TabsTrigger value="config"><Settings2 size={14} className="mr-1" />Config</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="gerente"><Briefcase size={14} className="mr-1" />Gerente</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="cobranza"><CreditCard size={14} className="mr-1" />Cobranza</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="admin_area"><ShieldCheck size={14} className="mr-1" />Administración</TabsTrigger>}
         </TabsList>
 
         {/* ═══ EXECUTIVE ═══ */}
