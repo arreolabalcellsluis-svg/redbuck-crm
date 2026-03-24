@@ -120,7 +120,10 @@ export async function generatePriceListPdf(
 
     const rowsHtml = items
       .map(
-        (p, i) => `
+        (p, i) => {
+          const comDist = p.price_client > 0 ? p.price_client * 0.15 : 0;
+          const comAdmin = p.price_client > 0 ? p.price_client * 0.025 : 0;
+          return `
       <tr style="background:${i % 2 === 0 ? '#ffffff' : '#F5F5F5'};">
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;font-weight:600;text-align:center;vertical-align:middle;">${p.sku}</td>
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;vertical-align:middle;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</td>
@@ -130,10 +133,12 @@ export async function generatePriceListPdf(
         </td>
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;font-weight:600;color:#C00000;">${p.price_client > 0 ? fmtPrice(p.price_client) : '—'}</td>
         <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;font-weight:600;">${p.price_distributor > 0 ? fmtPrice(p.price_distributor) : '—'}</td>
-        <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;">${p.commission_distributor > 0 ? fmtPrice(p.commission_distributor) : '—'}</td>
-        <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;">${p.commission_admin > 0 ? fmtPrice(p.commission_admin) : '—'}</td>
+        <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;">${comDist > 0 ? fmtPrice(comDist) : '—'}</td>
+        <td style="padding:6px 8px;border:1px solid #e0e0e0;font-size:11px;text-align:right;vertical-align:middle;">${comAdmin > 0 ? fmtPrice(comAdmin) : '—'}</td>
       </tr>
-    `
+    `;
+        }
+      )
       )
       .join('');
 
