@@ -437,6 +437,22 @@ export default function ImportsPage() {
                     <button onClick={() => exportImportExcel(imp)} className="p-1.5 rounded-md hover:bg-muted text-green-600" title="Exportar Excel">
                       <FileSpreadsheet size={14} />
                     </button>
+                    {canEdit && imp.status !== 'procesado' && (imp.status === 'llego_bodega' || imp.status === 'inventario_disponible') && (
+                      <button
+                        onClick={() => handleProcessImport(imp)}
+                        disabled={processing === imp.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-success/10 text-success hover:bg-success/20 text-xs font-medium disabled:opacity-50"
+                        title="Procesar importación: crear productos e inventario"
+                      >
+                        {processing === imp.id ? <Loader2 size={12} className="animate-spin" /> : <PackageCheck size={12} />}
+                        {processing === imp.id ? 'Procesando...' : 'Procesar'}
+                      </button>
+                    )}
+                    {imp.status === 'procesado' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-success/10 text-success text-xs font-medium">
+                        <PackageCheck size={12} /> Procesado
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{imp.supplier} · {imp.country}</p>
                 </div>
