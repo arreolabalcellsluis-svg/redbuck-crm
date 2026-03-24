@@ -50,6 +50,7 @@ const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?:
   listPrice: 0, minPrice: 0, cost: 0, currency: 'USD', deliveryDays: 5,
   supplier: '', warranty: '1 año', active: true, stock: {}, inTransit: 0, image: '',
   satProductKey: '', satUnitKey: '', taxObject: '02', taxFamily: '16',
+  capacity: '', priceClient: 0, priceDistributor: 0, commissionDistributor: 0, commissionAdmin: 0,
 });
 
 type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string };
