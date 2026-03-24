@@ -248,7 +248,7 @@ export default function CRMPage() {
   };
 
   const vendors = dbTeam.filter(u => u.role === 'vendedor');
-  const pipelineStages = ['prospecto_nuevo', 'contactado', 'calificado', 'diagnostico', 'cotizacion_enviada', 'seguimiento', 'negociacion'] as const;
+  const pipelineStages = ['prospecto_nuevo', 'contactado', 'calificado', 'diagnostico', 'cotizacion_enviada', 'seguimiento', 'negociacion', 'cierre_ganado', 'cierre_perdido', 'postventa'] as const;
 
   const handleExport = () => {
     exportCRMToExcel(filteredCustomers, dbTeam as any);
