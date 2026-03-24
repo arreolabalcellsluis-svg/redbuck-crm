@@ -53,7 +53,7 @@ const emptyProduct = (): Omit<Product, 'id'> & { image?: string; satProductKey?:
   capacity: '', priceClient: 0, priceDistributor: 0, commissionDistributor: 0, commissionAdmin: 0,
 });
 
-type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string };
+type ProductForm = Omit<Product, 'id'> & { image?: string; satProductKey?: string; satUnitKey?: string; taxObject?: string; taxFamily?: string; capacity?: string; priceClient?: number; priceDistributor?: number; commissionDistributor?: number; commissionAdmin?: number };
 
 export default function ProductsPage() {
   const { currentRole, exchangeRate } = useAppContext();
