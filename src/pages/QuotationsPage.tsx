@@ -460,7 +460,7 @@ export default function QuotationsPage() {
     const cleanPhone = customerPhone.startsWith('52') ? customerPhone : `52${customerPhone.replace(/[^0-9]/g, '')}`;
     
     // Use vendor's WhatsApp number so the link opens on the vendor's device sending TO the customer
-    const vendor = demoUsers.find(u => u.id === q.vendorId);
+    const vendor = dbTeamMembers.find(u => u.id === q.vendorId);
     const vendorWa = vendor?.whatsapp || vendor?.phone?.replace(/[^0-9]/g, '') || '';
 
     // wa.me sends TO the customer's number — this opens WhatsApp on whichever device opens the link
