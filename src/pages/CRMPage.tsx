@@ -420,57 +420,76 @@ export default function CRMPage() {
         const pipelineTotal = allOpportunities.reduce((s, o) => s + o.estimatedAmount, 0);
         const cierreGanado = allOpportunities.filter(o => o.stage === 'cierre_ganado').reduce((s, o) => s + o.estimatedAmount, 0);
         const activeOps = allOpportunities.filter(o => !['cierre_ganado', 'cierre_perdido'].includes(o.stage));
+        const clsValues = [...classificationMap.values()];
+        const prospectos = clsValues.filter(c => c.contactType === 'prospecto').length;
+        const clientes = clsValues.filter(c => c.contactType === 'cliente').length;
+        const recurrentes = clsValues.filter(c => c.clientLevel === 'recurrente').length;
+        const vips = clsValues.filter(c => c.clientValue === 'vip').length;
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+          <>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <button onClick={() => { setFilterContactType(''); setFilterClientLevel(''); setFilterClientValue(''); setTab('clientes'); clearFilters(); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Users size={14} /> {isVendedor ? 'Mis clientes' : 'Clientes'}
+                <Users size={14} /> Total contactos
               </div>
               <div className="text-xl font-bold">{isLoading ? '...' : allCustomers.length}</div>
               <div className="space-y-0.5 mt-2 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Alta prioridad:</span> <span className="font-semibold">{allCustomers.filter(c => c.priority === 'alta').length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Nuevos este mes:</span> <span className="font-semibold">{allCustomers.filter(c => c.createdAt >= new Date().toISOString().slice(0, 7)).length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Prospectos:</span> <span className="font-semibold text-yellow-600">{prospectos}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Clientes:</span> <span className="font-semibold text-green-600">{clientes}</span></div>
               </div>
-            </div>
+            </button>
 
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+            <button onClick={() => { setTab('clientes'); clearFilters(); setFilterContactType('prospecto'); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Target size={14} /> {isVendedor ? 'Mis oportunidades' : 'Oportunidades'}
+                <Clock size={14} /> Prospectos
               </div>
-              <div className="text-xl font-bold">{allOpportunities.length}</div>
-              <div className="space-y-0.5 mt-2 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Activas:</span> <span className="font-semibold">{activeOps.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Ganadas:</span> <span className="font-semibold text-success">{allOpportunities.filter(o => o.stage === 'cierre_ganado').length}</span></div>
-              </div>
-            </div>
+              <div className="text-xl font-bold text-yellow-600">{prospectos}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Sin pedidos</div>
+            </button>
 
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+            <button onClick={() => { setTab('clientes'); clearFilters(); setFilterClientLevel('recurrente'); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--info))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Star size={14} /> Recurrentes
+              </div>
+              <div className="text-xl font-bold">{recurrentes}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">2+ pedidos</div>
+            </button>
+
+            <button onClick={() => { setTab('clientes'); clearFilters(); setFilterClientValue('vip'); }} className="bg-card rounded-xl border p-4 text-left hover:shadow-md transition-shadow" style={{ borderLeft: '4px solid hsl(var(--accent))' }}>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Crown size={14} /> VIP
+              </div>
+              <div className="text-xl font-bold text-purple-600">{vips}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">&gt;$100,000 en compras</div>
+            </button>
+
+            <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <TrendingUp size={14} /> Pipeline activo
               </div>
               <div className="text-xl font-bold">{fmt(pipelineTotal)}</div>
               <div className="space-y-0.5 mt-2 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Promedio/op:</span> <span className="font-medium">{fmt(activeOps.length > 0 ? Math.round(activeOps.reduce((s, o) => s + o.estimatedAmount, 0) / activeOps.length) : 0)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">En negociación:</span> <span className="font-semibold">{allOpportunities.filter(o => o.stage === 'negociacion').length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Activas:</span> <span className="font-semibold">{activeOps.length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ganadas:</span> <span className="font-semibold text-green-600">{allOpportunities.filter(o => o.stage === 'cierre_ganado').length}</span></div>
               </div>
             </div>
 
-            <div className="bg-card rounded-xl border p-4 group" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+            <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <UserPlus size={14} /> Cierre ganado
               </div>
-              <div className="text-xl font-bold text-success">{fmt(cierreGanado)}</div>
+              <div className="text-xl font-bold text-green-600">{fmt(cierreGanado)}</div>
               {pipelineTotal > 0 && (
                 <div className="flex items-center justify-between mt-2">
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${Math.min(Math.round((cierreGanado / pipelineTotal) * 100), 100)}%` }} />
+                    <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${Math.min(Math.round((cierreGanado / pipelineTotal) * 100), 100)}%` }} />
                   </div>
                   <span className="text-xs font-bold ml-2 whitespace-nowrap">{Math.round((cierreGanado / pipelineTotal) * 100)}%</span>
                 </div>
               )}
-              <div className="text-[10px] text-muted-foreground mt-1">del pipeline total</div>
             </div>
           </div>
+          </>
         );
       })()}
 
