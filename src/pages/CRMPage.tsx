@@ -102,6 +102,11 @@ export default function CRMPage() {
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
+  // Classification engine
+  const classificationMap = useMemo(() => {
+    return classifyAllCustomers(customers, dbOrders as any);
+  }, [customers, dbOrders]);
+
   const canExport = true;
   const isVendedor = currentRole === 'vendedor';
 
