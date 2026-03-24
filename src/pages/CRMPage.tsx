@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, type DBCustomer } from '@/hooks/useCustomers';
+import { useAllCustomerFiscalData, useSaveCustomerFiscalData } from '@/hooks/useInvoicing';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
