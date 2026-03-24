@@ -67,6 +67,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [userRole]);
 
+  // Build vendor series from DB team members
+  useEffect(() => {
+    if (teamMembers.length > 0) {
+      setVendorSeries(buildInitialSeries(teamMembers));
+    }
+  }, [teamMembers]);
+
   const [exchangeRate, setExchangeRate] = useState<number>(17.5);
 
   const getNextFolio = useCallback((vendorId: string): string => {
