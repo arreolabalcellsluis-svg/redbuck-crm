@@ -100,10 +100,18 @@ export default function CFODashboardPage() {
   // Period selector — derive available months from monthlySales
   const availableMonths = useMemo(() =>
     monthlySales.map(m => ({ label: m.month, value: parseMonthLabel(m.month) })),
-    [],
+    [monthlySales],
   );
-  const [periodFrom, setPeriodFrom] = useState(availableMonths[0]?.value ?? '2024-01');
-  const [periodTo, setPeriodTo] = useState(availableMonths[availableMonths.length - 1]?.value ?? '2025-03');
+  const [periodFrom, setPeriodFrom] = useState('2024-01');
+  const [periodTo, setPeriodTo] = useState('2025-03');
+
+  // Sync period defaults when availableMonths first loads
+  useEffect(() => {
+    if (availableMonths.length > 0) {
+      setPeriodFrom(prev => availableMonths.find(m => m.value === prev) ? prev : availableMonths[0].value);
+      setPeriodTo(prev => availableMonths.find(m => m.value === prev) ? prev : availableMonths[availableMonths.length - 1].value);
+    }
+  }, [availableMonths]);
   const period: PeriodRange = useMemo(() => ({ from: periodFrom, to: periodTo }), [periodFrom, periodTo]);
 
   const periodLabel = useMemo(() => {
