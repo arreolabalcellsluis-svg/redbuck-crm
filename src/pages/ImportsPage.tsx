@@ -16,6 +16,8 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useImportOrders, useAddImportOrder, useUpdateImportOrder } from '@/hooks/useImportOrders';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
