@@ -383,6 +383,77 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_documents: {
+        Row: {
+          conditions: string | null
+          created_at: string
+          customer_contact: string
+          customer_name: string
+          doc_type: string
+          folio: string
+          id: string
+          items: Json
+          legal_text: string | null
+          notes: string | null
+          order_id: string
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+          user_id: string | null
+          vendor_name: string
+          vendor_phone: string | null
+        }
+        Insert: {
+          conditions?: string | null
+          created_at?: string
+          customer_contact?: string
+          customer_name?: string
+          doc_type?: string
+          folio: string
+          id?: string
+          items?: Json
+          legal_text?: string | null
+          notes?: string | null
+          order_id: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_name?: string
+          vendor_phone?: string | null
+        }
+        Update: {
+          conditions?: string | null
+          created_at?: string
+          customer_contact?: string
+          customer_name?: string
+          doc_type?: string
+          folio?: string
+          id?: string
+          items?: Json
+          legal_text?: string | null
+          notes?: string | null
+          order_id?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_name?: string
+          vendor_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_documents_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_config: {
         Row: {
           config_key: string
