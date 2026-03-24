@@ -101,9 +101,17 @@ export function useUpdateCommissionConfig() {
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      // Use upsert to handle both insert and update cases
       const { error } = await supabase.from('commission_config')
-        .update({ config_value: value, updated_at: new Date().toISOString(), user_id: user?.id ?? null })
-        .eq('config_key', key);
+        .upsert(
+          {
+            config_key: key,
+            config_value: value,
+            updated_at: new Date().toISOString(),
+            user_id: user?.id ?? null,
+          },
+          { onConflict: 'config_key' }
+        );
       if (error) throw error;
     },
     onSuccess: () => {
