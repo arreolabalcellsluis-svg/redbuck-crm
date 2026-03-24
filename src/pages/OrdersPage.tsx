@@ -3,7 +3,7 @@ import { useOrders, useAddOrder, useUpdateOrderStatus, useUpdateOrder, type DBOr
 import { useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import OrderDetailDialog from '@/components/orders/OrderDetailDialog';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useProducts } from '@/hooks/useProducts';
+
 import { useOrderPayments, useAddOrderPayment } from '@/hooks/useOrderPayments';
 import { useAccountsReceivable, useAddAccountReceivable, useUpdateAccountReceivable } from '@/hooks/useAccountsReceivable';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
