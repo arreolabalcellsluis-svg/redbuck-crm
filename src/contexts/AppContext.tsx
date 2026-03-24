@@ -77,12 +77,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [exchangeRate, setExchangeRate] = useState<number>(17.5);
 
   const getNextFolio = useCallback((vendorId: string): string => {
-    const vendor = demoUsers.find(u => u.id === vendorId);
+    const vendor = teamMembers.find(u => u.id === vendorId);
     if (!vendor?.seriesPrefix) return `COT-${Date.now()}`;
     const current = vendorSeries[vendorId] ?? vendor.seriesStart ?? 1000;
     const next = current + 1;
     return `${vendor.seriesPrefix}-${next}`;
-  }, [vendorSeries]);
+  }, [vendorSeries, teamMembers]);
 
   const consumeFolio = useCallback((vendorId: string) => {
     setVendorSeries(prev => {
