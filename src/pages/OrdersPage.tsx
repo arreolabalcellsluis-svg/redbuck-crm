@@ -4,7 +4,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrderPayments, useAddOrderPayment } from '@/hooks/useOrderPayments';
 import { useAccountsReceivable, useAddAccountReceivable, useUpdateAccountReceivable } from '@/hooks/useAccountsReceivable';
-import { demoUsers } from '@/data/demo-data';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
 import { ShoppingCart, PackageCheck, Truck, Clock, Plus, Search, X, Edit2, DollarSign, FileSpreadsheet, History, ChevronsUpDown, Check, CalendarClock, Package, FileText, Loader2 } from 'lucide-react';
