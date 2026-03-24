@@ -1009,21 +1009,23 @@ export default function CRMPage() {
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} />
-              {phoneDuplicate && (
-                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
-                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Este número ya está registrado en el sistema
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
-                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
-                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
-                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
-                  </div>
-                </div>
-              )}
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${duplicateMatches.length > 0 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} />
             </div>
+            {duplicateMatches.length > 0 && (
+              <div className="md:col-span-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
+                <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Posibles duplicados ({duplicateMatches.length})
+                </div>
+                {duplicateMatches.slice(0, 3).map(dm => (
+                  <div key={dm.customer.id} className="ml-6 p-2 rounded-md bg-background/60 border text-xs mb-1">
+                    <span className="font-semibold">{dm.customer.name}</span>
+                    <span className="text-muted-foreground ml-2">📞 {dm.customer.phone}</span>
+                    <span className="ml-2">{dm.matchReasons.join(', ')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
               <input value={form.whatsapp || ''} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
