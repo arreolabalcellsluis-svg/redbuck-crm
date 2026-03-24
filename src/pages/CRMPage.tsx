@@ -278,9 +278,23 @@ export default function CRMPage() {
       priority: form.priority,
     }, {
       onSuccess: () => {
+        // Save fiscal data
+        const hasFiscal = fiscal.legalName || fiscal.taxRegime || fiscal.fiscalZipCode || fiscal.invoiceEmail;
+        if (hasFiscal) {
+          saveFiscalMut.mutate({
+            customer_id: editingCustomer.id,
+            legal_name: fiscal.legalName,
+            rfc: form.rfc || '',
+            tax_regime: fiscal.taxRegime,
+            fiscal_zip_code: fiscal.fiscalZipCode,
+            cfdi_use_default: fiscal.cfdiUse || 'G03',
+            invoice_email: fiscal.invoiceEmail || null,
+          });
+        }
         toast.success(`Cliente "${form.name}" actualizado correctamente`);
         setEditingCustomer(null);
         setForm(emptyCustomer());
+        setFiscal(emptyFiscal());
       },
     });
   };
