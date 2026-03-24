@@ -115,12 +115,12 @@ export type DuplicateGroup = {
   reason: string;
 };
 
-/** Scan all customers for global duplicate groups */
+/** Scan all customers for global duplicate groups — ONLY by phone number */
 export function scanGlobalDuplicates(allCustomers: Customer[]): DuplicateGroup[] {
   const groups: DuplicateGroup[] = [];
   const usedIds = new Set<string>();
 
-  // Phone-based groups
+  // Phone-based groups only
   const phoneMap = new Map<string, Customer[]>();
   for (const c of allCustomers) {
     const p = normalizePhone(c.phone);
@@ -146,41 +146,6 @@ export function scanGlobalDuplicates(allCustomers: Customer[]): DuplicateGroup[]
       }
     }
   });
-
-  // Email-based groups
-  const emailMap = new Map<string, Customer[]>();
-  for (const c of allCustomers) {
-    if (c.email) {
-      const e = normalizeEmail(c.email);
-      if (e.length > 3) {
-        if (!emailMap.has(e)) emailMap.set(e, []);
-        emailMap.get(e)!.push(c);
-      }
-    }
-  }
-  emailMap.forEach((custs) => {
-    if (custs.length > 1) {
-      const ids = custs.map(c => c.id).sort().join(',');
-      if (!usedIds.has(ids)) {
-        usedIds.add(ids);
-        groups.push({ customers: custs, reason: 'Email duplicado' });
-      }
-    }
-  });
-
-  // Name-based groups (fuzzy)
-  for (let i = 0; i < allCustomers.length; i++) {
-    for (let j = i + 1; j < allCustomers.length; j++) {
-      const a = allCustomers[i], b = allCustomers[j];
-      if (fuzzyNameMatch(a.name, b.name)) {
-        const ids = [a.id, b.id].sort().join(',');
-        if (!usedIds.has(ids)) {
-          usedIds.add(ids);
-          groups.push({ customers: [a, b], reason: 'Nombre similar' });
-        }
-      }
-    }
-  }
 
   return groups;
 }
