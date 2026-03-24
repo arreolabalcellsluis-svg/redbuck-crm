@@ -22,7 +22,7 @@ export function useAreaGoals(month?: number, year?: number) {
   return useQuery({
     queryKey: ['area_goals', month, year],
     queryFn: async () => {
-      let q = supabase.from('area_goals' as any).select('*');
+      let q = supabase.from('area_goals').select('*');
       if (month) q = q.eq('month', month);
       if (year) q = q.eq('year', year);
       const { data, error } = await q.order('area');
