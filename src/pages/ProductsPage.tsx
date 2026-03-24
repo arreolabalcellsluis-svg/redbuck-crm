@@ -759,6 +759,37 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Price List PDF Dialog */}
+      <Dialog open={showPriceListDialog} onOpenChange={setShowPriceListDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generar Lista de Precios PDF</DialogTitle>
+            <DialogDescription>Selecciona la categoría para generar el catálogo de precios profesional REDBUCK.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Categoría</label>
+              <select value={priceListCategory} onChange={e => setPriceListCategory(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
+                <option value="all">Todas las categorías</option>
+                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <p>📋 Se incluirán solo productos <strong>activos</strong> con precio asignado.</p>
+              <p className="mt-1">📄 El PDF se generará en formato horizontal con diseño profesional.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowPriceListDialog(false)} className="px-4 py-2 rounded-lg border text-sm font-medium">Cancelar</button>
+            <button onClick={handleGeneratePriceList} disabled={generatingPriceList} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+              {generatingPriceList ? 'Generando...' : '📄 Generar Lista de Precios'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
