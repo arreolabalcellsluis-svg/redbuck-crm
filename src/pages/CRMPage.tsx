@@ -65,6 +65,7 @@ function dbToCustomer(db: DBCustomer): Customer {
 
 
 export default function CRMPage() {
+  const navigate = useNavigate();
   const { currentRole } = useAppContext();
   const [tab, setTab] = useState<Tab>('clientes');
   const [search, setSearch] = useState('');
