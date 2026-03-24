@@ -95,6 +95,7 @@ export default function ImportsPage() {
       productId: it.productId,
       productName: it.productName,
       sku: it.sku,
+      skuFabrica: it.skuFabrica || '',
       category: it.category,
       qty: it.qty,
       unitCost: it.unitCost,
