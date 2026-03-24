@@ -52,6 +52,11 @@ function mapRow(row: any): DBProduct {
     active: row.active,
     stock: typeof row.stock === 'object' ? row.stock : {},
     in_transit: row.in_transit,
+    capacity: row.capacity || '',
+    price_client: Number(row.price_client || 0),
+    price_distributor: Number(row.price_distributor || 0),
+    commission_distributor: Number(row.commission_distributor || 0),
+    commission_admin: Number(row.commission_admin || 0),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
