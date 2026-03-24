@@ -77,6 +77,8 @@ export default function CRMPage() {
   const { data: dbActivities = [] } = useActivities();
   const addActivityMut = useAddActivity();
   const { config: onboardingConfig } = useOnboardingConfig();
+  const { data: allFiscalData = [] } = useAllCustomerFiscalData();
+  const saveFiscalMut = useSaveCustomerFiscalData();
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
