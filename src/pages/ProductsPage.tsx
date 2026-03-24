@@ -67,6 +67,8 @@ export default function ProductsPage() {
   const deleteProductMut = useDeleteProduct();
 
   const products = useMemo(() => (dbProducts ?? []).map(dbToProduct), [dbProducts]);
+  const { data: teamMembers = [] } = useTeamMembers();
+  const sellers = useMemo(() => teamMembers.filter(m => m.active && ['vendedor', 'gerencia_comercial', 'director'].includes(m.role)), [teamMembers]);
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ProductCategory | ''>('');
