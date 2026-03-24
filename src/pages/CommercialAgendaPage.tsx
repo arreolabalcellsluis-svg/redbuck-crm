@@ -75,6 +75,7 @@ export default function CommercialAgendaPage() {
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbQuotations = [] } = useQuotations();
   const { data: dbProducts = [] } = useProducts();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
 
   // Open create dialog pre-filled when navigated from DailyAssistant
   useEffect(() => {
