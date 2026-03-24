@@ -740,9 +740,30 @@ export default function CRMPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre de contacto</label>
               <input value={form.contactName || ''} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Ej: Juan Pérez" />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="811-234-5678" />
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} placeholder="811-234-5678" />
+              {phoneDuplicate && (
+                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
+                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Este número ya está registrado en el sistema
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
+                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
+                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
+                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
+                  </div>
+                  <div className="flex gap-2 mt-2 ml-6">
+                    <button type="button" onClick={() => { setShowCreate(false); setViewingCustomer(phoneDuplicate); }} className="text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1">
+                      <Eye className="w-3 h-3" /> Ver cliente existente
+                    </button>
+                    <button type="button" onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="text-xs px-3 py-1 rounded-md border hover:bg-accent">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
