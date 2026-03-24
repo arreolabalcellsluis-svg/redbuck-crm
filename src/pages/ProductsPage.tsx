@@ -687,8 +687,22 @@ export default function ProductsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre del vendedor *</label>
-              <input value={datasheetSeller.name} onChange={e => setDatasheetSeller(s => ({ ...s, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Tu nombre completo" />
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor *</label>
+              <select
+                value={datasheetSeller.name}
+                onChange={e => {
+                  const selected = sellers.find(s => s.name === e.target.value);
+                  if (selected) {
+                    setDatasheetSeller(s => ({ ...s, name: selected.name, phone: selected.phone || selected.whatsapp || '', email: selected.email || '' }));
+                  } else {
+                    setDatasheetSeller(s => ({ ...s, name: e.target.value }));
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-lg border bg-card text-sm"
+              >
+                <option value="">Selecciona un vendedor</option>
+                {sellers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+              </select>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono / WhatsApp *</label>
