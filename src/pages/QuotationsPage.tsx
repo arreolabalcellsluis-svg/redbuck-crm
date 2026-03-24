@@ -454,8 +454,9 @@ export default function QuotationsPage() {
   };
 
   const handleWhatsAppSend = (q: Quotation) => {
-    // Build the message with quotation details for the customer
-    const customerPhone = q.customerWhatsapp || q.customerPhone?.replace(/[^0-9]/g, '');
+    // Always use the latest phone from the customer database
+    const liveCustomer = q.customerId ? dbCustomers.find(c => c.id === q.customerId) : null;
+    const customerPhone = liveCustomer?.whatsapp || liveCustomer?.phone?.replace(/[^0-9]/g, '') || q.customerWhatsapp || q.customerPhone?.replace(/[^0-9]/g, '');
     if (!customerPhone) { toast.error('El cliente no tiene número de WhatsApp registrado.'); return; }
     const cleanPhone = customerPhone.startsWith('52') ? customerPhone : `52${customerPhone.replace(/[^0-9]/g, '')}`;
     
@@ -1046,7 +1047,10 @@ export default function QuotationsPage() {
           <div className="space-y-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Número de destino</label>
-              <div className="text-sm font-medium">{showWhatsApp?.customerWhatsapp || showWhatsApp?.customerPhone || '⚠️ Sin número registrado'}</div>
+              <div className="text-sm font-medium">{(() => {
+                const liveCustomer = showWhatsApp?.customerId ? dbCustomers.find(c => c.id === showWhatsApp.customerId) : null;
+                return liveCustomer?.whatsapp || liveCustomer?.phone || showWhatsApp?.customerWhatsapp || showWhatsApp?.customerPhone || '⚠️ Sin número registrado';
+              })()}</div>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Mensaje</label>
