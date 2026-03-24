@@ -1,4 +1,4 @@
-import { demoUsers } from '@/data/demo-data';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useAppContext } from '@/contexts/AppContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';

@@ -78,6 +78,8 @@ export default function OrdersPage() {
   const { data: dbOrderPayments = [] } = useOrderPayments();
   const addOrderPaymentMutation = useAddOrderPayment();
   const { data: dbReceivables = [] } = useAccountsReceivable();
+  const { data: dbTeamMembers = [] } = useTeamMembers();
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
   const addReceivableMutation = useAddAccountReceivable();
   const updateReceivableMutation = useUpdateAccountReceivable();
 

@@ -96,7 +96,7 @@ export default function CommercialAgendaPage() {
     }
   }, [location.state]);
 
-  const vendors = demoUsers.filter(u => u.role === 'vendedor');
+  const vendors = dbTeamMembers.filter(u => u.role === 'vendedor' && u.active);
 
   // ─── Filtering ───────────────────────────────────────────
   const filtered = useMemo(() => {
