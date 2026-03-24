@@ -715,15 +715,27 @@ export default function CommercialAgendaPage() {
       )}
 
       {/* ═══ PENDING LIST ═══ */}
-      {view === 'pending' && (
+      {view === 'pending' && (() => {
+        const priorityOrder = { alta: 0, media: 1, baja: 2 };
+        const statusOrder = { pendiente: 0, en_proceso: 1, reagendada: 2, no_realizada: 3, realizada: 4, cancelada: 5 };
+        const sortByPriority = (a: Activity, b: Activity) => {
+          const pd = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+          if (pd !== 0) return pd;
+          const sd = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
+          if (sd !== 0) return sd;
+          return a.date.localeCompare(b.date);
+        };
+        const overdueList = getOverdueActivities(filtered, TODAY).sort(sortByPriority);
+        const pendingList = getPendingActivities(filtered).filter(a => a.date >= TODAY).sort(sortByPriority);
+        return (
         <div>
-          {overdue.length > 0 && (
+          {overdueList.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-bold text-destructive flex items-center gap-2 mb-2">
-                <AlertTriangle size={14} /> Vencidas ({overdue.length})
+                <AlertTriangle size={14} /> Vencidas ({overdueList.length})
               </h3>
               <div className="space-y-2">
-                {overdue.map(act => (
+                {overdueList.map(act => (
                   <div key={act.id} className="border-l-2 border-l-destructive pl-3">
                     <ActivityCard act={act} />
                   </div>
@@ -732,23 +744,24 @@ export default function CommercialAgendaPage() {
             </div>
           )}
           <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
-            <Clock size={14} className="text-warning" /> Pendientes ({pending.filter(a => a.date >= TODAY).length})
+            <Clock size={14} className="text-warning" /> Pendientes ({pendingList.length})
           </h3>
           <div className="space-y-2">
-            {pending.filter(a => a.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)).map(act => (
+            {pendingList.map(act => (
               <div key={act.id} className="flex items-center gap-3">
                 <div className="text-[10px] text-muted-foreground w-16 shrink-0 text-right">{act.date.slice(5)}</div>
                 <div className="flex-1"><ActivityCard act={act} /></div>
               </div>
             ))}
-            {pending.filter(a => a.date >= TODAY).length === 0 && (
+            {pendingList.length === 0 && (
               <div className="text-center text-muted-foreground py-8 border border-dashed rounded-xl">
                 ¡Sin actividades pendientes!
               </div>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ═══ CREATE DIALOG ═══ */}
       <Dialog open={showCreate} onOpenChange={open => {
