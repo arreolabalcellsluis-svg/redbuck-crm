@@ -9,6 +9,7 @@ export interface ImportItemData {
   productId: string | null;
   productName: string;
   sku: string;
+  skuFabrica: string;
   category: string;
   qty: number;
   unitCost: number;
