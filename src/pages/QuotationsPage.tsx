@@ -233,7 +233,7 @@ export default function QuotationsPage() {
     const total = Math.round((subtotal + tax) * 100) / 100;
     const vendor = dbTeamMembers.find(u => u.id === selectedVendorId);
     const customer = dbCustomers.find(c => c.id === selectedCustomerId);
-    const folio = getNextFolio(selectedVendorId);
+    const folio = getNextFolioFromDB(selectedVendorId);
 
     const today = new Date();
     const validDate = new Date(today);
