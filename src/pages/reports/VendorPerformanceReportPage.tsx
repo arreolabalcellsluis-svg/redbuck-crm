@@ -57,6 +57,8 @@ export default function VendorPerformanceReportPage() {
     meta: r.meta,
   }));
 
+  const avgTicket = records.length > 0 ? records.reduce((s, r) => s + r.ticketProm, 0) / records.length : 0;
+
   const handleExportExcel = () => {
     const dateStr = new Date().toISOString().split('T')[0];
     const totalVentas = records.reduce((s, r) => s + r.ventasTotales, 0);
