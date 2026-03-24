@@ -38,6 +38,7 @@ export default function QuotationsPage() {
   const { data: dbQuotations = [], isLoading: quotationsLoading } = useQuotations();
   const addQuotationMutation = useAddQuotation();
   const updateQuotationStatusMutation = useUpdateQuotationStatus();
+  const updateQuotationMutation = useUpdateQuotation();
   const { data: dbOrders = [] } = useOrders();
   const addOrderMutation = useAddOrder();
   const { data: dbCustomers = [] } = useCustomers();
