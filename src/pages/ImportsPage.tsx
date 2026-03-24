@@ -86,6 +86,21 @@ export default function ImportsPage() {
       return;
     }
 
+    const pesoTotal = items.reduce((s, it) => s + (it.peso || 0) * it.qty, 0);
+    const cbmTotal = items.reduce((s, it) => s + (it.cbm || 0) * it.qty, 0);
+
+    // Save enriched items with productId, sku, cbm, peso
+    const saveItems = items.map(it => ({
+      productId: it.productId,
+      productName: it.productName,
+      sku: it.sku,
+      category: it.category,
+      qty: it.qty,
+      unitCost: it.unitCost,
+      cbm: it.cbm,
+      peso: it.peso,
+    }));
+
     if (editId) {
       updateMutation.mutate({
         id: editId,
@@ -94,7 +109,8 @@ export default function ImportsPage() {
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
         freightCost: form.freightCost, customsCost: form.customsCost, status: form.status,
         exchangeRate: form.exchangeRate,
-        items, totalCost, totalLanded,
+        items: saveItems as any, totalCost, totalLanded,
+        pesoTotalKg: pesoTotal, volumenTotalCbm: cbmTotal,
         daysInTransit: form.estimatedDeparture ? Math.max(0, Math.floor((Date.now() - new Date(form.estimatedDeparture).getTime()) / 86400000)) : 0,
       });
     } else {
@@ -105,11 +121,11 @@ export default function ImportsPage() {
         currency: 'USD', exchangeRate: form.exchangeRate,
         purchaseDate: form.purchaseDate, estimatedDeparture: form.estimatedDeparture,
         estimatedArrival: form.estimatedArrival, status: form.status,
-        items, totalCost, freightCost: form.freightCost, customsCost: form.customsCost,
+        items: saveItems as any, totalCost, freightCost: form.freightCost, customsCost: form.customsCost,
         totalLanded, daysInTransit: 0,
         expenses: DEFAULT_EXPENSES,
-        pesoTotalKg: 0,
-        volumenTotalCbm: 0,
+        pesoTotalKg: pesoTotal,
+        volumenTotalCbm: cbmTotal,
         numeroContenedores: 1,
       });
     }
