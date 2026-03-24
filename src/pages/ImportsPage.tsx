@@ -5,7 +5,8 @@ import ImportProductSelector, { type ImportItemData } from '@/components/imports
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
-import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download } from 'lucide-react';
+import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { exportImportPdf, exportImportExcel } from '@/lib/importExport';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ImportStatus, IMPORT_STATUS_LABELS, IMPORT_STATUS_ORDER } from '@/types';
@@ -222,6 +223,12 @@ export default function ImportsPage() {
                         <Edit2 size={14} />
                       </button>
                     )}
+                    <button onClick={() => exportImportPdf(imp)} className="p-1.5 rounded-md hover:bg-muted text-destructive" title="Exportar PDF">
+                      <FileText size={14} />
+                    </button>
+                    <button onClick={() => exportImportExcel(imp)} className="p-1.5 rounded-md hover:bg-muted text-green-600" title="Exportar Excel">
+                      <FileSpreadsheet size={14} />
+                    </button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{imp.supplier} · {imp.country}</p>
                 </div>
