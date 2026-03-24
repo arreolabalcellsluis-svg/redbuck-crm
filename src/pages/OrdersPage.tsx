@@ -449,6 +449,15 @@ export default function OrdersPage() {
                       {!['cancelado', 'nuevo'].includes(o.status) && (
                         <button onClick={() => setInvoiceOrder(o)} className="p-1.5 rounded-md hover:bg-muted text-primary" title="Facturar pedido"><FileText size={14} /></button>
                       )}
+                      {o.status !== 'cancelado' && (
+                        <button onClick={() => {
+                          if (window.confirm(`¿Estás seguro de cancelar el pedido ${o.folio}? No se eliminará, solo cambiará su estatus a cancelado.`)) {
+                            handleStatusChange(o.id, 'cancelado');
+                            addAuditLog({ userId: 'current', userName: 'Usuario actual', userRole: currentRole, module: 'pedidos', action: 'cancelar_pedido', entityId: o.id, previousValue: o.status, newValue: 'cancelado', comment: `Pedido ${o.folio} cancelado` });
+                            toast.success(`Pedido ${o.folio} cancelado`);
+                          }
+                        }} className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive" title="Cancelar pedido"><X size={14} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
