@@ -233,8 +233,8 @@ export default function CRMPage() {
     return ids.map(id => ({ id, name: dbTeam.find(t => t.id === id)?.name || id })).sort((a, b) => a.name.localeCompare(b.name));
   }, [allCustomers, dbTeam]);
 
-  const hasFilters = !!(filterType || filterCity || filterVendor || filterPriority || filterDateFrom || filterDateTo);
-  const clearFilters = () => { setFilterType(''); setFilterCity(''); setFilterVendor(''); setFilterPriority(''); setFilterDateFrom(''); setFilterDateTo(''); setSearch(''); };
+  const hasFilters = !!(filterType || filterCity || filterVendor || filterPriority || filterDateFrom || filterDateTo || filterContactType || filterClientLevel || filterClientValue);
+  const clearFilters = () => { setFilterType(''); setFilterCity(''); setFilterVendor(''); setFilterPriority(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterContactType(''); setFilterClientLevel(''); setFilterClientValue(''); setSearch(''); };
 
   const filteredCustomers = useMemo(() => {
     let data = [...allCustomers];
@@ -248,8 +248,11 @@ export default function CRMPage() {
     if (filterPriority) data = data.filter(c => c.priority === filterPriority);
     if (filterDateFrom) data = data.filter(c => c.createdAt >= filterDateFrom);
     if (filterDateTo) data = data.filter(c => c.createdAt <= filterDateTo);
+    if (filterContactType) data = data.filter(c => classificationMap.get(c.id)?.contactType === filterContactType);
+    if (filterClientLevel) data = data.filter(c => classificationMap.get(c.id)?.clientLevel === filterClientLevel);
+    if (filterClientValue) data = data.filter(c => classificationMap.get(c.id)?.clientValue === filterClientValue);
     return data;
-  }, [allCustomers, search, filterType, filterCity, filterVendor, filterPriority, filterDateFrom, filterDateTo]);
+  }, [allCustomers, search, filterType, filterCity, filterVendor, filterPriority, filterDateFrom, filterDateTo, filterContactType, filterClientLevel, filterClientValue, classificationMap]);
 
   const resolveVendor = (vendorId: string) => {
     const u = dbTeam.find(usr => usr.id === vendorId);
