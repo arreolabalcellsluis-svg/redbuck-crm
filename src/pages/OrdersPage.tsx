@@ -437,7 +437,12 @@ export default function OrdersPage() {
               const balance = o.total - paid;
               const payStatus = getPaymentStatusLocal(o);
               return (
-                <tr key={o.id}>
+                <tr key={o.id} className={o.status === 'cancelado' ? 'relative opacity-60' : ''}>
+                  {o.status === 'cancelado' && (
+                    <td colSpan={0} className="absolute inset-x-0 top-0 h-0">
+                      <div className="h-[3px] w-full bg-destructive rounded-full" />
+                    </td>
+                  )}
                   <td>
                     <button onClick={() => { const db = dbOrders.find(d => d.id === o.id); if (db) setDetailOrder(db); }} className="font-mono text-xs font-semibold text-primary hover:underline cursor-pointer">{o.folio}</button>
                   </td>
