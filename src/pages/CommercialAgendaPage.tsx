@@ -323,12 +323,39 @@ export default function CommercialAgendaPage() {
 
   // ─── Form dialog content ────────────────────────────────
   function ActivityFormFields() {
+    // Smart title suggestions
+    const hasQuotation = !!form.quotationId;
+    const stage: CustomerStage = form.customerId
+      ? detectCustomerStage(form.customerId, dbActivities as any[], hasQuotation)
+      : 'nuevo';
+    const suggestions = suggestTitles(form.type, stage, form.productName, form.customerName);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 relative">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Título *</label>
           <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+            onFocus={() => setShowSuggestions(true)}
             className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Descripción de la actividad" />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b bg-muted/50">
+                💡 Sugerencias de título ({stage === 'nuevo' ? 'Nuevo' : stage === 'seguimiento' ? 'Seguimiento' : stage === 'cierre' ? 'Cierre' : 'Reactivación'})
+              </div>
+              {suggestions.map((s, i) => (
+                <button key={i} type="button"
+                  onClick={() => { setForm(p => ({ ...p, title: s })); setShowSuggestions(false); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors border-b last:border-b-0">
+                  {s}
+                </button>
+              ))}
+              <button type="button" onClick={() => setShowSuggestions(false)}
+                className="w-full text-center px-3 py-1.5 text-[10px] text-muted-foreground hover:bg-muted transition-colors">
+                Cerrar sugerencias
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Tipo de actividad</label>
