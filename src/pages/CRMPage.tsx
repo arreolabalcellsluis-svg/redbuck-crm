@@ -61,6 +61,12 @@ export default function CRMPage() {
   const { currentRole } = useAppContext();
   const [tab, setTab] = useState<Tab>('clientes');
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterCity, setFilterCity] = useState('');
+  const [filterVendor, setFilterVendor] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
