@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { CUSTOMER_TYPE_LABELS, PIPELINE_LABELS, CustomerType, LeadSource, Customer } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -55,6 +55,16 @@ function dbToCustomer(db: DBCustomer): Customer {
     priority: db.priority,
     createdAt: db.created_at.split('T')[0],
   };
+}
+
+/** Normalize phone: strip spaces, dashes, parentheses, country code prefixes */
+function normalizePhone(phone: string): string {
+  let p = phone.replace(/[\s\-\(\)\.\+]/g, '');
+  // Remove Mexico country code variants
+  if (p.startsWith('521') && p.length > 10) p = p.slice(p.length - 10);
+  else if (p.startsWith('52') && p.length > 10) p = p.slice(p.length - 10);
+  else if (p.startsWith('1') && p.length === 11) p = p.slice(1);
+  return p;
 }
 
 export default function CRMPage() {
@@ -111,7 +121,20 @@ export default function CRMPage() {
 
   const allCustomers = customers;
 
-  // Map quotation status → pipeline stage for display
+  // Duplicate phone detection
+  const phoneDuplicate = useMemo(() => {
+    const normalized = normalizePhone(form.phone);
+    if (!normalized || normalized.length < 7) return null;
+    const match = allCustomers.find(c => {
+      if (editingCustomer && c.id === editingCustomer.id) return false;
+      const cNorm = normalizePhone(c.phone);
+      if (cNorm === normalized) return true;
+      if (c.whatsapp && normalizePhone(c.whatsapp) === normalized) return true;
+      return false;
+    });
+    return match || null;
+  }, [form.phone, allCustomers, editingCustomer]);
+
   const quotationToPipelineStage = (status: string): string => {
     switch (status) {
       case 'borrador': return 'cotizacion_enviada';
@@ -717,9 +740,30 @@ export default function CRMPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre de contacto</label>
               <input value={form.contactName || ''} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="Ej: Juan Pérez" />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="811-234-5678" />
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} placeholder="811-234-5678" />
+              {phoneDuplicate && (
+                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
+                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Este número ya está registrado en el sistema
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
+                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
+                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
+                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
+                  </div>
+                  <div className="flex gap-2 mt-2 ml-6">
+                    <button type="button" onClick={() => { setShowCreate(false); setViewingCustomer(phoneDuplicate); }} className="text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1">
+                      <Eye className="w-3 h-3" /> Ver cliente existente
+                    </button>
+                    <button type="button" onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="text-xs px-3 py-1 rounded-md border hover:bg-accent">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
@@ -833,9 +877,22 @@ export default function CRMPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre / Razón social *</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} />
+              {phoneDuplicate && (
+                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
+                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Este número ya está registrado en el sistema
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
+                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
+                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
+                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
