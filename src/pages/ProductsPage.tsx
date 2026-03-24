@@ -299,7 +299,7 @@ export default function ProductsPage() {
     }
   };
 
-
+  const getWarehouseNames = (stock: Record<string, number>) => {
     return Object.entries(stock)
       .filter(([, qty]) => qty > 0)
       .map(([wId, qty]) => ({ name: warehouseMap[wId] || wId, qty }));
