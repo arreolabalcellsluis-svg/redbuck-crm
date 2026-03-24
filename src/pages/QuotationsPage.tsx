@@ -1047,7 +1047,7 @@ export default function QuotationsPage() {
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Número de destino</label>
               <div className="text-sm font-medium">{(() => {
-                const liveCustomer = showWhatsApp?.customer_id ? dbCustomers.find(c => c.id === showWhatsApp.customer_id) : null;
+                const liveCustomer = showWhatsApp?.customerId ? dbCustomers.find(c => c.id === showWhatsApp.customerId) : null;
                 return liveCustomer?.whatsapp || liveCustomer?.phone || showWhatsApp?.customerWhatsapp || showWhatsApp?.customerPhone || '⚠️ Sin número registrado';
               })()}</div>
             </div>
