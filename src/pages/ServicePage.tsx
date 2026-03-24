@@ -23,8 +23,8 @@ const SERVICE_STATUS_LABELS: Record<ServiceStatus, string> = {
   terminado: 'Terminado', cancelado: 'Cancelado',
 };
 
-function generateServiceReportPDF(so: ExtendedServiceOrder) {
-  const tech = demoUsers.find(u => u.name === so.technicianName);
+function generateServiceReportPDF(so: ExtendedServiceOrder, teamMembers?: any[]) {
+  const tech = teamMembers?.find((u: any) => u.name === so.technicianName);
   const html = `
     <html><head><title>Reporte ${so.folio}</title>
     <style>
