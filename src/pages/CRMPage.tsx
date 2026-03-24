@@ -171,6 +171,7 @@ export default function CRMPage() {
     if (!form.phone.trim()) { toast.error('El teléfono es obligatorio'); return; }
     if (!form.vendorId) { toast.error('Selecciona un vendedor'); return; }
 
+    const vendor = dbTeam.find(v => v.id === form.vendorId);
     addCustomerMut.mutate({
       name: form.name,
       contact_name: form.contactName || null,
@@ -186,8 +187,30 @@ export default function CRMPage() {
       source: form.source,
       priority: form.priority,
     }, {
-      onSuccess: () => {
+      onSuccess: (_data, _vars, _ctx) => {
         toast.success(`Cliente "${form.name}" registrado correctamente`);
+        // Trigger onboarding automation
+        if (onboardingConfig.enabled && vendor) {
+          const today = new Date().toISOString().split('T')[0];
+          const activities = generateOnboardingActivities(
+            onboardingConfig,
+            { id: '', name: form.name, createdAt: today },
+            { id: vendor.id, name: vendor.name },
+          );
+          activities.forEach(act => addActivityMut.mutate(act));
+          if (activities.length > 0) {
+            toast.success(`${activities.length} actividades de seguimiento creadas automáticamente`);
+          }
+          // Open WhatsApp if available
+          if (form.whatsapp) {
+            const link = buildWhatsAppLink(form.whatsapp, onboardingConfig.whatsappTemplate, {
+              cliente: form.name,
+              vendedor: vendor.name,
+              producto: 'equipo automotriz',
+            });
+            window.open(link, '_blank');
+          }
+        }
         setShowCreate(false);
         setForm(emptyCustomer());
       },
