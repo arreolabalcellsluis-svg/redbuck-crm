@@ -105,7 +105,22 @@ export default function CRMPage() {
   const [showFiscal, setShowFiscal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleDeleteCustomer = () => {
+  // Duplicate phone detection
+  const phoneDuplicate = useMemo(() => {
+    const normalized = normalizePhone(form.phone);
+    if (!normalized || normalized.length < 7) return null;
+    const match = allCustomers.find(c => {
+      // Skip current customer when editing
+      if (editingCustomer && c.id === editingCustomer.id) return false;
+      const cNorm = normalizePhone(c.phone);
+      if (cNorm === normalized) return true;
+      // Also check whatsapp
+      if (c.whatsapp && normalizePhone(c.whatsapp) === normalized) return true;
+      return false;
+    });
+    return match || null;
+  }, [form.phone, allCustomers, editingCustomer]);
+
     if (!editingCustomer) return;
     deleteCustomerMut.mutate(editingCustomer.id, {
       onSuccess: () => {
