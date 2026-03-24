@@ -1058,7 +1058,7 @@ export default function CFODashboardPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Slow Inventory */}
-            <div className="bg-card rounded-xl border p-6">
+            <div className="bg-card rounded-xl border p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" onClick={() => navigate('/reportes/inventario-muerto')}>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Package size={16} /> Inventario sin Rotación
               </h3>
