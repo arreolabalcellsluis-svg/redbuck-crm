@@ -703,7 +703,13 @@ export default function CRMPage() {
         const customersWithFollowUp = new Set(
           dbActivities.filter(a => a.customerName && (a.status === 'realizada' || a.status === 'en_proceso')).map(a => a.customerId).filter(Boolean)
         );
-        const withoutFollowUp = recentCustomers.filter(c => !customersWithFollowUp.has(c.id));
+        const withoutFollowUp = recentCustomers
+          .filter(c => !customersWithFollowUp.has(c.id))
+          .sort((a, b) => {
+            const daysA = Math.floor((Date.now() - new Date(a.createdAt).getTime()) / 86400000);
+            const daysB = Math.floor((Date.now() - new Date(b.createdAt).getTime()) / 86400000);
+            return daysB - daysA;
+          });
 
         // Customers with all onboarding activities done
         const onboardingCompleted = recentCustomers.filter(c => {
