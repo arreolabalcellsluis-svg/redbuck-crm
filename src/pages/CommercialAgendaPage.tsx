@@ -67,6 +67,8 @@ export default function CommercialAgendaPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [form, setForm] = useState<Omit<Activity, 'id'>>(emptyActivity());
+  const [manualStage, setManualStage] = useState<CustomerStage | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // DB hooks
   const { data: dbActivities = [], isLoading } = useActivities();
