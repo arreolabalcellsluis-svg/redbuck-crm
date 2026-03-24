@@ -452,6 +452,18 @@ export default function QuotationsPage() {
       comment: `Cotización ${q.folio} convertida a pedido ${folio} — Tipo: ${selectedOrderType}${advance > 0 ? ` — Anticipo: ${fmt(advance)}` : ''}`,
     });
 
+    // Deduct stock from inventory for each product
+    const warehouse = 'Bodega Principal';
+    for (const item of q.items) {
+      if (!item.productId) continue;
+      const product = dbProducts.find(p => p.id === item.productId);
+      if (!product) continue;
+      const currentStock = (product.stock as Record<string, number>)[warehouse] ?? 0;
+      const newStock = Math.max(0, currentStock - item.qty);
+      const updatedStock = { ...(product.stock as Record<string, number>), [warehouse]: newStock };
+      updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+    }
+
     toast.success(
       <div>
         <div className="font-semibold">Pedido {folio} generado</div>
