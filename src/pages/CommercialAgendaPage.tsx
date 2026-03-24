@@ -324,16 +324,13 @@ export default function CommercialAgendaPage() {
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
   // ─── Form dialog content ────────────────────────────────
-  function ActivityFormFields() {
-    // Smart title suggestions
+  const renderActivityFormFields = () => {
     const hasQuotation = !!form.quotationId;
     const autoStage: CustomerStage = form.customerId
       ? detectCustomerStage(form.customerId, dbActivities as any[], hasQuotation)
       : 'nuevo';
-    const [manualStage, setManualStage] = useState<CustomerStage | null>(null);
     const stage = manualStage ?? autoStage;
     const suggestions = suggestTitles(form.type, stage, form.productName, form.customerName);
-    const [showSuggestions, setShowSuggestions] = useState(false);
 
     const stageOptions: { key: CustomerStage; label: string; emoji: string }[] = [
       { key: 'nuevo', label: 'Nuevo', emoji: '🆕' },
@@ -344,7 +341,6 @@ export default function CommercialAgendaPage() {
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Etapa del cliente */}
         <div className="md:col-span-2">
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Etapa del cliente</label>
           <div className="flex flex-wrap gap-2">
@@ -368,7 +364,6 @@ export default function CommercialAgendaPage() {
           </div>
         </div>
 
-        {/* Título con sugerencias */}
         <div className="md:col-span-2 relative">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Título *</label>
           <div className="flex gap-2">
@@ -393,15 +388,25 @@ export default function CommercialAgendaPage() {
                 💡 Sugerencias — Etapa: {stageOptions.find(o => o.key === stage)?.emoji} {stageOptions.find(o => o.key === stage)?.label}
               </div>
               {suggestions.map((s, i) => (
-                <button key={i} type="button"
+                <button
+                  key={i}
+                  type="button"
                   onMouseDown={e => e.preventDefault()}
-                  onClick={() => { setForm(p => ({ ...p, title: s })); setShowSuggestions(false); }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors border-b last:border-b-0">
+                  onClick={() => {
+                    setForm(p => ({ ...p, title: s }));
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors border-b last:border-b-0"
+                >
                   {s}
                 </button>
               ))}
-              <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => setShowSuggestions(false)}
-                className="w-full text-center px-3 py-1.5 text-[10px] text-muted-foreground hover:bg-muted transition-colors">
+              <button
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => setShowSuggestions(false)}
+                className="w-full text-center px-3 py-1.5 text-[10px] text-muted-foreground hover:bg-muted transition-colors"
+              >
                 ✕ Cerrar
               </button>
             </div>
@@ -436,6 +441,7 @@ export default function CommercialAgendaPage() {
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Cliente</label>
           <select value={form.customerId ?? ''} onChange={e => {
             const c = dbCustomers.find(cc => cc.id === e.target.value);
+            setManualStage(null);
             setForm(p => ({ ...p, customerId: e.target.value || undefined, customerName: c?.name }));
           }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
             <option value="">Ninguno</option>
@@ -446,6 +452,7 @@ export default function CommercialAgendaPage() {
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Cotización</label>
           <select value={form.quotationId ?? ''} onChange={e => {
             const q = dbQuotations.find(qq => qq.id === e.target.value);
+            setManualStage(null);
             setForm(p => ({ ...p, quotationId: e.target.value || undefined, quotationFolio: q?.folio }));
           }} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
             <option value="">Ninguna</option>
@@ -485,7 +492,7 @@ export default function CommercialAgendaPage() {
         </div>
       </div>
     );
-  }
+  };
 
   if (isLoading) {
     return <div className="py-12 text-center text-muted-foreground">Cargando agenda...</div>;
