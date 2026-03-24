@@ -66,6 +66,7 @@ export default function ImportsPage() {
       productId: it.productId || null,
       productName: it.productName || '',
       sku: it.sku || '',
+      skuFabrica: it.skuFabrica || '',
       category: it.category || '',
       qty: it.qty || 1,
       unitCost: it.unitCost || 0,
