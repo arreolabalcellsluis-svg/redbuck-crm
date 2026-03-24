@@ -278,7 +278,7 @@ export default function ServicePage() {
                 </td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => generateServiceReportPDF(so)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" title="Descargar PDF">
+                    <button onClick={() => generateServiceReportPDF(so, dbTeamMembers)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" title="Descargar PDF">
                       <FileDown size={14} />
                     </button>
                     <button onClick={() => sendServiceReportWhatsApp(so)} className="p-1.5 rounded-md hover:bg-muted text-green-600 hover:text-green-700" title="Enviar por WhatsApp">
