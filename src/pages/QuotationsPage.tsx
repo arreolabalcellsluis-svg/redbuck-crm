@@ -412,7 +412,7 @@ export default function QuotationsPage() {
     { value: 'entrega_futura', label: 'Entrega futura', desc: 'El cliente compra para recibir después', icon: CalendarClock },
   ];
 
-  const handleGenerateOrder = () => {
+  const handleGenerateOrder = async () => {
     if (!convertQuotation || !selectedOrderType) return;
     const q = convertQuotation;
 
@@ -430,77 +430,84 @@ export default function QuotationsPage() {
     const balance = q.total - advance;
     const today = new Date().toISOString().slice(0, 10);
 
-    addOrderMutation.mutate({
-      folio,
-      customer_id: q.customerId || null,
-      customer_name: q.customerName,
-      vendor_name: q.vendorName,
-      items: q.items.map(it => ({ productId: it.productId, name: it.productName, qty: it.qty, unitPrice: it.unitPrice * (1 - (it.discount || 0) / 100) })),
-      total: q.total,
-      advance,
-      balance: Math.max(0, balance),
-      status: getOrderStatusForType(selectedOrderType),
-      order_type: selectedOrderType,
-      warehouse: 'Bodega Principal',
-      promise_date: selectedOrderType === 'entrega_futura' ? scheduledDate : today,
-      quotation_folio: q.folio,
-      scheduled_delivery_date: selectedOrderType === 'entrega_futura' ? scheduledDate : null,
-      delivery_notes: deliveryNotes || null,
-      reserve_deadline: selectedOrderType === 'apartado' ? reserveDeadline : null,
-      transportista: '',
-      guia_numero: '',
-      fecha_envio: null,
-      shipping_images: [],
-      invoice_number_manual: '',
-      invoice_date_manual: null,
-      invoice_pdf_url: '',
-      edit_history: [],
-    });
+    try {
+      const createdOrder = await addOrderMutation.mutateAsync({
+        folio,
+        customer_id: q.customerId || null,
+        customer_name: q.customerName,
+        vendor_name: q.vendorName,
+        items: q.items.map(it => ({ productId: it.productId, name: it.productName, qty: it.qty, unitPrice: it.unitPrice * (1 - (it.discount || 0) / 100) })),
+        total: q.total,
+        advance,
+        balance: Math.max(0, balance),
+        status: getOrderStatusForType(selectedOrderType),
+        order_type: selectedOrderType,
+        warehouse: 'Bodega Principal',
+        promise_date: selectedOrderType === 'entrega_futura' ? scheduledDate : today,
+        quotation_folio: q.folio,
+        scheduled_delivery_date: selectedOrderType === 'entrega_futura' ? scheduledDate : null,
+        delivery_notes: deliveryNotes || null,
+        reserve_deadline: selectedOrderType === 'apartado' ? reserveDeadline : null,
+        transportista: '',
+        guia_numero: '',
+        fecha_envio: null,
+        shipping_images: [],
+        invoice_number_manual: '',
+        invoice_date_manual: null,
+        invoice_pdf_url: '',
+        edit_history: [],
+      });
 
-    // Auto-create receivable in DB
-    const receivableStatus = advance >= q.total ? 'liquidado' : advance > 0 ? 'al_corriente' : selectedOrderType === 'apartado' ? 'por_vencer' : 'al_corriente';
-    const dueDate = selectedOrderType === 'apartado' && reserveDeadline ? reserveDeadline : selectedOrderType === 'entrega_futura' ? scheduledDate : today;
-    addReceivableMutation.mutate({
-      order_id: '',
-      customer_id: q.customerId,
-      customer_name: q.customerName,
-      order_folio: folio,
-      total: q.total,
-      paid: advance,
-      balance: Math.max(0, balance),
-      due_date: dueDate,
-      days_overdue: 0,
-      status: receivableStatus,
-    });
+      // Auto-create receivable in DB with the real order ID
+      const receivableStatus = advance >= q.total ? 'liquidado' : advance > 0 ? 'al_corriente' : selectedOrderType === 'apartado' ? 'por_vencer' : 'al_corriente';
+      const dueDate = selectedOrderType === 'apartado' && reserveDeadline ? reserveDeadline : selectedOrderType === 'entrega_futura' ? scheduledDate : today;
+      addReceivableMutation.mutate({
+        order_id: createdOrder.id,
+        customer_id: q.customerId,
+        customer_name: q.customerName,
+        order_folio: folio,
+        total: q.total,
+        paid: advance,
+        balance: Math.max(0, balance),
+        due_date: dueDate,
+        days_overdue: 0,
+        status: receivableStatus,
+      });
 
-    // Audit
-    addAuditLog({
-      userId: 'current', userName: 'Usuario actual', userRole: currentRole,
-      module: 'cotizaciones', action: 'convertir_a_pedido', entityId: q.id,
-      newValue: `${folio} (${selectedOrderType})`,
-      comment: `Cotización ${q.folio} convertida a pedido ${folio} — Tipo: ${selectedOrderType}${advance > 0 ? ` — Anticipo: ${fmt(advance)}` : ''}`,
-    });
+      // Audit
+      addAuditLog({
+        userId: 'current', userName: 'Usuario actual', userRole: currentRole,
+        module: 'cotizaciones', action: 'convertir_a_pedido', entityId: q.id,
+        newValue: `${folio} (${selectedOrderType})`,
+        comment: `Cotización ${q.folio} convertida a pedido ${folio} — Tipo: ${selectedOrderType}${advance > 0 ? ` — Anticipo: ${fmt(advance)}` : ''}`,
+      });
 
-    // Deduct stock from inventory for each product
-    const warehouse = 'Bodega Principal';
-    for (const item of q.items) {
-      if (!item.productId) continue;
-      const product = dbProducts.find(p => p.id === item.productId);
-      if (!product) continue;
-      const currentStock = (product.stock as Record<string, number>)[warehouse] ?? 0;
-      const newStock = Math.max(0, currentStock - item.qty);
-      const updatedStock = { ...(product.stock as Record<string, number>), [warehouse]: newStock };
-      updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+      // Deduct stock from inventory for each product
+      const warehouse = 'Bodega Principal';
+      for (const item of q.items) {
+        if (!item.productId) continue;
+        const product = dbProducts.find(p => p.id === item.productId);
+        if (!product) continue;
+        const currentStock = (product.stock as Record<string, number>)[warehouse] ?? 0;
+        const newStock = Math.max(0, currentStock - item.qty);
+        const updatedStock = { ...(product.stock as Record<string, number>), [warehouse]: newStock };
+        updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+      }
+
+      // Update quotation status to reflect conversion
+      updateQuotationStatusMutation.mutate({ id: q.id, status: 'aceptada' });
+
+      toast.success(
+        <div>
+          <div className="font-semibold">Pedido {folio} generado</div>
+          <div className="text-xs mt-0.5">Desde cotización {q.folio} — {ORDER_TYPE_OPTIONS.find(o => o.value === selectedOrderType)?.label}</div>
+        </div>
+      );
+
+      setConvertQuotation(null);
+    } catch (err: any) {
+      toast.error('Error al generar pedido: ' + (err?.message || 'Intenta de nuevo'));
     }
-
-    toast.success(
-      <div>
-        <div className="font-semibold">Pedido {folio} generado</div>
-        <div className="text-xs mt-0.5">Desde cotización {q.folio} — {ORDER_TYPE_OPTIONS.find(o => o.value === selectedOrderType)?.label}</div>
-      </div>
-    );
-
-    setConvertQuotation(null);
   };
 
   const handleWhatsAppSend = (q: Quotation) => {
