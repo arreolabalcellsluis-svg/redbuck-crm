@@ -625,72 +625,114 @@ export type Database = {
       import_orders: {
         Row: {
           arrival_port: string
+          comercializadora: number
           country: string
           created_at: string
           currency: string
           customs_cost: number
           days_in_transit: number
           departure_port: string
+          dta: number
           estimated_arrival: string | null
           estimated_departure: string | null
           exchange_rate: number
+          flete_internacional_maritimo: number
+          flete_local_china: number
+          flete_terrestre_gdl: number
           freight_cost: number
+          gastos_locales_naviera: number
+          honorarios_despacho_aduanal: number
           id: string
+          igi: number
           items: Json
+          maniobras_puerto: number
+          numero_contenedores: number
           order_number: string
+          peso_total_kg: number
+          prevalidacion: number
           purchase_date: string
+          seguro: number
           status: string
           supplier: string
           total_cost: number
           total_landed: number
           updated_at: string
           user_id: string | null
+          volumen_total_cbm: number
         }
         Insert: {
           arrival_port?: string
+          comercializadora?: number
           country?: string
           created_at?: string
           currency?: string
           customs_cost?: number
           days_in_transit?: number
           departure_port?: string
+          dta?: number
           estimated_arrival?: string | null
           estimated_departure?: string | null
           exchange_rate?: number
+          flete_internacional_maritimo?: number
+          flete_local_china?: number
+          flete_terrestre_gdl?: number
           freight_cost?: number
+          gastos_locales_naviera?: number
+          honorarios_despacho_aduanal?: number
           id?: string
+          igi?: number
           items?: Json
+          maniobras_puerto?: number
+          numero_contenedores?: number
           order_number?: string
+          peso_total_kg?: number
+          prevalidacion?: number
           purchase_date?: string
+          seguro?: number
           status?: string
           supplier?: string
           total_cost?: number
           total_landed?: number
           updated_at?: string
           user_id?: string | null
+          volumen_total_cbm?: number
         }
         Update: {
           arrival_port?: string
+          comercializadora?: number
           country?: string
           created_at?: string
           currency?: string
           customs_cost?: number
           days_in_transit?: number
           departure_port?: string
+          dta?: number
           estimated_arrival?: string | null
           estimated_departure?: string | null
           exchange_rate?: number
+          flete_internacional_maritimo?: number
+          flete_local_china?: number
+          flete_terrestre_gdl?: number
           freight_cost?: number
+          gastos_locales_naviera?: number
+          honorarios_despacho_aduanal?: number
           id?: string
+          igi?: number
           items?: Json
+          maniobras_puerto?: number
+          numero_contenedores?: number
           order_number?: string
+          peso_total_kg?: number
+          prevalidacion?: number
           purchase_date?: string
+          seguro?: number
           status?: string
           supplier?: string
           total_cost?: number
           total_landed?: number
           updated_at?: string
           user_id?: string | null
+          volumen_total_cbm?: number
         }
         Relationships: []
       }

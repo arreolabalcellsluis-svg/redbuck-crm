@@ -81,6 +81,8 @@ export const demoOrders: Order[] = [
   { id: 'or4', folio: 'PED-2026-004', customerId: 'c10', customerName: 'Taller Hernández', vendorName: 'Fernando Ruiz', items: [{ productName: 'Gato Hidráulico Patin 3 Ton', qty: 3, unitPrice: 8000 }], total: 27840, advance: 0, balance: 27840, status: 'nuevo', warehouse: 'Bodega CDMX', promiseDate: '2026-03-20', createdAt: '2026-03-04' },
 ];
 
+const defaultExpenses = { fleteLocalChina: 0, fleteInternacionalMaritimo: 0, igi: 0, dta: 0, prevalidacion: 0, gastosLocalesNaviera: 0, maniobrasPuerto: 0, seguro: 0, honorariosDespachoAduanal: 0, comercializadora: 0, fleteTerrestreGdl: 0 };
+
 export const demoImports: ImportOrder[] = [
   {
     id: 'imp1', orderNumber: 'IMP-2026-001', supplier: 'Guangzhou Lift Co.', country: 'China',
@@ -89,6 +91,7 @@ export const demoImports: ImportOrder[] = [
     status: 'transito_maritimo',
     items: [{ productName: 'Elevador 4 Postes 4 Ton', qty: 5, unitCost: 3020 }, { productName: 'Elevador 2 Postes 4.5 Ton', qty: 3, unitCost: 2560 }],
     totalCost: 22780, freightCost: 4500, customsCost: 3200, totalLanded: 30480, daysInTransit: 45,
+    expenses: defaultExpenses, pesoTotalKg: 0, volumenTotalCbm: 0, numeroContenedores: 1,
   },
   {
     id: 'imp2', orderNumber: 'IMP-2026-002', supplier: 'Zhongshan Auto Equipment', country: 'China',
@@ -97,6 +100,7 @@ export const demoImports: ImportOrder[] = [
     status: 'embarcado',
     items: [{ productName: 'Balanceadora Automática', qty: 8, unitCost: 1280 }, { productName: 'Desmontadora Automática 24"', qty: 6, unitCost: 1685 }],
     totalCost: 20350, freightCost: 3800, customsCost: 2800, totalLanded: 26950, daysInTransit: 19,
+    expenses: defaultExpenses, pesoTotalKg: 0, volumenTotalCbm: 0, numeroContenedores: 1,
   },
   {
     id: 'imp3', orderNumber: 'IMP-2026-003', supplier: 'Shenzhen Alignment Tech', country: 'China',
@@ -105,9 +109,9 @@ export const demoImports: ImportOrder[] = [
     status: 'produccion',
     items: [{ productName: 'Alineadora 3D', qty: 2, unitCost: 5700 }, { productName: 'Elevador Tijera 3 Ton', qty: 4, unitCost: 2210 }],
     totalCost: 20240, freightCost: 3500, customsCost: 2600, totalLanded: 26340, daysInTransit: 0,
+    expenses: defaultExpenses, pesoTotalKg: 0, volumenTotalCbm: 0, numeroContenedores: 1,
   },
 ];
-
 export const demoAccountsReceivable: AccountReceivable[] = [
   { id: 'ar1', customerId: 'c4', customerName: 'Servicio Automotriz Juárez', orderId: 'or1', orderFolio: 'PED-2026-001', total: 47560, paid: 23780, balance: 23780, dueDate: '2026-03-15', daysOverdue: 0, status: 'al_corriente' },
   { id: 'ar2', customerId: 'c2', customerName: 'Llantamax', orderId: 'or3', orderFolio: 'PED-2026-003', total: 34800, paid: 17400, balance: 17400, dueDate: '2026-03-10', daysOverdue: 0, status: 'por_vencer' },

@@ -1,5 +1,6 @@
 import { useAppContext } from '@/contexts/AppContext';
 import ImportCostingSummary from '@/components/imports/ImportCostingSummary';
+import ImportExpensesDetail from '@/components/imports/ImportExpensesDetail';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
@@ -7,6 +8,7 @@ import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download } from
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ImportStatus, IMPORT_STATUS_LABELS, IMPORT_STATUS_ORDER } from '@/types';
+import type { ImportExpenses } from '@/types';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -14,6 +16,12 @@ import { useImportOrders, useAddImportOrder, useUpdateImportOrder } from '@/hook
 import { useSuppliers } from '@/hooks/useSuppliers';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+
+const DEFAULT_EXPENSES: ImportExpenses = {
+  fleteLocalChina: 0, fleteInternacionalMaritimo: 0, igi: 0, dta: 0, prevalidacion: 0,
+  gastosLocalesNaviera: 0, maniobrasPuerto: 0, seguro: 0, honorariosDespachoAduanal: 0,
+  comercializadora: 0, fleteTerrestreGdl: 0,
+};
 
 export default function ImportsPage() {
   const { currentRole } = useAppContext();
@@ -97,6 +105,10 @@ export default function ImportsPage() {
         estimatedArrival: form.estimatedArrival, status: form.status,
         items, totalCost, freightCost: form.freightCost, customsCost: form.customsCost,
         totalLanded, daysInTransit: 0,
+        expenses: DEFAULT_EXPENSES,
+        pesoTotalKg: 0,
+        volumenTotalCbm: 0,
+        numeroContenedores: 1,
       });
     }
     setOpen(false);
@@ -110,16 +122,29 @@ export default function ImportsPage() {
     const data = imports.filter(i => i.purchaseDate >= dlDateFrom && i.purchaseDate <= dlDateTo);
     if (data.length === 0) { toast.error('No hay importaciones en el rango seleccionado'); return; }
 
-    const rows = data.map(i => ({
-      'No. Orden': i.orderNumber, 'Proveedor': i.supplier, 'País': i.country,
-      'Puerto Salida': i.departurePort, 'Puerto Llegada': i.arrivalPort,
-      'Fecha Compra': i.purchaseDate, 'Salida Estimada': i.estimatedDeparture,
-      'Llegada Estimada': i.estimatedArrival, 'Costo Productos (USD)': i.totalCost,
-      'Flete (USD)': i.freightCost, 'Aduanas (USD)': i.customsCost,
-      'Total Landed (USD)': i.totalLanded, 'Tipo Cambio': i.exchangeRate,
-      'Total MXN': Math.round(i.totalLanded * i.exchangeRate),
-      'Estatus': IMPORT_STATUS_LABELS[i.status] || i.status, 'Días Tránsito': i.daysInTransit,
-    }));
+    const rows = data.map(i => {
+      const exp = i.expenses;
+      const subtotalGastos = Object.values(exp).reduce((s, v) => s + (Number(v) || 0), 0);
+      return {
+        'No. Orden': i.orderNumber, 'Proveedor': i.supplier, 'País': i.country,
+        'Puerto Salida': i.departurePort, 'Puerto Llegada': i.arrivalPort,
+        'Fecha Compra': i.purchaseDate, 'Salida Estimada': i.estimatedDeparture,
+        'Llegada Estimada': i.estimatedArrival, 'Costo Productos (USD)': i.totalCost,
+        'Flete local China': exp.fleteLocalChina,
+        'Flete internacional': exp.fleteInternacionalMaritimo,
+        'IGI': exp.igi, 'DTA': exp.dta, 'Prevalidación': exp.prevalidacion,
+        'Gastos naviera': exp.gastosLocalesNaviera, 'Maniobras puerto': exp.maniobrasPuerto,
+        'Seguro': exp.seguro, 'Honorarios aduanal': exp.honorariosDespachoAduanal,
+        'Comercializadora': exp.comercializadora, 'Flete terrestre GDL': exp.fleteTerrestreGdl,
+        'Subtotal Gastos': subtotalGastos,
+        'IVA Gastos': subtotalGastos * 0.16,
+        'IVA Producto': i.totalCost * 0.16,
+        'Total Importación': i.totalCost + subtotalGastos + (subtotalGastos * 0.16) + (i.totalCost * 0.16),
+        'Tipo Cambio': i.exchangeRate,
+        'Estatus': IMPORT_STATUS_LABELS[i.status] || i.status,
+        'Peso (kg)': i.pesoTotalKg, 'Volumen (CBM)': i.volumenTotalCbm, 'Contenedores': i.numeroContenedores,
+      };
+    });
 
     const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.json_to_sheet(rows);
@@ -218,6 +243,10 @@ export default function ImportsPage() {
                   </div>
                 ))}
               </div>
+
+              {/* New detailed expenses section */}
+              <ImportExpensesDetail importOrder={imp} canEdit={canEdit} />
+
               <ImportCostingSummary
                 items={imp.items}
                 freightCost={imp.freightCost}
