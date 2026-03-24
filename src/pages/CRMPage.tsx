@@ -827,61 +827,178 @@ export default function CRMPage() {
       )}
 
       <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{viewingCustomer?.name}</DialogTitle>
-            <DialogDescription>Información del cliente</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">{viewingCustomer?.name} {viewingCustomer && <StatusBadge status={viewingCustomer.priority} type="priority" />}</DialogTitle>
+            <DialogDescription>Historial completo del cliente</DialogDescription>
           </DialogHeader>
-          {viewingCustomer && (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {viewingCustomer.contactName && (
-                <div className="col-span-2">
-                  <span className="text-xs text-muted-foreground block">Nombre de contacto</span>
-                  <span className="font-medium">{viewingCustomer.contactName}</span>
+          {viewingCustomer && (() => {
+            const custOrders = dbOrders.filter(o => o.customer_id === viewingCustomer.id);
+            const custQuotations = dbQuotations.filter(q => q.customer_id === viewingCustomer.id);
+            const custActivities = dbActivities.filter(a => a.customerId === viewingCustomer.id);
+            const custPayments = dbOrderPayments.filter(p => custOrders.some(o => o.id === p.order_id));
+            const custDocs = dbCommDocs.filter(d => custOrders.some(o => o.id === d.order_id));
+            const totalVenta = custOrders.filter(o => o.status !== 'cancelado').reduce((s, o) => s + o.total, 0);
+            const totalPagado = custPayments.reduce((s, p) => s + p.amount, 0);
+
+            return (
+              <div className="space-y-5">
+                {/* ── Datos generales ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="flex items-center gap-2"><Phone size={13} className="text-muted-foreground" /> <span>{viewingCustomer.phone || '—'}</span></div>
+                  <div className="flex items-center gap-2"><Mail size={13} className="text-muted-foreground" /> <span>{viewingCustomer.email || '—'}</span></div>
+                  <div className="flex items-center gap-2"><MapPin size={13} className="text-muted-foreground" /> <span>{viewingCustomer.city}, {viewingCustomer.state}</span></div>
+                  <div className="flex items-center gap-2"><Users size={13} className="text-muted-foreground" /> <span>{resolveVendor(viewingCustomer.vendorId)}</span></div>
                 </div>
-              )}
-              <div>
-                <span className="text-xs text-muted-foreground block">Tipo</span>
-                <span className="font-medium">{CUSTOMER_TYPE_LABELS[viewingCustomer.type]}</span>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                  <div><span className="text-muted-foreground">Tipo:</span> <span className="font-medium">{CUSTOMER_TYPE_LABELS[viewingCustomer.type]}</span></div>
+                  <div><span className="text-muted-foreground">RFC:</span> <span className="font-medium">{viewingCustomer.rfc || '—'}</span></div>
+                  <div><span className="text-muted-foreground">Desde:</span> <span className="font-medium">{viewingCustomer.createdAt}</span></div>
+                  {viewingCustomer.contactName && <div><span className="text-muted-foreground">Contacto:</span> <span className="font-medium">{viewingCustomer.contactName}</span></div>}
+                  {viewingCustomer.whatsapp && <div><span className="text-muted-foreground">WhatsApp:</span> <span className="font-medium">{viewingCustomer.whatsapp}</span></div>}
+                </div>
+
+                {/* ── Resumen financiero ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase font-semibold">Cotizaciones</div>
+                    <div className="text-lg font-bold">{custQuotations.length}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase font-semibold">Pedidos</div>
+                    <div className="text-lg font-bold">{custOrders.length}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase font-semibold">Venta total</div>
+                    <div className="text-lg font-bold text-green-600">{fmt(totalVenta)}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase font-semibold">Pagado</div>
+                    <div className="text-lg font-bold">{fmt(totalPagado)}</div>
+                    {totalVenta > 0 && <div className="text-[10px] text-muted-foreground">{Math.round((totalPagado / totalVenta) * 100)}%</div>}
+                  </div>
+                </div>
+
+                {/* ── Cotizaciones ── */}
+                {custQuotations.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5 mb-2"><FileText size={13} /> Cotizaciones ({custQuotations.length})</h4>
+                    <div className="space-y-1.5">
+                      {custQuotations.slice(0, 5).map(q => (
+                        <div key={q.id} className="flex items-center justify-between p-2 rounded-lg border text-xs hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono font-semibold">{q.folio}</span>
+                            <StatusBadge status={q.status} type="quotation" />
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">{fmt(q.total)}</span>
+                            <span className="text-muted-foreground">{q.created_at?.split('T')[0]}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {custQuotations.length > 5 && <div className="text-[10px] text-muted-foreground text-center">+{custQuotations.length - 5} más</div>}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Pedidos ── */}
+                {custOrders.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5 mb-2"><Package size={13} /> Pedidos ({custOrders.length})</h4>
+                    <div className="space-y-1.5">
+                      {custOrders.slice(0, 5).map(o => (
+                        <div key={o.id} className="flex items-center justify-between p-2 rounded-lg border text-xs hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono font-semibold">{o.folio}</span>
+                            <StatusBadge status={o.status} type="order" />
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">{fmt(o.total)}</span>
+                            <span className="text-muted-foreground">{o.created_at?.split('T')[0]}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {custOrders.length > 5 && <div className="text-[10px] text-muted-foreground text-center">+{custOrders.length - 5} más</div>}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Pagos ── */}
+                {custPayments.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5 mb-2"><CreditCard size={13} /> Pagos ({custPayments.length})</h4>
+                    <div className="space-y-1.5">
+                      {custPayments.slice(0, 5).map(p => (
+                        <div key={p.id} className="flex items-center justify-between p-2 rounded-lg border text-xs hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <span className="capitalize">{p.method}</span>
+                            {p.reference && <span className="text-muted-foreground">Ref: {p.reference}</span>}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-green-600">{fmt(p.amount)}</span>
+                            <span className="text-muted-foreground">{p.payment_date}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Documentos comerciales ── */}
+                {custDocs.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5 mb-2"><FileText size={13} /> Documentos ({custDocs.length})</h4>
+                    <div className="space-y-1.5">
+                      {custDocs.slice(0, 5).map(d => (
+                        <div key={d.id} className="flex items-center justify-between p-2 rounded-lg border text-xs hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono font-semibold">{d.folio}</span>
+                            <span className="capitalize text-muted-foreground">{d.doc_type.replace(/_/g, ' ')}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">{fmt(d.total)}</span>
+                            <span className="text-muted-foreground">{d.created_at?.split('T')[0]}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Actividades ── */}
+                {custActivities.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5 mb-2"><CalendarDays size={13} /> Actividades ({custActivities.length})</h4>
+                    <div className="space-y-1.5">
+                      {custActivities.slice(0, 5).map(a => (
+                        <div key={a.id} className="flex items-center justify-between p-2 rounded-lg border text-xs hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">{a.title}</span>
+                            <StatusBadge status={a.status} type="service" />
+                          </div>
+                          <span className="text-muted-foreground">{a.date}</span>
+                        </div>
+                      ))}
+                      {custActivities.length > 5 && <div className="text-[10px] text-muted-foreground text-center">+{custActivities.length - 5} más</div>}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Acciones rápidas ── */}
+                <div className="flex gap-2 flex-wrap pt-2 border-t">
+                  <button onClick={() => { setViewingCustomer(null); handleEdit(viewingCustomer); }} className="text-xs px-3 py-1.5 rounded-md border hover:bg-accent flex items-center gap-1.5">
+                    <Pencil size={12} /> Editar
+                  </button>
+                  <button onClick={() => { setViewingCustomer(null); navigate('/cotizaciones'); }} className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5">
+                    <FileText size={12} /> Nueva cotización
+                  </button>
+                  <button onClick={() => { setViewingCustomer(null); navigate('/agenda'); }} className="text-xs px-3 py-1.5 rounded-md border hover:bg-accent flex items-center gap-1.5">
+                    <CalendarDays size={12} /> Agendar actividad
+                  </button>
+                </div>
               </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Prioridad</span>
-                <StatusBadge status={viewingCustomer.priority} type="priority" />
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Teléfono</span>
-                <span className="font-medium">{viewingCustomer.phone || '—'}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">WhatsApp</span>
-                <span className="font-medium">{viewingCustomer.whatsapp || '—'}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Correo</span>
-                <span className="font-medium">{viewingCustomer.email || '—'}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">RFC</span>
-                <span className="font-medium">{viewingCustomer.rfc || '—'}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Ciudad</span>
-                <span className="font-medium">{viewingCustomer.city || '—'}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Estado</span>
-                <span className="font-medium">{viewingCustomer.state || '—'}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Vendedor</span>
-                <span className="font-medium">{resolveVendor(viewingCustomer.vendorId)}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Desde</span>
-                <span className="font-medium">{viewingCustomer.createdAt}</span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
