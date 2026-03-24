@@ -1,8 +1,9 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { useOrders, useAddOrder, useUpdateOrderStatus, useUpdateOrder, type DBOrder } from '@/hooks/useOrders';
+import { useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import OrderDetailDialog from '@/components/orders/OrderDetailDialog';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useProducts } from '@/hooks/useProducts';
+
 import { useOrderPayments, useAddOrderPayment } from '@/hooks/useOrderPayments';
 import { useAccountsReceivable, useAddAccountReceivable, useUpdateAccountReceivable } from '@/hooks/useAccountsReceivable';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
@@ -76,6 +77,7 @@ export default function OrdersPage() {
   const updateOrderMutation = useUpdateOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const updateProductMutation = useUpdateProduct();
   const { data: dbOrderPayments = [] } = useOrderPayments();
   const addOrderPaymentMutation = useAddOrderPayment();
   const { data: dbReceivables = [] } = useAccountsReceivable();
@@ -248,10 +250,22 @@ export default function OrdersPage() {
 
     addAuditLog({ userId: 'current', userName: 'Usuario actual', module: 'pedidos', action: 'crear_pedido', entityId: folio, newValue: folio, comment: `Pedido creado para ${customer.name}` });
 
+    // Deduct stock from inventory for each product in the order
+    for (const item of items) {
+      if (!item.productId) continue;
+      const product = dbProducts.find(p => p.id === item.productId);
+      if (!product) continue;
+      const warehouseKey = form.warehouse;
+      const currentStock = product.stock[warehouseKey] ?? 0;
+      const newStock = Math.max(0, currentStock - item.qty);
+      const updatedStock = { ...product.stock, [warehouseKey]: newStock };
+      updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+    }
+
     setOpen(false);
     setForm({ customerId: '', vendorName: '', warehouse: 'Bodega Principal', promiseDate: '', advance: 0 });
     setItems([]);
-    toast.success(`Pedido ${folio} creado y registrado en cobranza`);
+    toast.success(`Pedido ${folio} creado, inventario actualizado y registrado en cobranza`);
   };
 
   // Edit folio

@@ -23,7 +23,7 @@ import type { QuotationItem, Quotation, QuotationStatus, Order, OrderType, Accou
 import type { Payment } from '@/types/payments';
 import { useQuotations, useAddQuotation, useUpdateQuotationStatus, useUpdateQuotation } from '@/hooks/useQuotations';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import { useAddOrder } from '@/hooks/useOrders';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
@@ -44,6 +44,7 @@ export default function QuotationsPage() {
   const addOrderMutation = useAddOrder();
   const { data: dbCustomers = [] } = useCustomers();
   const { data: dbProducts = [] } = useProducts();
+  const updateProductMutation = useUpdateProduct();
   const { data: dbTeamMembers = [] } = useTeamMembers();
 
   // Map DB quotations to local Quotation type
@@ -450,6 +451,18 @@ export default function QuotationsPage() {
       newValue: `${folio} (${selectedOrderType})`,
       comment: `Cotización ${q.folio} convertida a pedido ${folio} — Tipo: ${selectedOrderType}${advance > 0 ? ` — Anticipo: ${fmt(advance)}` : ''}`,
     });
+
+    // Deduct stock from inventory for each product
+    const warehouse = 'Bodega Principal';
+    for (const item of q.items) {
+      if (!item.productId) continue;
+      const product = dbProducts.find(p => p.id === item.productId);
+      if (!product) continue;
+      const currentStock = (product.stock as Record<string, number>)[warehouse] ?? 0;
+      const newStock = Math.max(0, currentStock - item.qty);
+      const updatedStock = { ...(product.stock as Record<string, number>), [warehouse]: newStock };
+      updateProductMutation.mutate({ id: product.id, stock: updatedStock });
+    }
 
     toast.success(
       <div>
