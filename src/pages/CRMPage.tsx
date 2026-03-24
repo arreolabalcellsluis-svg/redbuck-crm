@@ -5,7 +5,7 @@ import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -13,10 +13,13 @@ import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, typ
 import { useQuotations } from '@/hooks/useQuotations';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useActivities, useAddActivity } from '@/hooks/useActivities';
+import { useOnboardingConfig } from '@/hooks/useOnboardingConfig';
+import { generateOnboardingActivities, buildWhatsAppLink } from '@/lib/onboardingEngine';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
 
-type Tab = 'clientes' | 'pipeline';
+type Tab = 'clientes' | 'pipeline' | 'onboarding';
 
 type FiscalData = {
   taxRegime: string;
@@ -70,6 +73,9 @@ export default function CRMPage() {
   const { data: dbQuotations = [] } = useQuotations();
   const { data: dbOrders = [] } = useOrders();
   const { data: dbTeam = [] } = useTeamMembers();
+  const { data: dbActivities = [] } = useActivities();
+  const addActivityMut = useAddActivity();
+  const { config: onboardingConfig } = useOnboardingConfig();
 
   const customers = useMemo(() => (dbCustomers ?? []).map(dbToCustomer), [dbCustomers]);
 
@@ -165,6 +171,7 @@ export default function CRMPage() {
     if (!form.phone.trim()) { toast.error('El teléfono es obligatorio'); return; }
     if (!form.vendorId) { toast.error('Selecciona un vendedor'); return; }
 
+    const vendor = dbTeam.find(v => v.id === form.vendorId);
     addCustomerMut.mutate({
       name: form.name,
       contact_name: form.contactName || null,
@@ -180,8 +187,30 @@ export default function CRMPage() {
       source: form.source,
       priority: form.priority,
     }, {
-      onSuccess: () => {
+      onSuccess: (_data, _vars, _ctx) => {
         toast.success(`Cliente "${form.name}" registrado correctamente`);
+        // Trigger onboarding automation
+        if (onboardingConfig.enabled && vendor) {
+          const today = new Date().toISOString().split('T')[0];
+          const activities = generateOnboardingActivities(
+            onboardingConfig,
+            { id: '', name: form.name, createdAt: today },
+            { id: vendor.id, name: vendor.name },
+          );
+          activities.forEach(act => addActivityMut.mutate(act));
+          if (activities.length > 0) {
+            toast.success(`${activities.length} actividades de seguimiento creadas automáticamente`);
+          }
+          // Open WhatsApp if available
+          if (form.whatsapp) {
+            const link = buildWhatsAppLink(form.whatsapp, onboardingConfig.whatsappTemplate, {
+              cliente: form.name,
+              vendedor: vendor.name,
+              producto: 'equipo automotriz',
+            });
+            window.open(link, '_blank');
+          }
+        }
         setShowCreate(false);
         setForm(emptyCustomer());
       },
@@ -302,9 +331,9 @@ export default function CRMPage() {
       })()}
 
       <div className="flex items-center gap-1 mb-4 border-b">
-        {(['clientes', 'pipeline'] as Tab[]).map(t => (
+        {(['clientes', 'pipeline', 'onboarding'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-            {t === 'clientes' ? 'Clientes' : 'Pipeline'}
+            {t === 'clientes' ? 'Clientes' : t === 'pipeline' ? 'Pipeline' : '⚡ Onboarding'}
           </button>
         ))}
       </div>
@@ -379,7 +408,132 @@ export default function CRMPage() {
         </div>
       )}
 
-      {/* ===================== VIEW CLIENT DIALOG (READ-ONLY) ===================== */}
+      {/* ═══ ONBOARDING TAB ═══ */}
+      {tab === 'onboarding' && (() => {
+        const TODAY_STR = new Date().toISOString().split('T')[0];
+        const thirtyDaysAgo = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; })();
+        const recentCustomers = allCustomers.filter(c => c.createdAt >= thirtyDaysAgo);
+
+        // Customers with at least one follow-up activity
+        const customersWithFollowUp = new Set(
+          dbActivities.filter(a => a.customerName && (a.status === 'realizada' || a.status === 'en_proceso')).map(a => a.customerId).filter(Boolean)
+        );
+        const withoutFollowUp = recentCustomers.filter(c => !customersWithFollowUp.has(c.id));
+
+        // Customers with all onboarding activities done
+        const onboardingCompleted = recentCustomers.filter(c => {
+          const acts = dbActivities.filter(a => a.customerId === c.id);
+          return acts.length > 0 && acts.every(a => a.status === 'realizada' || a.status === 'cancelada');
+        });
+
+        // Response rate: customers that had at least 1 follow-up done / total recent
+        const responseRate = recentCustomers.length > 0
+          ? Math.round((recentCustomers.filter(c => customersWithFollowUp.has(c.id)).length / recentCustomers.length) * 100)
+          : 0;
+
+        return (
+          <div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--destructive))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <AlertTriangle size={14} /> Sin seguimiento
+                </div>
+                <div className="text-2xl font-bold text-destructive">{withoutFollowUp.length}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">Últimos 30 días</div>
+              </div>
+              <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--success))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <CheckCircle2 size={14} /> Onboarding completo
+                </div>
+                <div className="text-2xl font-bold text-success">{onboardingCompleted.length}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">De {recentCustomers.length} recientes</div>
+              </div>
+              <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--primary))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <TrendingUp size={14} /> Tasa de respuesta
+                </div>
+                <div className="text-2xl font-bold">{responseRate}%</div>
+                <div className="text-[10px] text-muted-foreground mt-1">Clientes con seguimiento</div>
+              </div>
+              <div className="bg-card rounded-xl border p-4" style={{ borderLeft: '4px solid hsl(var(--warning))' }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Zap size={14} /> Automatización
+                </div>
+                <div className="text-2xl font-bold">{onboardingConfig.enabled ? '✅ Activa' : '⏸️ Pausada'}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">Días: {onboardingConfig.followUpDays.join(', ')}</div>
+              </div>
+            </div>
+
+            {/* Clients without follow-up */}
+            {withoutFollowUp.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-destructive flex items-center gap-2 mb-3">
+                  <AlertTriangle size={14} /> Clientes sin seguimiento ({withoutFollowUp.length})
+                </h3>
+                <div className="bg-card rounded-xl border overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr><th>Cliente</th><th>Tipo</th><th>Vendedor</th><th>Alta</th><th>Días sin contacto</th></tr>
+                    </thead>
+                    <tbody>
+                      {withoutFollowUp.map(c => {
+                        const daysSince = Math.floor((new Date().getTime() - new Date(c.createdAt).getTime()) / 86400000);
+                        return (
+                          <tr key={c.id}>
+                            <td className="font-medium">{c.name}</td>
+                            <td className="text-xs">{CUSTOMER_TYPE_LABELS[c.type]}</td>
+                            <td className="text-muted-foreground">{resolveVendor(c.vendorId)}</td>
+                            <td className="text-xs text-muted-foreground">{c.createdAt}</td>
+                            <td>
+                              <span className={`text-xs font-bold ${daysSince > 7 ? 'text-destructive' : daysSince > 3 ? 'text-warning' : 'text-success'}`}>
+                                {daysSince} días
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Completed onboarding */}
+            {onboardingCompleted.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-success flex items-center gap-2 mb-3">
+                  <CheckCircle2 size={14} /> Onboarding completado ({onboardingCompleted.length})
+                </h3>
+                <div className="bg-card rounded-xl border overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr><th>Cliente</th><th>Tipo</th><th>Vendedor</th><th>Alta</th></tr>
+                    </thead>
+                    <tbody>
+                      {onboardingCompleted.map(c => (
+                        <tr key={c.id}>
+                          <td className="font-medium">{c.name}</td>
+                          <td className="text-xs">{CUSTOMER_TYPE_LABELS[c.type]}</td>
+                          <td className="text-muted-foreground">{resolveVendor(c.vendorId)}</td>
+                          <td className="text-xs text-muted-foreground">{c.createdAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {recentCustomers.length === 0 && (
+              <div className="text-center text-muted-foreground py-12 border border-dashed rounded-xl">
+                No hay clientes registrados en los últimos 30 días
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+
       <Dialog open={!!viewingCustomer} onOpenChange={() => setViewingCustomer(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>

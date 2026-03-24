@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ROLE_LABELS, UserRole, User, Warehouse } from '@/types';
+import { useOnboardingConfig } from '@/hooks/useOnboardingConfig';
+import { DEFAULT_ONBOARDING_CONFIG, type OnboardingConfig } from '@/lib/onboardingEngine';
 import { useAppContext } from '@/contexts/AppContext';
 import { Users, Warehouse as WarehouseIcon, Shield, Building2, FileText, MessageCircle, Hash, Pencil, Plus, Trash2, X, Check, Upload, Image, FileUp, Loader2 } from 'lucide-react';
 import { useCompanyLogo } from '@/hooks/useCompanyLogo';
@@ -92,6 +94,9 @@ export default function SettingsPage() {
 
   const { data: settings = {}, isLoading: loadingSettings } = useAppSettings();
   const saveSettingMutation = useSaveSetting();
+  const { config: onboardingConfig, saveConfig: saveOnboardingConfig, isSaving: savingOnboarding } = useOnboardingConfig();
+  const [localOnboarding, setLocalOnboarding] = useState<OnboardingConfig>(DEFAULT_ONBOARDING_CONFIG);
+  useEffect(() => { setLocalOnboarding(onboardingConfig); }, [onboardingConfig]);
 
   // ─── Local state from DB settings ─────────────────────
   const [companyInfo, setCompanyInfo] = useState({ razonSocial: '', nombreComercial: '', direccion: '', telefono: '', correo: '', rfc: '' });
@@ -728,6 +733,75 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ═══════════ ONBOARDING AUTOMATION ═══════════ */}
+      <div className="bg-card rounded-xl border p-5 lg:col-span-2 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <MessageCircle size={20} className="text-primary" />
+            <h3 className="font-display font-semibold">Automatización de Onboarding</h3>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className="text-xs text-muted-foreground">{localOnboarding.enabled ? 'Activa' : 'Pausada'}</span>
+            <button onClick={() => setLocalOnboarding(p => ({ ...p, enabled: !p.enabled }))}
+              className={`w-10 h-5 rounded-full transition-colors ${localOnboarding.enabled ? 'bg-success' : 'bg-muted'}`}>
+              <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${localOnboarding.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+          </label>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Al registrar un nuevo cliente, se crearán actividades de seguimiento automáticas en la agenda del vendedor responsable.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Días de seguimiento</label>
+            <input
+              value={localOnboarding.followUpDays.join(', ')}
+              onChange={e => {
+                const days = e.target.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+                setLocalOnboarding(p => ({ ...p, followUpDays: days }));
+              }}
+              className="w-full px-3 py-2 rounded-lg border bg-card text-sm"
+              placeholder="1, 3, 7, 15"
+            />
+            <p className="text-[10px] text-muted-foreground mt-0.5">Separados por coma (ej: 1, 3, 7, 15)</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Títulos por día</label>
+            {localOnboarding.followUpDays.map(day => (
+              <div key={day} className="flex items-center gap-2 mb-1">
+                <span className="text-xs text-muted-foreground w-12 shrink-0">Día {day}:</span>
+                <input
+                  value={localOnboarding.activityTitles[day] || `Seguimiento día ${day} - {producto}`}
+                  onChange={e => setLocalOnboarding(p => ({
+                    ...p,
+                    activityTitles: { ...p.activityTitles, [day]: e.target.value },
+                  }))}
+                  className="flex-1 px-2 py-1 rounded border bg-card text-xs"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Plantilla WhatsApp</label>
+            <textarea
+              value={localOnboarding.whatsappTemplate}
+              onChange={e => setLocalOnboarding(p => ({ ...p, whatsappTemplate: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border bg-card text-sm h-20 resize-none"
+              placeholder="Hola {cliente}, soy {vendedor}..."
+            />
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Variables disponibles: {'{cliente}'}, {'{vendedor}'}, {'{producto}'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => { saveOnboardingConfig(localOnboarding); toast.success('Configuración de onboarding guardada'); }}
+          disabled={savingOnboarding}
+          className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50">
+          {savingOnboarding ? 'Guardando...' : 'Guardar configuración de onboarding'}
+        </button>
       </div>
 
       {/* ═══════════ USER DIALOG (Create/Edit) ═══════════ */}
