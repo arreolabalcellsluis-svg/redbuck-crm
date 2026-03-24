@@ -76,6 +76,15 @@ export default function QuotationsPage() {
     return maxNum;
   };
 
+  // Set of quotation folios that already have an order generated
+  const foliosWithOrder = useMemo(() => {
+    const set = new Set<string>();
+    dbOrders.forEach(o => {
+      if (o.quotation_folio) set.add(o.quotation_folio);
+    });
+    return set;
+  }, [dbOrders]);
+
   // Map DB quotations to local Quotation type
   const quotations: Quotation[] = useMemo(() => dbQuotations.map(q => ({
     id: q.id,
