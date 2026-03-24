@@ -5,7 +5,7 @@ import { exportCRMToExcel } from '@/lib/exportUtils';
 import { SAT_TAX_REGIMES, SAT_CFDI_USES } from '@/lib/satCatalogs';
 import StatusBadge from '@/components/shared/StatusBadge';
 import MetricCard from '@/components/shared/MetricCard';
-import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Target, TrendingUp, Search, Plus, FileDown, Pencil, ChevronDown, ChevronUp, Trash2, Zap, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -61,6 +61,12 @@ export default function CRMPage() {
   const { currentRole } = useAppContext();
   const [tab, setTab] = useState<Tab>('clientes');
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterCity, setFilterCity] = useState('');
+  const [filterVendor, setFilterVendor] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
@@ -152,9 +158,29 @@ export default function CRMPage() {
     return [...quotationOpps, ...orderOpps];
   }, [dbQuotations, dbOrders, allCustomers, dbTeam]);
 
-  const filteredCustomers = allCustomers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) || c.city.toLowerCase().includes(search.toLowerCase())
-  );
+  const cities = useMemo(() => [...new Set(allCustomers.map(c => c.city).filter(Boolean))].sort(), [allCustomers]);
+  const filterVendorOptions = useMemo(() => {
+    const ids = [...new Set(allCustomers.map(c => c.vendorId).filter(Boolean))];
+    return ids.map(id => ({ id, name: dbTeam.find(t => t.id === id)?.name || id })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allCustomers, dbTeam]);
+
+  const hasFilters = !!(filterType || filterCity || filterVendor || filterPriority || filterDateFrom || filterDateTo);
+  const clearFilters = () => { setFilterType(''); setFilterCity(''); setFilterVendor(''); setFilterPriority(''); setFilterDateFrom(''); setFilterDateTo(''); setSearch(''); };
+
+  const filteredCustomers = useMemo(() => {
+    let data = [...allCustomers];
+    if (search) {
+      const s = search.toLowerCase();
+      data = data.filter(c => c.name.toLowerCase().includes(s) || c.city.toLowerCase().includes(s));
+    }
+    if (filterType) data = data.filter(c => c.type === filterType);
+    if (filterCity) data = data.filter(c => c.city === filterCity);
+    if (filterVendor) data = data.filter(c => c.vendorId === filterVendor);
+    if (filterPriority) data = data.filter(c => c.priority === filterPriority);
+    if (filterDateFrom) data = data.filter(c => c.createdAt >= filterDateFrom);
+    if (filterDateTo) data = data.filter(c => c.createdAt <= filterDateTo);
+    return data;
+  }, [allCustomers, search, filterType, filterCity, filterVendor, filterPriority, filterDateFrom, filterDateTo]);
 
   const resolveVendor = (vendorId: string) => {
     const u = dbTeam.find(usr => usr.id === vendorId);
@@ -386,11 +412,46 @@ export default function CRMPage() {
 
       {tab === 'clientes' && (
         <>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..." className="w-full pl-9 pr-3 py-2 rounded-lg border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+          <div className="bg-card rounded-xl border p-4 mb-4 space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-muted-foreground">Filtros</span>
+              <div className="ml-auto">
+                {hasFilters && <button onClick={clearFilters} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X size={14} />Limpiar</button>}
+              </div>
             </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search size={14} className="absolute left-2.5 top-2 text-muted-foreground" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..." className="w-full pl-8 pr-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos los tipos</option>
+                {Object.entries(CUSTOMER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <select value={filterCity} onChange={e => setFilterCity(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todas las ciudades</option>
+                {cities.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={filterVendor} onChange={e => setFilterVendor(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos los vendedores</option>
+                {filterVendorOptions.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+              <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todas las prioridades</option>
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+              </select>
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground whitespace-nowrap">Desde:</span>
+                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="px-2 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground whitespace-nowrap">Hasta:</span>
+                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="px-2 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">{filteredCustomers.length} de {allCustomers.length} clientes</div>
           </div>
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Cargando clientes...</div>
