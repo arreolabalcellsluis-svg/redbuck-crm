@@ -877,9 +877,22 @@ export default function CRMPage() {
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre / Razón social *</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" />
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} />
+              {phoneDuplicate && (
+                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
+                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Este número ya está registrado en el sistema
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
+                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
+                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
+                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
