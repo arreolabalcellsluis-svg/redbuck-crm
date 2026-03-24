@@ -859,29 +859,42 @@ export default function CRMPage() {
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Teléfono *</label>
-              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${phoneDuplicate ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} placeholder="811-234-5678" />
-              {phoneDuplicate && (
-                <div className="mt-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm">
-                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium mb-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Este número ya está registrado en el sistema
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
-                    <p><strong>Cliente:</strong> {phoneDuplicate.name}</p>
-                    {phoneDuplicate.vendorId && <p><strong>Vendedor:</strong> {resolveVendor(phoneDuplicate.vendorId)}</p>}
-                    <p><strong>Registrado:</strong> {phoneDuplicate.createdAt}</p>
-                  </div>
-                  <div className="flex gap-2 mt-2 ml-6">
-                    <button type="button" onClick={() => { setShowCreate(false); setViewingCustomer(phoneDuplicate); }} className="text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1">
-                      <Eye className="w-3 h-3" /> Ver cliente existente
-                    </button>
-                    <button type="button" onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="text-xs px-3 py-1 rounded-md border hover:bg-accent">
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className={`w-full px-3 py-2 rounded-lg border text-sm ${duplicateMatches.length > 0 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30' : 'bg-card'}`} placeholder="811-234-5678" />
             </div>
+            {/* Multi-field duplicate detection panel */}
+            {duplicateMatches.length > 0 && (
+              <div className="md:col-span-2 p-3 rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/30 text-sm space-y-2">
+                <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Posibles clientes existentes ({duplicateMatches.length})
+                </div>
+                {duplicateMatches.slice(0, 5).map(dm => (
+                  <div key={dm.customer.id} className="ml-6 p-2 rounded-md bg-background/60 border text-xs space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{dm.customer.name}</span>
+                      <span className="flex gap-1 flex-wrap">
+                        {dm.matchReasons.map(r => (
+                          <span key={r} className="px-1.5 py-0.5 rounded bg-yellow-200 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-[10px]">{r}</span>
+                        ))}
+                      </span>
+                    </div>
+                    <div className="flex gap-4 text-muted-foreground">
+                      <span>📞 {dm.customer.phone}</span>
+                      {dm.customer.email && <span>✉ {dm.customer.email}</span>}
+                      <span>👤 {resolveVendor(dm.customer.vendorId)}</span>
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                      <button type="button" onClick={() => { setShowCreate(false); setViewingCustomer(dm.customer); }} className="text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1">
+                        <Eye className="w-3 h-3" /> Ver existente
+                      </button>
+                      <button type="button" onClick={() => { setShowCreate(false); setForm(emptyCustomer()); }} className="text-[10px] px-2 py-1 rounded border hover:bg-accent">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
               <input value={form.whatsapp || ''} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="5218112345678" />
