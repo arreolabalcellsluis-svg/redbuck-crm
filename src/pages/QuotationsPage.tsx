@@ -1046,7 +1046,10 @@ export default function QuotationsPage() {
           <div className="space-y-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Número de destino</label>
-              <div className="text-sm font-medium">{showWhatsApp?.customerWhatsapp || showWhatsApp?.customerPhone || '⚠️ Sin número registrado'}</div>
+              <div className="text-sm font-medium">{(() => {
+                const liveCustomer = showWhatsApp?.customer_id ? dbCustomers.find(c => c.id === showWhatsApp.customer_id) : null;
+                return liveCustomer?.whatsapp || liveCustomer?.phone || showWhatsApp?.customerWhatsapp || showWhatsApp?.customerPhone || '⚠️ Sin número registrado';
+              })()}</div>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Mensaje</label>
