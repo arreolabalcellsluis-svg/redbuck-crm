@@ -230,14 +230,20 @@ function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onU
 function NewProductForm({ initialName, initialCost, onCreated, onCancel }: {
   initialName: string;
   initialCost: number;
-  onCreated: (p: { id: string; name: string; sku: string; category: string; cost: number }) => void;
+  onCreated: (p: { id: string; name: string; sku: string; category: string; cost: number; brand: string; model: string; description: string; listPrice: number; minPrice: number; warranty: string }) => void;
   onCancel: () => void;
 }) {
   const qc = useQueryClient();
   const [name, setName] = useState(initialName);
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState('otros');
+  const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
+  const [description, setDescription] = useState('');
   const [cost, setCost] = useState(initialCost);
+  const [listPrice, setListPrice] = useState(0);
+  const [minPrice, setMinPrice] = useState(0);
+  const [warranty, setWarranty] = useState('');
   const [saving, setSaving] = useState(false);
 
   const handleCreate = async () => {
@@ -246,11 +252,10 @@ function NewProductForm({ initialName, initialCost, onCreated, onCancel }: {
 
     setSaving(true);
     try {
-      // Check if SKU exists
-      const { data: existing } = await supabase.from('products').select('id, name, sku, category, cost').eq('sku', sku.trim()).maybeSingle();
+      const { data: existing } = await supabase.from('products').select('id, name, sku, category, cost, brand, model, description, list_price, min_price, warranty').eq('sku', sku.trim()).maybeSingle();
       if (existing) {
         toast.info(`SKU ya existe. Se vinculó al producto "${existing.name}".`);
-        onCreated({ id: existing.id, name: existing.name, sku: existing.sku, category: existing.category, cost: Number(existing.cost) });
+        onCreated({ id: existing.id, name: existing.name, sku: existing.sku, category: existing.category, cost: Number(existing.cost), brand: existing.brand || '', model: existing.model || '', description: existing.description || '', listPrice: Number(existing.list_price), minPrice: Number(existing.min_price), warranty: existing.warranty || '' });
         return;
       }
 
@@ -259,27 +264,27 @@ function NewProductForm({ initialName, initialCost, onCreated, onCancel }: {
         sku: sku.trim(),
         name: name.trim(),
         category: category as any,
-        brand: '',
-        model: '',
-        description: '',
+        brand: brand.trim(),
+        model: model.trim(),
+        description: description.trim(),
         cost,
-        list_price: 0,
-        min_price: 0,
+        list_price: listPrice,
+        min_price: minPrice,
         currency: 'USD' as any,
         delivery_days: 0,
         supplier: '',
-        warranty: '',
+        warranty: warranty.trim(),
         active: true,
         stock: {} as any,
         in_transit: 0,
         images: [] as any,
         user_id: user?.id ?? null,
-      }).select('id, name, sku, category, cost').single();
+      }).select('id, name, sku, category, cost, brand, model, description, list_price, min_price, warranty').single();
 
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ['products'] });
       toast.success(`Producto "${data.name}" creado y agregado al catálogo`);
-      onCreated({ id: data.id, name: data.name, sku: data.sku, category: data.category, cost: Number(data.cost) });
+      onCreated({ id: data.id, name: data.name, sku: data.sku, category: data.category, cost: Number(data.cost), brand: data.brand || '', model: data.model || '', description: data.description || '', listPrice: Number(data.list_price), minPrice: Number(data.min_price), warranty: data.warranty || '' });
     } catch (e: any) {
       toast.error('Error: ' + e.message);
     } finally {
@@ -292,7 +297,7 @@ function NewProductForm({ initialName, initialCost, onCreated, onCancel }: {
       <div className="text-xs font-semibold text-primary flex items-center gap-1">
         <Plus size={12} /> Crear producto nuevo
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground">Nombre *</label>
           <input value={name} onChange={e => setName(e.target.value)} className="w-full px-2 py-1 rounded border bg-background text-xs" />
@@ -308,9 +313,33 @@ function NewProductForm({ initialName, initialCost, onCreated, onCancel }: {
           </select>
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">Costo unitario (USD)</label>
+          <label className="text-[10px] text-muted-foreground">Marca</label>
+          <input value={brand} onChange={e => setBrand(e.target.value)} className="w-full px-2 py-1 rounded border bg-background text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Modelo</label>
+          <input value={model} onChange={e => setModel(e.target.value)} className="w-full px-2 py-1 rounded border bg-background text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Costo unit. (USD)</label>
           <input type="number" step="0.01" min={0} value={cost} onChange={e => setCost(Number(e.target.value))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
         </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Precio lista (MXN)</label>
+          <input type="number" step="0.01" min={0} value={listPrice} onChange={e => setListPrice(Number(e.target.value))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Precio mínimo (MXN)</label>
+          <input type="number" step="0.01" min={0} value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Garantía</label>
+          <input value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full px-2 py-1 rounded border bg-background text-xs" placeholder="Ej: 1 año" />
+        </div>
+      </div>
+      <div>
+        <label className="text-[10px] text-muted-foreground">Descripción</label>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="w-full px-2 py-1 rounded border bg-background text-xs resize-none" />
       </div>
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="px-3 py-1 rounded border text-xs hover:bg-muted">Cancelar</button>
