@@ -32,7 +32,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, exchangeRate, getNextFolio, consumeFolio, vendorSeries } = useAppContext();
+  const { currentRole, exchangeRate } = useAppContext();
   const addReceivableMutation = useAddAccountReceivable();
 
   // DB hooks
@@ -46,6 +46,35 @@ export default function QuotationsPage() {
   const { data: dbProducts = [] } = useProducts();
   const updateProductMutation = useUpdateProduct();
   const { data: dbTeamMembers = [] } = useTeamMembers();
+
+  // Compute next folio from DB quotations for a given vendor
+  const getNextFolioFromDB = (vendorId: string): string => {
+    const vendor = dbTeamMembers.find(u => u.id === vendorId);
+    if (!vendor?.seriesPrefix) return `COT-${Date.now()}`;
+    const prefix = vendor.seriesPrefix;
+    let maxNum = vendor.seriesStart ?? 1000;
+    dbQuotations.forEach(q => {
+      if (q.folio && q.folio.startsWith(prefix + '-')) {
+        const numPart = parseInt(q.folio.replace(prefix + '-', ''), 10);
+        if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart;
+      }
+    });
+    return `${prefix}-${maxNum + 1}`;
+  };
+
+  const getVendorCurrentNum = (vendorId: string): number => {
+    const vendor = dbTeamMembers.find(u => u.id === vendorId);
+    if (!vendor?.seriesPrefix) return 0;
+    const prefix = vendor.seriesPrefix;
+    let maxNum = vendor.seriesStart ?? 1000;
+    dbQuotations.forEach(q => {
+      if (q.folio && q.folio.startsWith(prefix + '-')) {
+        const numPart = parseInt(q.folio.replace(prefix + '-', ''), 10);
+        if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart;
+      }
+    });
+    return maxNum;
+  };
 
   // Map DB quotations to local Quotation type
   const quotations: Quotation[] = useMemo(() => dbQuotations.map(q => ({
@@ -204,7 +233,7 @@ export default function QuotationsPage() {
     const total = Math.round((subtotal + tax) * 100) / 100;
     const vendor = dbTeamMembers.find(u => u.id === selectedVendorId);
     const customer = dbCustomers.find(c => c.id === selectedCustomerId);
-    const folio = getNextFolio(selectedVendorId);
+    const folio = getNextFolioFromDB(selectedVendorId);
 
     const today = new Date();
     const validDate = new Date(today);
@@ -740,7 +769,7 @@ export default function QuotationsPage() {
   const subtotalPreview = calcSubtotal();
   const taxPreview = Math.round(subtotalPreview * IVA_RATE * 100) / 100;
   const totalPreview = Math.round((subtotalPreview + taxPreview) * 100) / 100;
-  const nextFolioPreview = selectedVendorId ? getNextFolio(selectedVendorId) : null;
+  const nextFolioPreview = selectedVendorId ? getNextFolioFromDB(selectedVendorId) : null;
 
   return (
     <div>
@@ -870,7 +899,7 @@ export default function QuotationsPage() {
                 <select value={selectedVendorId} onChange={e => setSelectedVendorId(e.target.value)} className="w-full px-3 py-2 rounded-lg border bg-card text-sm">
                   <option value="">Seleccionar vendedor...</option>
                   {vendors.map(v => {
-                    const current = vendorSeries[v.id] ?? v.seriesStart ?? 1000;
+                    const current = getVendorCurrentNum(v.id);
                     return <option key={v.id} value={v.id}>{v.name} — Serie {v.seriesPrefix} (siguiente: {v.seriesPrefix}-{current + 1})</option>;
                   })}
                 </select>
