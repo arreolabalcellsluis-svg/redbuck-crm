@@ -615,16 +615,26 @@ export default function CommercialAgendaPage() {
             </div>
             <button onClick={() => navigateDate(1)} className="p-2 rounded-lg hover:bg-muted"><ChevronRight size={18} /></button>
           </div>
-          <div className="space-y-2">
-            {getActivitiesForDate(filtered, currentDate).sort((a, b) => (a.time ?? '99:99').localeCompare(b.time ?? '99:99')).map(act => (
-              <ActivityCard key={act.id} act={act} />
-            ))}
-            {getActivitiesForDate(filtered, currentDate).length === 0 && (
+          {(() => {
+            const priorityOrder: Record<string, number> = { alta: 0, media: 1, baja: 2 };
+            const statusOrder: Record<string, number> = { pendiente: 0, en_proceso: 1, reagendada: 2, no_realizada: 3, realizada: 4, cancelada: 5 };
+            const dayActs = getActivitiesForDate(filtered, currentDate).sort((a, b) => {
+              const sd = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5);
+              if (sd !== 0) return sd;
+              const pd = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+              if (pd !== 0) return pd;
+              return (a.time ?? '99:99').localeCompare(b.time ?? '99:99');
+            });
+            return dayActs.length > 0 ? (
+              <div className="space-y-2">
+                {dayActs.map(act => <ActivityCard key={act.id} act={act} />)}
+              </div>
+            ) : (
               <div className="text-center text-muted-foreground py-12 border border-dashed rounded-xl">
                 Sin actividades para este día
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
 

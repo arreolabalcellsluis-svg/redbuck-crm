@@ -3,20 +3,24 @@
  * Shows actionable commercial recommendations based on quotations, activities, and customers.
  */
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useActivities } from '@/hooks/useActivities';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useOrders } from '@/hooks/useOrders';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { getActivitiesForDate, getOverdueActivities, getPendingActivities } from '@/lib/agendaEngine';
 import MetricCard from '@/components/shared/MetricCard';
 import { Input } from '@/components/ui/input';
 import {
   Brain, Search, Phone, MessageCircle, FileText,
-  CheckCircle2, Zap, Target, TrendingUp, AlertTriangle, Clock,
+  CheckCircle2, Zap, Target, TrendingUp, AlertTriangle, Clock, CalendarDays,
 } from 'lucide-react';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+
+const TODAY = new Date().toISOString().split('T')[0];
 
 interface Recommendation {
   id: string;
@@ -36,6 +40,7 @@ const PRIORITY_STYLES: Record<string, string> = {
 };
 
 export default function DailyAssistantPage() {
+  const navigate = useNavigate();
   const { data: dbQuotations = [] } = useQuotations();
   const { data: dbActivities = [] } = useActivities();
   const { data: dbCustomers = [] } = useCustomers();
@@ -44,6 +49,13 @@ export default function DailyAssistantPage() {
 
   const [search, setSearch] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('');
+
+  // ─── Real KPIs ──────────────────────────────────────────
+  const allTodayActs = useMemo(() => getActivitiesForDate(dbActivities, TODAY), [dbActivities]);
+  const allOverdue = useMemo(() => getOverdueActivities(dbActivities, TODAY), [dbActivities]);
+  const allPending = useMemo(() => getPendingActivities(dbActivities), [dbActivities]);
+  const todayPendingCount = allTodayActs.filter(a => a.status === 'pendiente' || a.status === 'en_proceso').length;
+  const todayDoneCount = allTodayActs.filter(a => a.status === 'realizada').length;
 
   // Generate recommendations from real data
   const recommendations = useMemo<Recommendation[]>(() => {
@@ -81,27 +93,44 @@ export default function DailyAssistantPage() {
         });
       });
 
-    // 3. Pending activities
-    dbActivities
-      .filter(a => a.status === 'pendiente' && new Date(a.date) <= new Date())
+    // 3. Overdue activities (high priority)
+    allOverdue.forEach(a => {
+      recs.push({
+        id: `overdue-${a.id}`,
+        customerName: a.customerName || a.leadName || 'Sin cliente',
+        vendorName: a.responsibleName,
+        reason: 'Actividad vencida',
+        priority: 'alta',
+        value: 0,
+        action: a.title,
+        detail: `${a.type} — Vencida desde ${a.date}`,
+      });
+    });
+
+    // 4. Pending activities for today
+    allTodayActs
+      .filter(a => a.status === 'pendiente' || a.status === 'en_proceso')
       .forEach(a => {
         recs.push({
           id: `act-${a.id}`,
           customerName: a.customerName || a.leadName || 'Sin cliente',
           vendorName: a.responsibleName,
-          reason: 'Actividad pendiente',
-          priority: new Date(a.date) < new Date(Date.now() - 86400000) ? 'alta' : 'media',
+          reason: 'Actividad pendiente hoy',
+          priority: a.priority === 'alta' ? 'alta' : 'media',
           value: 0,
           action: a.title,
-          detail: `${a.type} — ${a.notes || 'Sin notas'}`,
+          detail: `${a.type}${a.time ? ` — ${a.time}` : ''} — ${a.notes || 'Sin notas'}`,
         });
       });
 
     return recs.sort((a, b) => {
-      const pOrder = { alta: 0, media: 1, baja: 2 };
-      return (pOrder[a.priority] || 2) - (pOrder[b.priority] || 2);
+      const pOrder: Record<string, number> = { alta: 0, media: 1, baja: 2 };
+      const pd = (pOrder[a.priority] ?? 2) - (pOrder[b.priority] ?? 2);
+      if (pd !== 0) return pd;
+      // Within same priority, higher value first
+      return b.value - a.value;
     });
-  }, [dbQuotations, dbActivities]);
+  }, [dbQuotations, dbActivities, allOverdue, allTodayActs]);
 
   const filtered = useMemo(() => {
     let data = recommendations;
@@ -128,11 +157,20 @@ export default function DailyAssistantPage() {
         </p>
       </div>
 
+      {/* KPIs — clickable, from real unfiltered data */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Recomendaciones" value={String(recommendations.length)} icon={Zap} />
-        <MetricCard title="Prioridad alta" value={String(highCount)} icon={AlertTriangle} variant="danger" />
-        <MetricCard title="Valor en juego" value={fmt(totalValue)} icon={Target} variant="primary" />
-        <MetricCard title="Cotizaciones abiertas" value={String(dbQuotations.filter(q => ['enviada', 'seguimiento', 'vista'].includes(q.status)).length)} icon={FileText} />
+        <button onClick={() => navigate('/crm/agenda')} className="text-left">
+          <MetricCard title="Hoy pendientes" value={todayPendingCount} icon={Clock} variant="warning" />
+        </button>
+        <button onClick={() => navigate('/crm/agenda')} className="text-left">
+          <MetricCard title="Vencidas" value={allOverdue.length} icon={AlertTriangle} variant="danger" />
+        </button>
+        <button onClick={() => navigate('/crm/agenda')} className="text-left">
+          <MetricCard title="Realizadas hoy" value={todayDoneCount} icon={CheckCircle2} variant="success" />
+        </button>
+        <button onClick={() => navigate('/crm/agenda')} className="text-left">
+          <MetricCard title="Total pendientes" value={allPending.length} icon={CalendarDays} variant="primary" />
+        </button>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
