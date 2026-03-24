@@ -437,6 +437,34 @@ export default function ProductsPage() {
           <p className="text-[10px] text-primary mt-1">≈ {fmt(form.minPrice * exchangeRate, 'MXN')} MXN</p>
         )}
       </div>
+
+      {/* Precios Lista de Precios */}
+      <div className="md:col-span-2 pt-2 border-t mt-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Precios para Lista de Precios PDF</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Capacidad</label>
+            <input value={form.capacity || ''} onChange={e => setForm(p => ({ ...p, capacity: e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="4 ton, 12V, etc." />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio Cliente (USD)</label>
+            <input type="number" value={form.priceClient || ''} onChange={e => setForm(p => ({ ...p, priceClient: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="5000" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Precio Distribuidor (USD)</label>
+            <input type="number" value={form.priceDistributor || ''} onChange={e => setForm(p => ({ ...p, priceDistributor: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="4000" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Comisión Distribuidor (USD)</label>
+            <input type="number" value={form.commissionDistributor || ''} onChange={e => setForm(p => ({ ...p, commissionDistributor: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="500" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Comisión Admón (USD)</label>
+            <input type="number" value={form.commissionAdmin || ''} onChange={e => setForm(p => ({ ...p, commissionAdmin: +e.target.value }))} className="w-full px-3 py-2 rounded-lg border bg-card text-sm" placeholder="200" />
+          </div>
+        </div>
+      </div>
+
       <div className="md:col-span-2">
         <p className="text-[10px] text-muted-foreground">Tipo de cambio: $1 USD = ${exchangeRate} MXN (configurable en Ajustes)</p>
       </div>
