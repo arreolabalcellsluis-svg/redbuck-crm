@@ -496,6 +496,22 @@ export default function CRMPage() {
                 <Search size={14} className="absolute left-2.5 top-2 text-muted-foreground" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..." className="w-full pl-8 pr-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
+              <select value={filterContactType} onChange={e => setFilterContactType(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Prospectos y Clientes</option>
+                <option value="prospecto">Solo Prospectos</option>
+                <option value="cliente">Solo Clientes</option>
+              </select>
+              <select value={filterClientLevel} onChange={e => setFilterClientLevel(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos los niveles</option>
+                <option value="nuevo">Cliente nuevo</option>
+                <option value="recurrente">Cliente recurrente</option>
+              </select>
+              <select value={filterClientValue} onChange={e => setFilterClientValue(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos los valores</option>
+                <option value="vip">VIP (&gt;$100k)</option>
+                <option value="medio">Medio ($20k–$100k)</option>
+                <option value="bajo">Bajo (&lt;$20k)</option>
+              </select>
               <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
                 <option value="">Todos los tipos</option>
                 {Object.entries(CUSTOMER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -523,7 +539,7 @@ export default function CRMPage() {
                 <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="px-2 py-1.5 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
             </div>
-            <div className="text-xs text-muted-foreground">{filteredCustomers.length} de {allCustomers.length} clientes</div>
+            <div className="text-xs text-muted-foreground">{filteredCustomers.length} de {allCustomers.length} contactos</div>
           </div>
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Cargando clientes...</div>
@@ -531,24 +547,56 @@ export default function CRMPage() {
           <div className="bg-card rounded-xl border overflow-x-auto">
             <table className="data-table">
               <thead>
-                <tr><th>Cliente</th><th>Tipo</th><th>Ciudad</th><th>Vendedor</th><th>Prioridad</th><th>Desde</th><th className="w-10"></th></tr>
+                <tr><th>Cliente</th><th>Clasificación</th><th>Tipo</th><th>Ciudad</th><th>Vendedor</th><th>Pedidos</th><th>Total comprado</th><th>Último pedido</th><th className="w-10"></th></tr>
               </thead>
               <tbody>
-                {filteredCustomers.map(c => (
+                {filteredCustomers.map(c => {
+                  const cls = classificationMap.get(c.id);
+                  return (
                   <tr key={c.id} className="cursor-pointer">
                     <td className="font-medium text-primary hover:underline cursor-pointer" onClick={() => setViewingCustomer(c)}>{c.name}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {cls?.contactType === 'prospecto' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                            <Clock size={10} /> Prospecto
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                            <UserCheck size={10} /> Cliente
+                          </span>
+                        )}
+                        {cls?.clientLevel === 'recurrente' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            <Star size={10} /> Recurrente
+                          </span>
+                        )}
+                        {cls?.clientValue === 'vip' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                            <Crown size={10} /> VIP
+                          </span>
+                        )}
+                        {cls?.clientValue === 'medio' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
+                            Medio
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td><span className="text-xs">{CUSTOMER_TYPE_LABELS[c.type]}</span></td>
                     <td className="text-muted-foreground">{c.city}, {c.state}</td>
                     <td className="text-muted-foreground">{resolveVendor(c.vendorId)}</td>
-                    <td><StatusBadge status={c.priority} type="priority" /></td>
-                    <td className="text-muted-foreground text-xs">{c.createdAt}</td>
+                    <td className="text-center font-semibold">{cls?.totalOrders ?? 0}</td>
+                    <td className="font-semibold">{fmt(cls?.totalPurchased ?? 0)}</td>
+                    <td className="text-muted-foreground text-xs">{cls?.lastOrderDate ?? '—'}</td>
                     <td>
                       <button onClick={() => handleEdit(c)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Editar cliente">
                         <Pencil size={14} />
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
