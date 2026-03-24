@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import {
   calculateImportCosting,
@@ -23,6 +23,21 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
   const [expanded, setExpanded] = useState(false);
   const [params, setParams] = useState<CostingParams>({ ...DEFAULT_COSTING_PARAMS });
   const [showParams, setShowParams] = useState(false);
+
+  // Per-item markup factors, keyed by index. Defaults to global markupFactor.
+  const [itemMarkups, setItemMarkups] = useState<Record<number, number>>({});
+
+  // When global markupFactor changes, reset items that haven't been individually modified
+  const prevGlobalMarkup = useState(params.markupFactor)[0];
+  useEffect(() => {
+    // Reset all item markups to new global value
+    const reset: Record<number, number> = {};
+    items.forEach((_, i) => { reset[i] = params.markupFactor; });
+    setItemMarkups(reset);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.markupFactor, items.length]);
+
+  const getItemMarkup = (index: number) => itemMarkups[index] ?? params.markupFactor;
 
   const importExpenses = (freightCost || 0) + (customsCost || 0);
 
@@ -55,7 +70,7 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
               { label: 'Total FOB', value: fmtUSD(costing.totalFob), sub: fmtMXN(costing.totalFob) },
               { label: 'Gastos importación', value: fmtUSD(costing.totalImportExpenses), sub: fmtPct(costing.expenseToFobRatio) + ' vs FOB' },
               { label: 'Total Landed', value: fmtUSD(costing.totalLanded), sub: fmtMXN(costing.totalLanded) },
-              { label: 'Factor utilidad', value: `×${params.markupFactor}`, sub: `IVA ${fmtPct(params.ivaRate)}` },
+              { label: 'Factor utilidad (global)', value: `×${params.markupFactor}`, sub: `IVA ${fmtPct(params.ivaRate)}` },
             ].map(kpi => (
               <div key={kpi.label} className="p-3 rounded-lg bg-card border text-center">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{kpi.label}</div>
@@ -76,12 +91,13 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
           {showParams && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-lg border bg-card">
               <div>
-                <label className="text-[10px] font-medium text-muted-foreground block mb-1">Factor utilidad</label>
+                <label className="text-[10px] font-medium text-muted-foreground block mb-1">Factor utilidad (global)</label>
                 <input
                   type="number" step="0.1" min="1" value={params.markupFactor}
                   onChange={e => setParams({ ...params, markupFactor: Math.max(0, Number(e.target.value)) })}
                   className="w-full px-2 py-1.5 rounded border bg-background text-sm"
                 />
+                <p className="text-[9px] text-muted-foreground mt-0.5">Se aplica a todos los productos por defecto</p>
               </div>
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground block mb-1">IVA (%)</label>
@@ -123,6 +139,7 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
                   <th className="text-right">Gasto asignado</th>
                   <th className="text-right">Landed total</th>
                   <th className="text-right">Landed unit</th>
+                  <th className="text-center">Factor</th>
                   <th className="text-right">Precio s/IVA</th>
                   <th className="text-right">Precio c/IVA</th>
                   <th className="text-right">Comisión</th>
@@ -132,8 +149,9 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
               </thead>
               <tbody>
                 {costing.items.map((it, i) => {
+                  const itemMarkup = getItemMarkup(i);
                   const unitLandedSinIva = it.unitLanded / (1 + params.ivaRate);
-                  const precioSinIva = unitLandedSinIva * params.markupFactor;
+                  const precioSinIva = unitLandedSinIva * itemMarkup;
                   const precioConIva = precioSinIva * (1 + params.ivaRate);
                   const comision = precioSinIva * params.commissionRate;
                   const admin = precioSinIva * params.adminRate;
@@ -149,6 +167,16 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
                       <td className="text-right">{fmtUSD(it.importExpenseAllocated)}</td>
                       <td className="text-right font-semibold">{fmtUSD(it.totalLanded)}</td>
                       <td className="text-right font-semibold text-primary">{fmtUSD(unitLandedSinIva)}</td>
+                      <td className="text-center">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          value={itemMarkup}
+                          onChange={e => setItemMarkups(prev => ({ ...prev, [i]: Math.max(0.1, Number(e.target.value)) }))}
+                          className="w-14 px-1 py-0.5 rounded border bg-background text-xs text-center"
+                        />
+                      </td>
                       <td className="text-right">{fmtUSD(precioSinIva)}</td>
                       <td className="text-right font-bold">{fmtUSD(precioConIva)}</td>
                       <td className="text-right text-muted-foreground">{fmtUSD(comision)}</td>
