@@ -15,9 +15,9 @@ import {
   getPendingActivities, getOverdueActivities,
   type Activity, type ActivityType, type ActivityStatus,
 } from '@/lib/agendaEngine';
-import { demoUsers } from '@/data/demo-data';
 import { useActivities, useAddActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/useActivities';
 import { useCustomers } from '@/hooks/useCustomers';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProducts } from '@/hooks/useProducts';
 import MetricCard from '@/components/shared/MetricCard';
