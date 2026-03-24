@@ -72,15 +72,16 @@ export default function OrderHistoryPage() {
     dbOrders.forEach(order => {
       const items = order.items as any[];
       items?.forEach((item: any) => {
-        const product = dbProducts.find(p => p.name === item.productName);
+        const itemName = item.name || item.productName || '';
+        const product = dbProducts.find(p => p.name === itemName);
         const subtotal = (item.qty || 1) * (item.unitPrice || 0);
         const tax = Math.round(subtotal * 0.16);
         records.push({
-          id: `oh-${order.id}-${(item.productName || '').slice(0, 5)}`,
+          id: `oh-${order.id}-${itemName.slice(0, 5)}`,
           date: order.created_at?.slice(0, 10) || '',
           folio: order.folio,
           customerName: order.customer_name,
-          productName: item.productName || '',
+          productName: itemName,
           category: product ? (CATEGORY_LABELS[product.category as keyof typeof CATEGORY_LABELS] || product.category) : 'Otros',
           qty: item.qty || 1,
           unitPrice: item.unitPrice || 0,
