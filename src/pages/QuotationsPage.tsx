@@ -32,7 +32,7 @@ const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', c
 const IVA_RATE = 0.16;
 
 export default function QuotationsPage() {
-  const { currentRole, exchangeRate, getNextFolio, consumeFolio, vendorSeries } = useAppContext();
+  const { currentRole, exchangeRate } = useAppContext();
   const addReceivableMutation = useAddAccountReceivable();
 
   // DB hooks
