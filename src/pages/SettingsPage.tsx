@@ -94,6 +94,9 @@ export default function SettingsPage() {
 
   const { data: settings = {}, isLoading: loadingSettings } = useAppSettings();
   const saveSettingMutation = useSaveSetting();
+  const { config: onboardingConfig, saveConfig: saveOnboardingConfig, isSaving: savingOnboarding } = useOnboardingConfig();
+  const [localOnboarding, setLocalOnboarding] = useState<OnboardingConfig>(DEFAULT_ONBOARDING_CONFIG);
+  useEffect(() => { setLocalOnboarding(onboardingConfig); }, [onboardingConfig]);
 
   // ─── Local state from DB settings ─────────────────────
   const [companyInfo, setCompanyInfo] = useState({ razonSocial: '', nombreComercial: '', direccion: '', telefono: '', correo: '', rfc: '' });
