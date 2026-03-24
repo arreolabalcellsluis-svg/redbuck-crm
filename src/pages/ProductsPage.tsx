@@ -200,6 +200,11 @@ export default function ProductsPage() {
       active: form.active,
       stock: form.stock,
       in_transit: form.inTransit,
+      capacity: '',
+      price_client: form.listPrice,
+      price_distributor: form.minPrice,
+      commission_distributor: 0,
+      commission_admin: 0,
     }, {
       onSuccess: () => {
         toast.success(`Producto "${form.name}" creado correctamente`);

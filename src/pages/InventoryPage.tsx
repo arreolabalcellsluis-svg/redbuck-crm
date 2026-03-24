@@ -284,6 +284,11 @@ td.zero{color:#dc2626;font-weight:600}
       active: true,
       stock: form.stock,
       in_transit: form.inTransit,
+      capacity: '',
+      price_client: 0,
+      price_distributor: 0,
+      commission_distributor: 0,
+      commission_admin: 0,
     }, {
       onSuccess: () => {
         toast.success(`Inventario "${form.productName}" creado correctamente`);
