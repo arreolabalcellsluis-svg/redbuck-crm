@@ -11,6 +11,12 @@ export interface ImportItemData {
   sku: string;
   skuFabrica: string;
   category: string;
+  brand: string;
+  model: string;
+  description: string;
+  listPrice: number;
+  minPrice: number;
+  warranty: string;
   qty: number;
   unitCost: number;
   cbm: number;
