@@ -146,7 +146,7 @@ export default function OrdersPage() {
   const [payForm, setPayForm] = useState({ date: '', amount: 0, method: 'transferencia' as Payment['method'], reference: '', comment: '' });
 
   // Order detail / account statement
-  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [detailOrder, setDetailOrder] = useState<DBOrder | null>(null);
 
   // Customer history
   const [historyCustomerId, setHistoryCustomerId] = useState<string | null>(null);
