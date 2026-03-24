@@ -139,7 +139,7 @@ export default function ImportCostingSummary({ items, freightCost, customsCost, 
                     <td className="text-right text-muted-foreground">{fmtPct(it.fobShare)}</td>
                     <td className="text-right">{fmtUSD(it.importExpenseAllocated)}</td>
                     <td className="text-right font-semibold">{fmtUSD(it.totalLanded)}</td>
-                    <td className="text-right font-semibold text-primary">{fmtUSD(it.unitLanded)}</td>
+                    <td className="text-right font-semibold text-primary">{fmtUSD(it.unitLanded / (1 + params.ivaRate))}</td>
                     <td className="text-right">{fmtUSD(it.priceBeforeIva)}</td>
                     <td className="text-right font-bold">{fmtUSD(it.priceWithIva)}</td>
                     <td className="text-right text-muted-foreground">{fmtUSD(it.commissionAmount)}</td>
