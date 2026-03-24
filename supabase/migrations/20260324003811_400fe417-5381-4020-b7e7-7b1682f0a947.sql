@@ -1,0 +1,1 @@
+ALTER TABLE public.commission_config ADD CONSTRAINT commission_config_config_key_unique UNIQUE (config_key);
