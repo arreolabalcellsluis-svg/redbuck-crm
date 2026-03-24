@@ -196,13 +196,15 @@ export async function generatePriceListPdf(
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',sans-serif; background:#fff; color:#1a1a1a; padding:20px 30px; }
-  @page { size:letter landscape; margin:12mm 15mm; }
+  body { font-family:'Inter',sans-serif; background:#fff; color:#1a1a1a; padding:20px 30px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  @page { size:letter landscape; margin:10mm 12mm; }
   @media print { 
     body { padding:0; }
-    .no-print { display:none; }
-    .page-header { position:running(header); }
+    .no-print { display:none !important; }
   }
+  table { page-break-inside:auto; }
+  tr { page-break-inside:avoid; page-break-after:auto; }
+  thead { display:table-header-group; }
   .print-btn { position:fixed;top:16px;right:16px;padding:10px 28px;background:#C00000;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(192,0,0,0.3); }
   .print-btn:hover { background:#a00000; }
 </style>
