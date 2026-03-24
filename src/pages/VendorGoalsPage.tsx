@@ -80,6 +80,24 @@ export default function VendorGoalsPage() {
   const alerts = useMemo(() => generateAlerts(allKPIs), [allKPIs]);
   const selectedKPI = selectedVendor ? allKPIs.find(k => k.vendorId === selectedVendor) : null;
 
+  // ─── Area Goals ────────────────────────────────────────────────
+  const { data: areaGoals = [] } = useAreaGoals(month, year);
+  const upsertAreaGoal = useUpsertAreaGoal();
+
+  const areaCalcContext: AreaCalcContext = useMemo(() => ({
+    vendorKPIs: allKPIs,
+    orders,
+    quotations,
+    accountsReceivable,
+    teamMembers,
+    month,
+    year,
+  }), [allKPIs, orders, quotations, accountsReceivable, teamMembers, month, year]);
+
+  const gerenteConfig = areaGoals.find(g => g.area === 'gerente_comercial');
+  const cobranzaConfig = areaGoals.find(g => g.area === 'cobranza');
+  const adminConfig = areaGoals.find(g => g.area === 'administracion');
+
   // Goal editing
   const [goalEdits, setGoalEdits] = useState<Record<string, Record<string, number>>>({});
   const updateGoalField = (vid: string, field: string, value: number) =>
