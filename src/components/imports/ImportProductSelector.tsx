@@ -154,23 +154,32 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
           </div>
 
           {showSearch && !linked && (
-            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {filtered.length > 0 ? filtered.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => selectProduct(p)}
-                  className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm border-b last:border-0"
-                >
-                  <Package size={12} className="text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{p.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{p.sku} · {p.category} · Costo: ${p.cost}</div>
+            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {productsLoading ? (
+                <div className="p-3 text-center text-xs text-muted-foreground">Cargando productos...</div>
+              ) : filtered.length > 0 ? (
+                <>
+                  <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b bg-muted/30">
+                    {filtered.length} producto(s) encontrado(s) — clic para seleccionar
                   </div>
-                </button>
-              )) : (
+                  {filtered.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => selectProduct(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm border-b last:border-0"
+                    >
+                      <Package size={12} className="text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{p.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{p.sku} · {p.category} · {p.brand} · Costo: ${p.cost}</div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              ) : (
                 <div className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground mb-2">No se encontró el producto</p>
+                  <p className="text-xs text-muted-foreground mb-2">No se encontró el producto "{search}"</p>
                   <button
                     type="button"
                     onClick={() => { setShowSearch(false); setShowNewForm(true); }}
