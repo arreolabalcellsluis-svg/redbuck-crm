@@ -153,3 +153,18 @@ export function useUpdateImportOrder() {
     onError: (e: any) => toast.error('Error: ' + e.message),
   });
 }
+
+export function useDeleteImportOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('import_orders').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['import_orders'] });
+      toast.success('Importación eliminada');
+    },
+    onError: (e: any) => toast.error('Error: ' + e.message),
+  });
+}

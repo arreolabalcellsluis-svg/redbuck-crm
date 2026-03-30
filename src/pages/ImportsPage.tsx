@@ -5,7 +5,7 @@ import ImportProductSelector, { type ImportItemData } from '@/components/imports
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
-import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet, PackageCheck, Loader2 } from 'lucide-react';
+import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet, PackageCheck, Loader2, Trash2 } from 'lucide-react';
 import { exportImportPdf, exportImportExcel } from '@/lib/importExport';
 import { useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
@@ -17,7 +17,8 @@ import type { ImportExpenses } from '@/types';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { useImportOrders, useAddImportOrder, useUpdateImportOrder } from '@/hooks/useImportOrders';
+import { useImportOrders, useAddImportOrder, useUpdateImportOrder, useDeleteImportOrder } from '@/hooks/useImportOrders';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -40,7 +41,9 @@ export default function ImportsPage() {
   const { data: warehouses = [] } = useWarehouses();
   const addMutation = useAddImportOrder();
   const updateMutation = useUpdateImportOrder();
+  const deleteMutation = useDeleteImportOrder();
   const qc = useQueryClient();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
@@ -440,6 +443,11 @@ export default function ImportsPage() {
                         <Edit2 size={14} />
                       </button>
                     )}
+                    {canEdit && (
+                      <button onClick={() => setDeleteConfirmId(imp.id)} className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive" title="Eliminar importación">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                     <button onClick={() => exportImportPdf(imp)} className="p-1.5 rounded-md hover:bg-muted text-destructive" title="Exportar PDF">
                       <FileText size={14} />
                     </button>
@@ -619,6 +627,31 @@ export default function ImportsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar importación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente esta importación y todos sus datos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmId) {
+                  deleteMutation.mutate(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
