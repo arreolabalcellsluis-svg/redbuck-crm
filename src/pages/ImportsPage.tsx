@@ -94,9 +94,12 @@ export default function ImportsPage() {
 
   const resetForm = () => {
     setEditId(null);
-    setForm({ supplier: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
+    setForm({ country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
     setItems([]);
   };
+
+  // Derive supplier(s) from items
+  const derivedSupplier = [...new Set(items.map(it => it.supplier).filter(Boolean))].join(', ') || '';
 
   const updateProductsInTransit = async (importItems: ImportItemData[]) => {
     const linkedItems = importItems.filter(it => it.productId);
