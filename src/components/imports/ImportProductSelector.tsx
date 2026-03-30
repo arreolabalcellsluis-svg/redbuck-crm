@@ -89,13 +89,16 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return products.slice(0, 10);
-    const q = search.toLowerCase();
-    return products.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
-    ).slice(0, 10);
+    if (!search.trim()) return products.slice(0, 20);
+    const q = search.toLowerCase().trim();
+    const terms = q.split(/\s+/);
+    return products.filter(p => {
+      const haystack = [p.name, p.sku, p.category, p.brand, p.model, p.description, p.supplier]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return terms.every(term => haystack.includes(term));
+    }).slice(0, 20);
   }, [search, products]);
 
   const selectProduct = (p: typeof products[0]) => {
