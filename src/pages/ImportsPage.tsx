@@ -97,7 +97,7 @@ export default function ImportsPage() {
 
   const resetForm = () => {
     setEditId(null);
-    setForm({ country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
+    setForm({ orderNumber: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
     setItems([]);
   };
 
