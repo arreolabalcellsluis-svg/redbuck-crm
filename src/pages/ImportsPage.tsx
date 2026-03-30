@@ -443,6 +443,11 @@ export default function ImportsPage() {
                         <Edit2 size={14} />
                       </button>
                     )}
+                    {canEdit && (
+                      <button onClick={() => setDeleteConfirmId(imp.id)} className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive" title="Eliminar importación">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                     <button onClick={() => exportImportPdf(imp)} className="p-1.5 rounded-md hover:bg-muted text-destructive" title="Exportar PDF">
                       <FileText size={14} />
                     </button>
