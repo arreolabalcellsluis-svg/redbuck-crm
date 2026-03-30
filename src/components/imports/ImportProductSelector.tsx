@@ -72,7 +72,7 @@ export default function ImportProductSelector({ items, onChange, suppliers = [] 
   );
 }
 
-function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onUpdate: (item: ImportItemData) => void; onRemove: () => void }) {
+function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportItemData; suppliers: { id: string; name: string }[]; onUpdate: (item: ImportItemData) => void; onRemove: () => void }) {
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState(item.productName);
   const [showSearch, setShowSearch] = useState(false);
