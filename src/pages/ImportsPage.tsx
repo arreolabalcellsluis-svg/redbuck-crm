@@ -49,7 +49,7 @@ export default function ImportsPage() {
   const [dlDateFrom, setDlDateFrom] = useState('');
   const [dlDateTo, setDlDateTo] = useState('');
   const [form, setForm] = useState({
-    supplier: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
+    country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
     purchaseDate: '', estimatedDeparture: '', estimatedArrival: '',
     freightCost: 0, customsCost: 0, status: 'orden_enviada' as ImportStatus,
     exchangeRate: 17.2,
@@ -65,7 +65,7 @@ export default function ImportsPage() {
   const openEdit = (imp: any) => {
     setEditId(imp.id);
     setForm({
-      supplier: imp.supplier, country: imp.country, departurePort: imp.departurePort,
+      country: imp.country, departurePort: imp.departurePort,
       arrivalPort: imp.arrivalPort, purchaseDate: imp.purchaseDate,
       estimatedDeparture: imp.estimatedDeparture, estimatedArrival: imp.estimatedArrival,
       freightCost: imp.freightCost, customsCost: imp.customsCost, status: imp.status,
@@ -87,15 +87,19 @@ export default function ImportsPage() {
       unitCost: it.unitCost || 0,
       cbm: it.cbm || 0,
       peso: it.peso || 0,
+      supplier: it.supplier || '',
     })));
     setOpen(true);
   };
 
   const resetForm = () => {
     setEditId(null);
-    setForm({ supplier: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
+    setForm({ country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
     setItems([]);
   };
+
+  // Derive supplier(s) from items
+  const derivedSupplier = [...new Set(items.map(it => it.supplier).filter(Boolean))].join(', ') || '';
 
   const updateProductsInTransit = async (importItems: ImportItemData[]) => {
     const linkedItems = importItems.filter(it => it.productId);
@@ -118,8 +122,12 @@ export default function ImportsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.supplier || items.length === 0 || !form.purchaseDate) {
-      toast.error('Completa proveedor, productos y fecha');
+    if (items.length === 0 || !form.purchaseDate) {
+      toast.error('Completa productos y fecha');
+      return;
+    }
+    if (items.some(it => !it.supplier)) {
+      toast.error('Cada producto debe tener un proveedor asignado');
       return;
     }
 
@@ -143,12 +151,13 @@ export default function ImportsPage() {
       unitCost: it.unitCost,
       cbm: it.cbm,
       peso: it.peso,
+      supplier: it.supplier || '',
     }));
 
     if (editId) {
       updateMutation.mutate({
         id: editId,
-        supplier: form.supplier, country: form.country, departurePort: form.departurePort,
+        supplier: derivedSupplier, country: form.country, departurePort: form.departurePort,
         arrivalPort: form.arrivalPort, purchaseDate: form.purchaseDate,
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
         freightCost: form.freightCost, customsCost: form.customsCost, status: form.status,
@@ -160,7 +169,7 @@ export default function ImportsPage() {
     } else {
       const orderNumber = `IMP-2026-${String(imports.length + 1).padStart(3, '0')}`;
       addMutation.mutate({
-        orderNumber, supplier: form.supplier, country: form.country,
+        orderNumber, supplier: derivedSupplier, country: form.country,
         departurePort: form.departurePort, arrivalPort: form.arrivalPort,
         currency: 'USD', exchangeRate: form.exchangeRate,
         purchaseDate: form.purchaseDate, estimatedDeparture: form.estimatedDeparture,
@@ -454,7 +463,7 @@ export default function ImportsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">{imp.supplier} · {imp.country}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{imp.supplier || 'Consolidado'} · {imp.country}</p>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div><span className="text-muted-foreground">Puerto salida:</span><span className="ml-1 font-medium">{imp.departurePort}</span></div>
@@ -465,10 +474,11 @@ export default function ImportsPage() {
               <div className="py-4 overflow-x-auto"><ImportTimeline currentStatus={imp.status} /></div>
               <div className="mt-4 rounded-lg border overflow-hidden">
                 <table className="data-table">
-                  <thead><tr><th>Producto</th><th>SKU</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
+                  <thead><tr><th>Proveedor</th><th>Producto</th><th>SKU</th><th>Cantidad</th><th>Costo unitario</th><th>Costo total</th></tr></thead>
                   <tbody>
                     {imp.items.map((item: any, i: number) => (
                       <tr key={i}>
+                        <td className="text-xs">{item.supplier || imp.supplier || '—'}</td>
                         <td className="font-medium">{item.productName}</td>
                         <td className="text-muted-foreground text-xs">{item.sku || '—'}</td>
                         <td>{item.qty}</td>
@@ -518,13 +528,6 @@ export default function ImportsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Proveedor *</label>
-                <select value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
-                  <option value="">Seleccionar...</option>
-                  {suppliers.filter(s => s.type === 'internacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
                 <label className="text-xs font-medium text-muted-foreground">País</label>
                 <input value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
@@ -559,7 +562,7 @@ export default function ImportsPage() {
                 {IMPORT_STATUS_ORDER.map(s => <option key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</option>)}
               </select>
             </div>
-            <ImportProductSelector items={items} onChange={setItems} />
+            <ImportProductSelector items={items} onChange={setItems} suppliers={suppliers.filter(s => s.type === 'internacional').map(s => ({ id: s.id, name: s.name }))} />
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Flete (USD)</label>

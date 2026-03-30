@@ -21,11 +21,13 @@ export interface ImportItemData {
   unitCost: number;
   cbm: number;
   peso: number;
+  supplier: string;
 }
 
 interface Props {
   items: ImportItemData[];
   onChange: (items: ImportItemData[]) => void;
+  suppliers?: { id: string; name: string }[];
 }
 
 const CATEGORIES = [
@@ -33,14 +35,14 @@ const CATEGORIES = [
   'compresores', 'gatos_hidraulicos', 'herramienta', 'refacciones', 'accesorios', 'otros',
 ];
 
-export default function ImportProductSelector({ items, onChange }: Props) {
+export default function ImportProductSelector({ items, onChange, suppliers = [] }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-medium text-muted-foreground">Productos *</label>
         <button
           type="button"
-          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', brand: '', model: '', description: '', listPrice: 0, minPrice: 0, warranty: '', qty: 1, unitCost: 0, cbm: 0, peso: 0 }])}
+          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', brand: '', model: '', description: '', listPrice: 0, minPrice: 0, warranty: '', qty: 1, unitCost: 0, cbm: 0, peso: 0, supplier: '' }])}
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           <Plus size={12} /> Agregar producto
@@ -51,6 +53,7 @@ export default function ImportProductSelector({ items, onChange }: Props) {
           <ImportItemRow
             key={i}
             item={item}
+            suppliers={suppliers}
             onUpdate={(updated) => {
               const next = [...items];
               next[i] = updated;
@@ -69,7 +72,7 @@ export default function ImportProductSelector({ items, onChange }: Props) {
   );
 }
 
-function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onUpdate: (item: ImportItemData) => void; onRemove: () => void }) {
+function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportItemData; suppliers: { id: string; name: string }[]; onUpdate: (item: ImportItemData) => void; onRemove: () => void }) {
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState(item.productName);
   const [showSearch, setShowSearch] = useState(false);
@@ -184,7 +187,14 @@ function ImportItemRow({ item, onUpdate, onRemove }: { item: ImportItemData; onU
       </div>
 
       {/* Inline fields */}
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-7 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground">Proveedor *</label>
+          <select value={item.supplier || ''} onChange={e => onUpdate({ ...item, supplier: e.target.value })} className="w-full px-2 py-1 rounded border bg-background text-xs">
+            <option value="">Seleccionar...</option>
+            {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </select>
+        </div>
         <div>
           <label className="text-[10px] text-muted-foreground">SKU Fábrica</label>
           <input value={item.skuFabrica || ''} className="w-full px-2 py-1 rounded border bg-background text-xs" placeholder="Ref. fábrica" onChange={e => onUpdate({ ...item, skuFabrica: e.target.value })} />
