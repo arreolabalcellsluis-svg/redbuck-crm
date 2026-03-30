@@ -73,7 +73,7 @@ export default function ImportProductSelector({ items, onChange, suppliers = [] 
 }
 
 function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportItemData; suppliers: { id: string; name: string }[]; onUpdate: (item: ImportItemData) => void; onRemove: () => void }) {
-  const { data: products = [] } = useProducts();
+  const { data: products = [], isLoading: productsLoading } = useProducts();
   const [search, setSearch] = useState(item.productName);
   const [showSearch, setShowSearch] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -88,8 +88,16 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Sync search text when productName changes externally
+  useEffect(() => {
+    if (item.productId && item.productName && item.productName !== search) {
+      setSearch(item.productName);
+      setLinked(true);
+    }
+  }, [item.productId, item.productName]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return products.slice(0, 20);
+    if (!search.trim()) return products.slice(0, 30);
     const q = search.toLowerCase().trim();
     const terms = q.split(/\s+/);
     return products.filter(p => {
@@ -98,7 +106,7 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
         .join(' ')
         .toLowerCase();
       return terms.every(term => haystack.includes(term));
-    }).slice(0, 20);
+    }).slice(0, 30);
   }, [search, products]);
 
   const selectProduct = (p: typeof products[0]) => {
