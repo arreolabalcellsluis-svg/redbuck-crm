@@ -21,6 +21,7 @@ export interface ImportItemData {
   unitCost: number;
   cbm: number;
   peso: number;
+  supplier: string;
 }
 
 interface Props {
