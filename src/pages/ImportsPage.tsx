@@ -68,7 +68,7 @@ export default function ImportsPage() {
   const openEdit = (imp: any) => {
     setEditId(imp.id);
     setForm({
-      country: imp.country, departurePort: imp.departurePort,
+      orderNumber: imp.orderNumber, country: imp.country, departurePort: imp.departurePort,
       arrivalPort: imp.arrivalPort, purchaseDate: imp.purchaseDate,
       estimatedDeparture: imp.estimatedDeparture, estimatedArrival: imp.estimatedArrival,
       freightCost: imp.freightCost, customsCost: imp.customsCost, status: imp.status,
