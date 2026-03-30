@@ -536,6 +536,10 @@ export default function ImportsPage() {
             <DialogDescription>{editId ? 'Modifica la información de la importación' : 'Registra una nueva orden de importación'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Código de Importación</label>
+              <input value={form.orderNumber} onChange={e => setForm({ ...form, orderNumber: e.target.value })} placeholder={`Ej: IMP-${new Date().getFullYear()}-001 (auto si vacío)`} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm font-semibold" />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">País</label>
