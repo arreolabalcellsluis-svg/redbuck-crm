@@ -157,7 +157,7 @@ export default function ImportsPage() {
     if (editId) {
       updateMutation.mutate({
         id: editId,
-        supplier: form.supplier, country: form.country, departurePort: form.departurePort,
+        supplier: derivedSupplier, country: form.country, departurePort: form.departurePort,
         arrivalPort: form.arrivalPort, purchaseDate: form.purchaseDate,
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
         freightCost: form.freightCost, customsCost: form.customsCost, status: form.status,
