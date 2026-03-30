@@ -52,7 +52,7 @@ export default function ImportsPage() {
   const [dlDateFrom, setDlDateFrom] = useState('');
   const [dlDateTo, setDlDateTo] = useState('');
   const [form, setForm] = useState({
-    country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
+    orderNumber: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
     purchaseDate: '', estimatedDeparture: '', estimatedArrival: '',
     freightCost: 0, customsCost: 0, status: 'orden_enviada' as ImportStatus,
     exchangeRate: 17.2,
@@ -68,7 +68,7 @@ export default function ImportsPage() {
   const openEdit = (imp: any) => {
     setEditId(imp.id);
     setForm({
-      country: imp.country, departurePort: imp.departurePort,
+      orderNumber: imp.orderNumber, country: imp.country, departurePort: imp.departurePort,
       arrivalPort: imp.arrivalPort, purchaseDate: imp.purchaseDate,
       estimatedDeparture: imp.estimatedDeparture, estimatedArrival: imp.estimatedArrival,
       freightCost: imp.freightCost, customsCost: imp.customsCost, status: imp.status,
@@ -97,7 +97,7 @@ export default function ImportsPage() {
 
   const resetForm = () => {
     setEditId(null);
-    setForm({ country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
+    setForm({ orderNumber: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo', purchaseDate: '', estimatedDeparture: '', estimatedArrival: '', freightCost: 0, customsCost: 0, status: 'orden_enviada', exchangeRate: 17.2 });
     setItems([]);
   };
 
@@ -157,9 +157,12 @@ export default function ImportsPage() {
       supplier: it.supplier || '',
     }));
 
+    const orderNumber = form.orderNumber.trim() || `IMP-${new Date().getFullYear()}-${String(imports.length + 1).padStart(3, '0')}`;
+
     if (editId) {
       updateMutation.mutate({
         id: editId,
+        orderNumber,
         supplier: derivedSupplier, country: form.country, departurePort: form.departurePort,
         arrivalPort: form.arrivalPort, purchaseDate: form.purchaseDate,
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
@@ -170,7 +173,6 @@ export default function ImportsPage() {
         daysInTransit: form.estimatedDeparture ? Math.max(0, Math.floor((Date.now() - new Date(form.estimatedDeparture).getTime()) / 86400000)) : 0,
       });
     } else {
-      const orderNumber = `IMP-2026-${String(imports.length + 1).padStart(3, '0')}`;
       addMutation.mutate({
         orderNumber, supplier: derivedSupplier, country: form.country,
         departurePort: form.departurePort, arrivalPort: form.arrivalPort,
@@ -534,6 +536,10 @@ export default function ImportsPage() {
             <DialogDescription>{editId ? 'Modifica la información de la importación' : 'Registra una nueva orden de importación'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Código de Importación</label>
+              <input value={form.orderNumber} onChange={e => setForm({ ...form, orderNumber: e.target.value })} placeholder={`Ej: IMP-${new Date().getFullYear()}-001 (auto si vacío)`} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm font-semibold" />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">País</label>
