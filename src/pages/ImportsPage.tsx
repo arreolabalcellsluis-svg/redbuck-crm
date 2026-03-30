@@ -52,7 +52,7 @@ export default function ImportsPage() {
   const [dlDateFrom, setDlDateFrom] = useState('');
   const [dlDateTo, setDlDateTo] = useState('');
   const [form, setForm] = useState({
-    country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
+    orderNumber: '', country: 'China', departurePort: '', arrivalPort: 'Manzanillo',
     purchaseDate: '', estimatedDeparture: '', estimatedArrival: '',
     freightCost: 0, customsCost: 0, status: 'orden_enviada' as ImportStatus,
     exchangeRate: 17.2,
