@@ -151,6 +151,7 @@ export default function ImportsPage() {
       unitCost: it.unitCost,
       cbm: it.cbm,
       peso: it.peso,
+      supplier: it.supplier || '',
     }));
 
     if (editId) {
