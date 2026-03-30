@@ -463,7 +463,7 @@ export default function ImportsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">{imp.supplier} · {imp.country}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{imp.supplier || 'Consolidado'} · {imp.country}</p>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div><span className="text-muted-foreground">Puerto salida:</span><span className="ml-1 font-medium">{imp.departurePort}</span></div>
