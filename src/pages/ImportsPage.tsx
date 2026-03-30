@@ -169,7 +169,7 @@ export default function ImportsPage() {
     } else {
       const orderNumber = `IMP-2026-${String(imports.length + 1).padStart(3, '0')}`;
       addMutation.mutate({
-        orderNumber, supplier: form.supplier, country: form.country,
+        orderNumber, supplier: derivedSupplier, country: form.country,
         departurePort: form.departurePort, arrivalPort: form.arrivalPort,
         currency: 'USD', exchangeRate: form.exchangeRate,
         purchaseDate: form.purchaseDate, estimatedDeparture: form.estimatedDeparture,
