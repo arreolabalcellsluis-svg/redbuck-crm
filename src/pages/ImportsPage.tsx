@@ -41,7 +41,9 @@ export default function ImportsPage() {
   const { data: warehouses = [] } = useWarehouses();
   const addMutation = useAddImportOrder();
   const updateMutation = useUpdateImportOrder();
+  const deleteMutation = useDeleteImportOrder();
   const qc = useQueryClient();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
