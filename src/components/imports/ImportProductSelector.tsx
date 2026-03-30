@@ -187,7 +187,14 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
       </div>
 
       {/* Inline fields */}
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-7 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground">Proveedor *</label>
+          <select value={item.supplier || ''} onChange={e => onUpdate({ ...item, supplier: e.target.value })} className="w-full px-2 py-1 rounded border bg-background text-xs">
+            <option value="">Seleccionar...</option>
+            {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </select>
+        </div>
         <div>
           <label className="text-[10px] text-muted-foreground">SKU Fábrica</label>
           <input value={item.skuFabrica || ''} className="w-full px-2 py-1 rounded border bg-background text-xs" placeholder="Ref. fábrica" onChange={e => onUpdate({ ...item, skuFabrica: e.target.value })} />
