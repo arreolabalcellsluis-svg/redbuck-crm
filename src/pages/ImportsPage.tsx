@@ -157,9 +157,12 @@ export default function ImportsPage() {
       supplier: it.supplier || '',
     }));
 
+    const orderNumber = form.orderNumber.trim() || `IMP-${new Date().getFullYear()}-${String(imports.length + 1).padStart(3, '0')}`;
+
     if (editId) {
       updateMutation.mutate({
         id: editId,
+        orderNumber,
         supplier: derivedSupplier, country: form.country, departurePort: form.departurePort,
         arrivalPort: form.arrivalPort, purchaseDate: form.purchaseDate,
         estimatedDeparture: form.estimatedDeparture, estimatedArrival: form.estimatedArrival,
@@ -170,7 +173,6 @@ export default function ImportsPage() {
         daysInTransit: form.estimatedDeparture ? Math.max(0, Math.floor((Date.now() - new Date(form.estimatedDeparture).getTime()) / 86400000)) : 0,
       });
     } else {
-      const orderNumber = `IMP-2026-${String(imports.length + 1).padStart(3, '0')}`;
       addMutation.mutate({
         orderNumber, supplier: derivedSupplier, country: form.country,
         departurePort: form.departurePort, arrivalPort: form.arrivalPort,
