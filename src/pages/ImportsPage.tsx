@@ -561,7 +561,7 @@ export default function ImportsPage() {
                 {IMPORT_STATUS_ORDER.map(s => <option key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</option>)}
               </select>
             </div>
-            <ImportProductSelector items={items} onChange={setItems} />
+            <ImportProductSelector items={items} onChange={setItems} suppliers={suppliers.filter(s => s.type === 'internacional').map(s => ({ id: s.id, name: s.name }))} />
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Flete (USD)</label>
