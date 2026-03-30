@@ -27,6 +27,7 @@ export interface ImportItemData {
 interface Props {
   items: ImportItemData[];
   onChange: (items: ImportItemData[]) => void;
+  suppliers?: { id: string; name: string }[];
 }
 
 const CATEGORIES = [
