@@ -35,14 +35,14 @@ const CATEGORIES = [
   'compresores', 'gatos_hidraulicos', 'herramienta', 'refacciones', 'accesorios', 'otros',
 ];
 
-export default function ImportProductSelector({ items, onChange }: Props) {
+export default function ImportProductSelector({ items, onChange, suppliers = [] }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-medium text-muted-foreground">Productos *</label>
         <button
           type="button"
-          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', brand: '', model: '', description: '', listPrice: 0, minPrice: 0, warranty: '', qty: 1, unitCost: 0, cbm: 0, peso: 0 }])}
+          onClick={() => onChange([...items, { productId: null, productName: '', sku: '', skuFabrica: '', category: '', brand: '', model: '', description: '', listPrice: 0, minPrice: 0, warranty: '', qty: 1, unitCost: 0, cbm: 0, peso: 0, supplier: '' }])}
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           <Plus size={12} /> Agregar producto
@@ -53,6 +53,7 @@ export default function ImportProductSelector({ items, onChange }: Props) {
           <ImportItemRow
             key={i}
             item={item}
+            suppliers={suppliers}
             onUpdate={(updated) => {
               const next = [...items];
               next[i] = updated;
