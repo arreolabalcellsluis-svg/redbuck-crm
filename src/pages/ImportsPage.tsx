@@ -527,13 +527,6 @@ export default function ImportsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Proveedor *</label>
-                <select value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm">
-                  <option value="">Seleccionar...</option>
-                  {suppliers.filter(s => s.type === 'internacional').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
                 <label className="text-xs font-medium text-muted-foreground">País</label>
                 <input value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
               </div>
