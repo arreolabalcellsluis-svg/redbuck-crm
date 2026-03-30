@@ -122,8 +122,12 @@ export default function ImportsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.supplier || items.length === 0 || !form.purchaseDate) {
-      toast.error('Completa proveedor, productos y fecha');
+    if (items.length === 0 || !form.purchaseDate) {
+      toast.error('Completa productos y fecha');
+      return;
+    }
+    if (items.some(it => !it.supplier)) {
+      toast.error('Cada producto debe tener un proveedor asignado');
       return;
     }
 
