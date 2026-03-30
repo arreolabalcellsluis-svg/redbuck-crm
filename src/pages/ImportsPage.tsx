@@ -87,6 +87,7 @@ export default function ImportsPage() {
       unitCost: it.unitCost || 0,
       cbm: it.cbm || 0,
       peso: it.peso || 0,
+      supplier: it.supplier || '',
     })));
     setOpen(true);
   };
