@@ -73,7 +73,7 @@ export default function ImportProductSelector({ items, onChange, suppliers = [] 
 }
 
 function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportItemData; suppliers: { id: string; name: string }[]; onUpdate: (item: ImportItemData) => void; onRemove: () => void }) {
-  const { data: products = [] } = useProducts();
+  const { data: products = [], isLoading: productsLoading } = useProducts();
   const [search, setSearch] = useState(item.productName);
   const [showSearch, setShowSearch] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -88,8 +88,16 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Sync search text when productName changes externally
+  useEffect(() => {
+    if (item.productId && item.productName && item.productName !== search) {
+      setSearch(item.productName);
+      setLinked(true);
+    }
+  }, [item.productId, item.productName]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return products.slice(0, 20);
+    if (!search.trim()) return products.slice(0, 30);
     const q = search.toLowerCase().trim();
     const terms = q.split(/\s+/);
     return products.filter(p => {
@@ -98,7 +106,7 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
         .join(' ')
         .toLowerCase();
       return terms.every(term => haystack.includes(term));
-    }).slice(0, 20);
+    }).slice(0, 30);
   }, [search, products]);
 
   const selectProduct = (p: typeof products[0]) => {
@@ -146,23 +154,32 @@ function ImportItemRow({ item, suppliers, onUpdate, onRemove }: { item: ImportIt
           </div>
 
           {showSearch && !linked && (
-            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {filtered.length > 0 ? filtered.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => selectProduct(p)}
-                  className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm border-b last:border-0"
-                >
-                  <Package size={12} className="text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{p.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{p.sku} · {p.category} · Costo: ${p.cost}</div>
+            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {productsLoading ? (
+                <div className="p-3 text-center text-xs text-muted-foreground">Cargando productos...</div>
+              ) : filtered.length > 0 ? (
+                <>
+                  <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b bg-muted/30">
+                    {filtered.length} producto(s) encontrado(s) — clic para seleccionar
                   </div>
-                </button>
-              )) : (
+                  {filtered.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => selectProduct(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm border-b last:border-0"
+                    >
+                      <Package size={12} className="text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{p.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{p.sku} · {p.category} · {p.brand} · Costo: ${p.cost}</div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              ) : (
                 <div className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground mb-2">No se encontró el producto</p>
+                  <p className="text-xs text-muted-foreground mb-2">No se encontró el producto "{search}"</p>
                   <button
                     type="button"
                     onClick={() => { setShowSearch(false); setShowNewForm(true); }}
