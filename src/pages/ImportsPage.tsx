@@ -5,7 +5,7 @@ import ImportProductSelector, { type ImportItemData } from '@/components/imports
 import StatusBadge from '@/components/shared/StatusBadge';
 import ImportTimeline from '@/components/shared/ImportTimeline';
 import MetricCard from '@/components/shared/MetricCard';
-import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet, PackageCheck, Loader2 } from 'lucide-react';
+import { Globe, Ship, AlertTriangle, DollarSign, Plus, X, Edit2, Download, FileText, FileSpreadsheet, PackageCheck, Loader2, Trash2 } from 'lucide-react';
 import { exportImportPdf, exportImportExcel } from '@/lib/importExport';
 import { useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
