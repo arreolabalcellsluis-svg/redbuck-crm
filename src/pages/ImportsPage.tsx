@@ -91,6 +91,7 @@ export default function ImportsPage() {
       cbm: it.cbm || 0,
       peso: it.peso || 0,
       supplier: it.supplier || '',
+      itemType: it.itemType || 'product',
     })));
     setOpen(true);
   };
@@ -236,94 +237,128 @@ export default function ImportsPage() {
       for (let i = 0; i < importItems.length; i++) {
         const item = importItems[i];
         let productId = item.productId;
+        const isSparePart = item.itemType === 'spare_part';
 
-        // 1. VALIDATE/CREATE PRODUCT
-        if (!productId) {
-          // Try to find by SKU first
-          if (item.sku) {
-            const { data: bySkuProduct } = await supabase
-              .from('products').select('id').eq('sku', item.sku.trim()).maybeSingle();
-            if (bySkuProduct) {
-              productId = bySkuProduct.id;
-              productosExistentes++;
-            }
-          }
-          // Fallback: find by name
-          if (!productId && item.productName) {
-            const normalizedName = item.productName.trim().toLowerCase();
-            const found = dbProducts.find(p =>
-              p.name.trim().toLowerCase() === normalizedName
-            );
-            if (found) {
-              productId = found.id;
-              productosExistentes++;
-            }
-          }
-          // Create new product if not found
+        if (isSparePart) {
+          // --- SPARE PART FLOW ---
           if (!productId) {
-            const newSku = item.sku || `IMP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-            const { data: newProduct, error: createErr } = await supabase.from('products').insert({
-              sku: newSku,
-              name: item.productName || 'Producto importado',
-              category: (item.category || 'otros') as any,
-              brand: item.brand || '',
-              model: item.model || '',
-              description: item.description || '',
-              cost: item.unitCost || 0,
-              list_price: item.listPrice || 0,
-              min_price: item.minPrice || 0,
-              currency: 'USD' as any,
-              delivery_days: 0,
-              supplier: imp.supplier || '',
-              warranty: item.warranty || '',
-              active: true,
-              stock: {} as any,
-              in_transit: 0,
-              images: [] as any,
-              user_id: userId,
-            }).select('id').single();
+            // Try find by SKU
+            if (item.sku) {
+              const { data: bySku } = await supabase
+                .from('spare_parts').select('id').eq('sku', item.sku.trim()).maybeSingle();
+              if (bySku) { productId = bySku.id; productosExistentes++; }
+            }
+            if (!productId) {
+              productosExistentes++; // can't auto-create spare parts without product association
+              updatedItems[i] = { ...item, productId: null };
+              continue;
+            }
+          } else {
+            productosExistentes++;
+          }
 
-            if (createErr) throw createErr;
-            productId = newProduct.id;
-            productosCreados++;
+          updatedItems[i] = { ...item, productId };
+
+          // Inventory movement for spare part
+          const { error: mvError } = await supabase.from('inventory_movements').insert({
+            product_id: null,
+            warehouse_id: defaultWarehouse,
+            quantity: item.qty || 0,
+            unit_cost: item.unitCost || 0,
+            total_cost: (item.qty || 0) * (item.unitCost || 0),
+            movement_type: 'import_in',
+            reference_type: 'import_spare',
+            reference_id: imp.id,
+            notes: `Refacción: ${item.productName} — Importación ${imp.orderNumber}`,
+            user_id: userId,
+          } as any);
+          if (mvError) throw mvError;
+          movimientosGenerados++;
+
+          // Update spare_parts stock
+          const { data: currentSP } = await supabase
+            .from('spare_parts').select('stock').eq('id', productId).maybeSingle();
+          if (currentSP) {
+            const newStock = (currentSP.stock || 0) + (item.qty || 0);
+            await supabase.from('spare_parts').update({
+              stock: newStock,
+              updated_at: new Date().toISOString(),
+            }).eq('id', productId);
           }
         } else {
-          productosExistentes++;
-        }
+          // --- PRODUCT FLOW (existing logic) ---
+          if (!productId) {
+            if (item.sku) {
+              const { data: bySkuProduct } = await supabase
+                .from('products').select('id').eq('sku', item.sku.trim()).maybeSingle();
+              if (bySkuProduct) { productId = bySkuProduct.id; productosExistentes++; }
+            }
+            if (!productId && item.productName) {
+              const normalizedName = item.productName.trim().toLowerCase();
+              const found = dbProducts.find(p => p.name.trim().toLowerCase() === normalizedName);
+              if (found) { productId = found.id; productosExistentes++; }
+            }
+            if (!productId) {
+              const newSku = item.sku || `IMP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+              const { data: newProduct, error: createErr } = await supabase.from('products').insert({
+                sku: newSku,
+                name: item.productName || 'Producto importado',
+                category: (item.category || 'otros') as any,
+                brand: item.brand || '',
+                model: item.model || '',
+                description: item.description || '',
+                cost: item.unitCost || 0,
+                list_price: item.listPrice || 0,
+                min_price: item.minPrice || 0,
+                currency: 'USD' as any,
+                delivery_days: 0,
+                supplier: imp.supplier || '',
+                warranty: item.warranty || '',
+                active: true,
+                stock: {} as any,
+                in_transit: 0,
+                images: [] as any,
+                user_id: userId,
+              }).select('id').single();
+              if (createErr) throw createErr;
+              productId = newProduct.id;
+              productosCreados++;
+            }
+          } else {
+            productosExistentes++;
+          }
 
-        // Update item with productId
-        updatedItems[i] = { ...item, productId };
+          updatedItems[i] = { ...item, productId };
 
-        // 2. GENERATE INVENTORY MOVEMENT
-        const { error: mvError } = await supabase.from('inventory_movements').insert({
-          product_id: productId,
-          warehouse_id: defaultWarehouse,
-          quantity: item.qty || 0,
-          unit_cost: item.unitCost || 0,
-          total_cost: (item.qty || 0) * (item.unitCost || 0),
-          movement_type: 'import_in',
-          reference_type: 'import',
-          reference_id: imp.id,
-          notes: `Importación ${imp.orderNumber}`,
-          user_id: userId,
-        } as any);
-        if (mvError) throw mvError;
-        movimientosGenerados++;
+          const { error: mvError } = await supabase.from('inventory_movements').insert({
+            product_id: productId,
+            warehouse_id: defaultWarehouse,
+            quantity: item.qty || 0,
+            unit_cost: item.unitCost || 0,
+            total_cost: (item.qty || 0) * (item.unitCost || 0),
+            movement_type: 'import_in',
+            reference_type: 'import',
+            reference_id: imp.id,
+            notes: `Importación ${imp.orderNumber}`,
+            user_id: userId,
+          } as any);
+          if (mvError) throw mvError;
+          movimientosGenerados++;
 
-        // 3. UPDATE STOCK on product
-        const { data: currentProduct } = await supabase
-          .from('products').select('stock, in_transit').eq('id', productId).maybeSingle();
-        if (currentProduct) {
-          const currentStock = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null)
-            ? currentProduct.stock as Record<string, number>
-            : {};
-          const newStock = { ...currentStock, [defaultWarehouse]: ((currentStock as any)[defaultWarehouse] || 0) + (item.qty || 0) };
-          const newInTransit = Math.max(0, (currentProduct.in_transit || 0) - (item.qty || 0));
-          await supabase.from('products').update({
-            stock: newStock as any,
-            in_transit: newInTransit,
-            updated_at: new Date().toISOString(),
-          }).eq('id', productId);
+          const { data: currentProduct } = await supabase
+            .from('products').select('stock, in_transit').eq('id', productId).maybeSingle();
+          if (currentProduct) {
+            const currentStock = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null)
+              ? currentProduct.stock as Record<string, number>
+              : {};
+            const newStock = { ...currentStock, [defaultWarehouse]: ((currentStock as any)[defaultWarehouse] || 0) + (item.qty || 0) };
+            const newInTransit = Math.max(0, (currentProduct.in_transit || 0) - (item.qty || 0));
+            await supabase.from('products').update({
+              stock: newStock as any,
+              in_transit: newInTransit,
+              updated_at: new Date().toISOString(),
+            }).eq('id', productId);
+          }
         }
       }
 
@@ -348,6 +383,7 @@ export default function ImportsPage() {
 
       qc.invalidateQueries({ queryKey: ['import_orders'] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['spare_parts'] });
       toast.success(`✅ Importación procesada: ${productosCreados} productos creados, ${productosExistentes} existentes, ${movimientosGenerados} movimientos generados`);
     } catch (e: any) {
       toast.error('Error al procesar: ' + e.message);
