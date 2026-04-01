@@ -18,6 +18,11 @@ function dbToSupplier(row: any): Supplier {
     cuentaDestino: row.cuenta_destino ?? '',
     clabeDestino: row.clabe_destino ?? '',
     divisaBanco: row.divisa_banco ?? 'USD',
+    direccionBanco: row.direccion_banco ?? '',
+    swiftCode: row.swift_code ?? '',
+    nombreBeneficiario: row.nombre_beneficiario ?? '',
+    direccionBeneficiario: row.direccion_beneficiario ?? '',
+    telefonoBeneficiario: row.telefono_beneficiario ?? '',
   };
 }
 
