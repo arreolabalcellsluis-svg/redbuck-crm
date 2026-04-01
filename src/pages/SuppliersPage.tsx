@@ -29,7 +29,7 @@ export default function SuppliersPage() {
 
   const resetForm = () => {
     setEditId(null);
-    setForm({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN', type: 'nacional', website: '', bancoDestino: '', cuentaDestino: '', clabeDestino: '', divisaBanco: 'USD' });
+    setForm({ name: '', country: 'México', contact: '', phone: '', email: '', currency: 'MXN', type: 'nacional', website: '', bancoDestino: '', cuentaDestino: '', clabeDestino: '', divisaBanco: 'USD', direccionBanco: '', swiftCode: '', nombreBeneficiario: '', direccionBeneficiario: '', telefonoBeneficiario: '' });
   };
 
   const handleSave = () => {
