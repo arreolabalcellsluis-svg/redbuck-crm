@@ -102,12 +102,12 @@ export default function SuppliersPage() {
       </div>
 
       <Dialog open={open} onOpenChange={() => { setOpen(false); resetForm(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editId ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
             <DialogDescription>{editId ? 'Modifica la información del proveedor' : 'Registra un nuevo proveedor'}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-y-auto pr-1 flex-1">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Nombre *</label>
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border bg-background text-sm" />
