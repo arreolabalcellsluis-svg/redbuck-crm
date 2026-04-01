@@ -58,6 +58,11 @@ export function useAddSupplier() {
         cuenta_destino: s.cuentaDestino ?? '',
         clabe_destino: s.clabeDestino ?? '',
         divisa_banco: s.divisaBanco ?? 'USD',
+        direccion_banco: s.direccionBanco ?? '',
+        swift_code: s.swiftCode ?? '',
+        nombre_beneficiario: s.nombreBeneficiario ?? '',
+        direccion_beneficiario: s.direccionBeneficiario ?? '',
+        telefono_beneficiario: s.telefonoBeneficiario ?? '',
         user_id: user?.id ?? null,
       });
       if (error) throw error;
