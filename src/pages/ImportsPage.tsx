@@ -383,6 +383,7 @@ export default function ImportsPage() {
 
       qc.invalidateQueries({ queryKey: ['import_orders'] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['spare_parts'] });
       toast.success(`✅ Importación procesada: ${productosCreados} productos creados, ${productosExistentes} existentes, ${movimientosGenerados} movimientos generados`);
     } catch (e: any) {
       toast.error('Error al procesar: ' + e.message);
