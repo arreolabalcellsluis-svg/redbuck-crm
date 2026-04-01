@@ -92,6 +92,11 @@ export function useUpdateSupplier() {
       if (s.cuentaDestino !== undefined) updates.cuenta_destino = s.cuentaDestino;
       if (s.clabeDestino !== undefined) updates.clabe_destino = s.clabeDestino;
       if (s.divisaBanco !== undefined) updates.divisa_banco = s.divisaBanco;
+      if (s.direccionBanco !== undefined) updates.direccion_banco = s.direccionBanco;
+      if (s.swiftCode !== undefined) updates.swift_code = s.swiftCode;
+      if (s.nombreBeneficiario !== undefined) updates.nombre_beneficiario = s.nombreBeneficiario;
+      if (s.direccionBeneficiario !== undefined) updates.direccion_beneficiario = s.direccionBeneficiario;
+      if (s.telefonoBeneficiario !== undefined) updates.telefono_beneficiario = s.telefonoBeneficiario;
       const { error } = await (supabase as any).from('suppliers').update(updates).eq('id', id);
       if (error) throw error;
     },
