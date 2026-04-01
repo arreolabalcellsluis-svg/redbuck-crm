@@ -1806,11 +1806,16 @@ export type Database = {
           created_at: string
           cuenta_destino: string | null
           currency: string
+          direccion_banco: string | null
+          direccion_beneficiario: string | null
           divisa_banco: string | null
           email: string
           id: string
           name: string
+          nombre_beneficiario: string | null
           phone: string
+          swift_code: string | null
+          telefono_beneficiario: string | null
           type: string
           updated_at: string
           user_id: string | null
@@ -1824,11 +1829,16 @@ export type Database = {
           created_at?: string
           cuenta_destino?: string | null
           currency?: string
+          direccion_banco?: string | null
+          direccion_beneficiario?: string | null
           divisa_banco?: string | null
           email?: string
           id?: string
           name: string
+          nombre_beneficiario?: string | null
           phone?: string
+          swift_code?: string | null
+          telefono_beneficiario?: string | null
           type?: string
           updated_at?: string
           user_id?: string | null
@@ -1842,11 +1852,16 @@ export type Database = {
           created_at?: string
           cuenta_destino?: string | null
           currency?: string
+          direccion_banco?: string | null
+          direccion_beneficiario?: string | null
           divisa_banco?: string | null
           email?: string
           id?: string
           name?: string
+          nombre_beneficiario?: string | null
           phone?: string
+          swift_code?: string | null
+          telefono_beneficiario?: string | null
           type?: string
           updated_at?: string
           user_id?: string | null

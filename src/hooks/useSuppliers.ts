@@ -18,6 +18,11 @@ function dbToSupplier(row: any): Supplier {
     cuentaDestino: row.cuenta_destino ?? '',
     clabeDestino: row.clabe_destino ?? '',
     divisaBanco: row.divisa_banco ?? 'USD',
+    direccionBanco: row.direccion_banco ?? '',
+    swiftCode: row.swift_code ?? '',
+    nombreBeneficiario: row.nombre_beneficiario ?? '',
+    direccionBeneficiario: row.direccion_beneficiario ?? '',
+    telefonoBeneficiario: row.telefono_beneficiario ?? '',
   };
 }
 
@@ -53,6 +58,11 @@ export function useAddSupplier() {
         cuenta_destino: s.cuentaDestino ?? '',
         clabe_destino: s.clabeDestino ?? '',
         divisa_banco: s.divisaBanco ?? 'USD',
+        direccion_banco: s.direccionBanco ?? '',
+        swift_code: s.swiftCode ?? '',
+        nombre_beneficiario: s.nombreBeneficiario ?? '',
+        direccion_beneficiario: s.direccionBeneficiario ?? '',
+        telefono_beneficiario: s.telefonoBeneficiario ?? '',
         user_id: user?.id ?? null,
       });
       if (error) throw error;
@@ -82,6 +92,11 @@ export function useUpdateSupplier() {
       if (s.cuentaDestino !== undefined) updates.cuenta_destino = s.cuentaDestino;
       if (s.clabeDestino !== undefined) updates.clabe_destino = s.clabeDestino;
       if (s.divisaBanco !== undefined) updates.divisa_banco = s.divisaBanco;
+      if (s.direccionBanco !== undefined) updates.direccion_banco = s.direccionBanco;
+      if (s.swiftCode !== undefined) updates.swift_code = s.swiftCode;
+      if (s.nombreBeneficiario !== undefined) updates.nombre_beneficiario = s.nombreBeneficiario;
+      if (s.direccionBeneficiario !== undefined) updates.direccion_beneficiario = s.direccionBeneficiario;
+      if (s.telefonoBeneficiario !== undefined) updates.telefono_beneficiario = s.telefonoBeneficiario;
       const { error } = await (supabase as any).from('suppliers').update(updates).eq('id', id);
       if (error) throw error;
     },

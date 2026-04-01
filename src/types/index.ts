@@ -274,6 +274,11 @@ export interface Supplier {
   cuentaDestino?: string;
   clabeDestino?: string;
   divisaBanco?: string;
+  direccionBanco?: string;
+  swiftCode?: string;
+  nombreBeneficiario?: string;
+  direccionBeneficiario?: string;
+  telefonoBeneficiario?: string;
 }
 
 export interface Warehouse {
