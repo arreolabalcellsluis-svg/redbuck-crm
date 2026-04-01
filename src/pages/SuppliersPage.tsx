@@ -23,7 +23,7 @@ export default function SuppliersPage() {
 
   const openEdit = (s: Supplier) => {
     setEditId(s.id);
-    setForm({ name: s.name, country: s.country, contact: s.contact, phone: s.phone, email: s.email, currency: s.currency, type: s.type, website: s.website ?? '', bancoDestino: s.bancoDestino ?? '', cuentaDestino: s.cuentaDestino ?? '', clabeDestino: s.clabeDestino ?? '', divisaBanco: s.divisaBanco ?? 'USD' });
+    setForm({ name: s.name, country: s.country, contact: s.contact, phone: s.phone, email: s.email, currency: s.currency, type: s.type, website: s.website ?? '', bancoDestino: s.bancoDestino ?? '', cuentaDestino: s.cuentaDestino ?? '', clabeDestino: s.clabeDestino ?? '', divisaBanco: s.divisaBanco ?? 'USD', direccionBanco: s.direccionBanco ?? '', swiftCode: s.swiftCode ?? '', nombreBeneficiario: s.nombreBeneficiario ?? '', direccionBeneficiario: s.direccionBeneficiario ?? '', telefonoBeneficiario: s.telefonoBeneficiario ?? '' });
     setOpen(true);
   };
 
