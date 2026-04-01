@@ -91,6 +91,7 @@ export default function ImportsPage() {
       cbm: it.cbm || 0,
       peso: it.peso || 0,
       supplier: it.supplier || '',
+      itemType: it.itemType || 'product',
     })));
     setOpen(true);
   };
