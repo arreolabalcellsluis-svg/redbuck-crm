@@ -66,7 +66,7 @@ export function useUpdateAccountReceivable() {
     mutationFn: async ({ id, ...fields }: Partial<DBAccountReceivable> & { id: string }) => {
       const updates: Record<string, any> = { updated_at: new Date().toISOString() };
       Object.entries(fields).forEach(([k, v]) => { if (v !== undefined) updates[k] = v; });
-      const { error } = await supabase.from('accounts_receivable').update(updates).eq('id', id);
+      const { error } = await supabase.from('accounts_receivable').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

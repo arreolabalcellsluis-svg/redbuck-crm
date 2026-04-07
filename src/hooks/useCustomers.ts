@@ -96,7 +96,7 @@ export function useUpdateCustomer() {
       Object.entries(customer).forEach(([k, v]) => {
         if (v !== undefined) updates[k] = v;
       });
-      const { error } = await supabase.from('customers').update(updates).eq('id', id);
+      const { error } = await supabase.from('customers').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

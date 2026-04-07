@@ -160,7 +160,7 @@ export function useUpdateQuotation() {
       if (fields.status !== undefined) updates.status = fields.status as any;
       if (fields.valid_until !== undefined) updates.valid_until = fields.valid_until;
 
-      const { error } = await supabase.from('quotations').update(updates).eq('id', id);
+      const { error } = await supabase.from('quotations').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -96,7 +96,7 @@ export function useUpdateServiceOrder() {
       if (so.actionsPerformed !== undefined) updates.work_performed = so.actionsPerformed || null;
       if (so.completedDate !== undefined) updates.completed_date = so.completedDate || null;
       if (so.observations !== undefined) updates.report_notes = so.observations || null;
-      const { error } = await supabase.from('service_orders').update(updates).eq('id', id);
+      const { error } = await supabase.from('service_orders').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

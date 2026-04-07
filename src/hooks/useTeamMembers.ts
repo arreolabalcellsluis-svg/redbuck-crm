@@ -91,7 +91,7 @@ export function useUpdateTeamMember() {
       if (u.emergencyContactPhone !== undefined) updates.emergency_contact_phone = u.emergencyContactPhone;
       if (u.photoUrl !== undefined) updates.photo_url = u.photoUrl;
       if (u.contractUrl !== undefined) updates.contract_url = u.contractUrl;
-      const { error } = await supabase.from('team_members').update(updates).eq('id', id);
+      const { error } = await supabase.from('team_members').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

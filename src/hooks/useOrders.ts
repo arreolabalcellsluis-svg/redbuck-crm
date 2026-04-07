@@ -143,7 +143,7 @@ export function useUpdateOrder() {
       Object.entries(fields).forEach(([k, v]) => {
         if (v !== undefined) updates[k] = v;
       });
-      const { error } = await supabase.from('orders').update(updates).eq('id', id);
+      const { error } = await supabase.from('orders').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
