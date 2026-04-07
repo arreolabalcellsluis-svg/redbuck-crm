@@ -143,7 +143,7 @@ export function useUpdateImportOrder() {
       if (imp.volumenTotalCbm !== undefined) updates.volumen_total_cbm = imp.volumenTotalCbm;
       if (imp.numeroContenedores !== undefined) updates.numero_contenedores = imp.numeroContenedores;
       if (imp.expenses !== undefined) Object.assign(updates, expensesToDb(imp.expenses));
-      const { error } = await supabase.from('import_orders').update(updates).eq('id', id);
+      const { error } = await supabase.from('import_orders').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

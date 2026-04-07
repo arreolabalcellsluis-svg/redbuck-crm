@@ -80,7 +80,7 @@ export function useUpdatePurchase() {
       Object.entries(fields).forEach(([k, v]) => {
         if (v !== undefined && k !== 'created_at') updates[k] = v;
       });
-      const { error } = await supabase.from('purchases').update(updates).eq('id', id);
+      const { error } = await supabase.from('purchases').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

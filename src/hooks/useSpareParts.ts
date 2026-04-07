@@ -82,7 +82,7 @@ export function useUpdateSparePart() {
       if (sp.active !== undefined) updates.active = sp.active;
       if (sp.image !== undefined) updates.image = sp.image || null;
       if (sp.images !== undefined) updates.images = sp.images ?? [];
-      const { error } = await supabase.from('spare_parts').update(updates).eq('id', id);
+      const { error } = await supabase.from('spare_parts').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

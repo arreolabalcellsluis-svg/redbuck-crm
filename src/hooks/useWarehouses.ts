@@ -55,7 +55,7 @@ export function useUpdateWarehouse() {
       if (w.name !== undefined) updates.name = w.name;
       if (w.location !== undefined) updates.location = w.location;
       if (w.hasExhibition !== undefined) updates.has_exhibition = w.hasExhibition;
-      const { error } = await supabase.from('warehouses').update(updates).eq('id', id);
+      const { error } = await supabase.from('warehouses').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

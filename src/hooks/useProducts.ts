@@ -146,7 +146,7 @@ export function useUpdateProduct() {
       if (product.commission_distributor !== undefined) updates.commission_distributor = product.commission_distributor;
       if (product.commission_admin !== undefined) updates.commission_admin = product.commission_admin;
 
-      const { error } = await supabase.from('products').update(updates).eq('id', id);
+      const { error } = await supabase.from('products').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
